@@ -1,0 +1,15 @@
+services:
+  frontend:
+    container_name: react_frontend_prod
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - "3032:80"
+    restart: unless-stopped
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

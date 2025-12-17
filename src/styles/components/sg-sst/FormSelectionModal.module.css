@@ -1,0 +1,376 @@
+/* src/styles/components/sg-sst/FormSelectionModal.module.css */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+  /* Asegurar que ocupe toda la pantalla */
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.3s ease-out;
+  /* Prevenir overflow */
+  box-sizing: border-box;
+  position: relative;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid #f3f4f6;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  /* Prevenir que se salga */
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  /* Asegurar que el texto no se corte */
+  line-height: 1.3;
+  word-wrap: break-word;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 300;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.content {
+  padding: 32px;
+  /* Permitir scroll interno si es necesario */
+  overflow-y: auto;
+  max-height: calc(90vh - 160px); /* Restar header y footer */
+  box-sizing: border-box;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin: 0 0 24px 0;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.formOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formOption {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px;
+  border: 2px solid #f3f4f6;
+  border-radius: 12px;
+  border-left: 6px solid;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  gap: 16px;
+  background: white;
+  position: relative;
+  overflow: hidden;
+  /* Asegurar que no se salga */
+  box-sizing: border-box;
+  min-height: 100px;
+}
+
+.formInfo {
+  flex: 1;
+  min-width: 0; /* Esto es importante para prevenir overflow */
+}
+
+.formTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.formDescription {
+  color: #6b7280;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.footer {
+  padding: 24px 32px;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  justify-content: center;
+  background: #fafafa;
+  /* Fijar en la parte inferior */
+  position: sticky;
+  bottom: 0;
+  background: white;
+}
+
+.cancelButton {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  min-width: 140px;
+  position: relative;
+  overflow: hidden;
+  /* Asegurar tamaño mínimo para touch */
+  min-height: 50px;
+}
+
+/* RESPONSIVE CRÍTICO PARA MÓVILES */
+@media (max-width: 768px) {
+  .overlay {
+    padding: 0; /* Sin padding en móviles */
+    align-items: flex-end;
+  }
+  
+  .modal {
+    max-height: 95vh; /* Un poco más de altura */
+    border-radius: 20px 20px 0 0;
+    margin: 0;
+    max-width: none;
+    width: 100vw; /* Ocupar todo el ancho */
+    animation: modalSlideUp 0.4s ease-out;
+  }
+  
+  @keyframes modalSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .header {
+    padding: 20px 24px;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    min-height: 70px;
+  }
+  
+  .title {
+    font-size: 1.3rem;
+    padding-right: 10px; /* Espacio para el botón de cerrar */
+  }
+  
+  .content {
+    padding: 20px 24px;
+    max-height: calc(95vh - 140px); /* Ajustar altura */
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    padding: 0 10px;
+  }
+  
+  .formOptions {
+    gap: 12px;
+  }
+  
+  .formOption {
+    padding: 16px 20px;
+    gap: 12px;
+    border-left-width: 5px;
+    min-height: 90px;
+  }
+  
+  .formTitle {
+    font-size: 1.05rem;
+  }
+  
+  .formDescription {
+    font-size: 0.9rem;
+  }
+  
+  .footer {
+    padding: 20px 24px;
+    position: sticky;
+    bottom: 0;
+    background: white;
+  }
+  
+  .cancelButton {
+    width: 100%;
+    max-width: 200px;
+    padding: 16px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .overlay {
+    padding: 0;
+  }
+  
+  .modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 98vh; /* Casi toda la pantalla */
+  }
+  
+  .header {
+    padding: 16px 20px;
+    min-height: 60px;
+  }
+  
+  .title {
+    font-size: 1.2rem;
+  }
+  
+  .content {
+    padding: 16px 20px;
+    max-height: calc(98vh - 120px);
+  }
+  
+  .formOption {
+    padding: 14px 16px;
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+    min-height: auto;
+  }
+  
+  .formInfo {
+    width: 100%;
+  }
+  
+  .formTitle {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+  
+  .formDescription {
+    font-size: 0.85rem;
+  }
+  
+  .formIcon {
+    font-size: 1.75rem;
+    order: -1;
+  }
+  
+  .formArrow {
+    display: none;
+  }
+  
+  .footer {
+    padding: 16px 20px;
+  }
+  
+  .cancelButton {
+    min-height: 44px;
+  }
+}
+
+/* CORRECCIONES ESPECÍFICAS PARA SAFARI iOS */
+@supports (-webkit-touch-callout: none) {
+  .modal {
+    max-height: -webkit-fill-available;
+  }
+  
+  .overlay {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Prevenir zoom en iOS */
+@media (max-width: 768px) {
+  .formOption,
+  .closeButton,
+  .cancelButton {
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+}
+
+/* Asegurar que no haya scroll horizontal */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+/* Corrección para viewport móvil */
+@viewport {
+  width: device-width;
+  zoom: 1.0;
+}
+
+/* Prevenir efectos de parallax en iOS */
+.modal {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Asegurar que el contenido sea escalable */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}

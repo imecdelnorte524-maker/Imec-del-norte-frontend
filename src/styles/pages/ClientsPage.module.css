@@ -1,0 +1,801 @@
+/* src/styles/pages/ClientsPage.module.css */
+.pageContainer {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header */
+.pageHeader {
+  margin-bottom: 32px;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.pageTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.pageSubtitle {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.createButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.createButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.plusIcon {
+  font-size: 1.2rem;
+}
+
+/* Stats */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+}
+
+.statIcon {
+  font-size: 2rem;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statContent h3 {
+  margin: 0 0 4px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.statNumber {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.searchContainer {
+  flex: 1;
+  min-width: 300px;
+}
+
+.searchWrapper {
+  position: relative;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.controlsRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.filterSelect {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background: white;
+  cursor: pointer;
+  min-width: 180px;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 12px;
+}
+
+.secondaryButton {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.secondaryButton:hover {
+  background: #4b5563;
+}
+
+/* Error */
+.errorAlert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.errorIcon {
+  font-size: 1.2rem;
+}
+
+.errorText {
+  flex: 1;
+}
+
+.errorClose {
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Content */
+.content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+/* Desktop Table */
+.desktopTable {
+  display: block;
+}
+
+@media (max-width: 1024px) {
+  .desktopTable {
+    display: none;
+  }
+}
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #f8fafc;
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+  padding: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.table tr:hover {
+  background: #f8fafc;
+}
+
+/* Client Cell */
+.clientCell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clientMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clientName {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.clientDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clientEmail {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.clientPhone {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.clientLocation small {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* NIT Code */
+.nitCode {
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+/* Contact Cell */
+.contactCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* User Cell */
+.userCell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userInfo strong {
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.userInfo small {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.roleBadge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-block;
+  width: fit-content;
+}
+
+.roleBadge.administrador { background: #dc3545; color: white; }
+.roleBadge.técnico { background: #fd7e14; color: white; }
+.roleBadge.cliente { background: #20c997; color: white; }
+.roleBadge.secretaria { background: #6f42c1; color: white; }
+.roleBadge.supervisor { background: #0091ff; color: white; }
+
+.noUser {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Areas Cell */
+.areasCell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.areasStats {
+  display: flex;
+  gap: 16px;
+}
+
+.areaStat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statIconSmall {
+  font-size: 1rem;
+}
+
+.statLabel {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.statValue {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.statValue.hasData {
+  color: #10b981;
+}
+
+.statValue.noData {
+  color: #9ca3af;
+}
+
+.viewAreasBtn {
+  background: #e0e7ff;
+  color: #4f46e5;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s;
+}
+
+.viewAreasBtn:hover {
+  background: #c7d2fe;
+}
+
+/* Actions Cell */
+.actionsCell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.actionBtn:hover {
+  background: #e5e7eb;
+}
+
+.actionIcon {
+  font-size: 1rem;
+}
+
+.actionText {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.deleteBtn {
+  background: #fee2e2;
+}
+
+.deleteBtn:hover {
+  background: #fecaca;
+}
+
+.deleteBtn .actionText {
+  color: #dc2626;
+}
+
+/* Mobile Cards */
+.mobileCards {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .mobileCards {
+    display: block;
+    padding: 20px;
+  }
+}
+
+.mobileCard {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  flex: 1;
+}
+
+.cardTitle h3 {
+  margin: 0 0 4px 0;
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+}
+
+.cardActionBtn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.cardActionBtn:hover {
+  background: #f3f4f6;
+}
+
+.cardDeleteBtn:hover {
+  background: #fee2e2;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cardRow:last-child {
+  border-bottom: none;
+}
+
+.cardLabel {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cardValue {
+  color: #374151;
+  font-size: 0.95rem;
+  text-align: right;
+  flex: 1;
+  margin-left: 16px;
+}
+
+.cardStats {
+  display: flex;
+  gap: 20px;
+  margin: 12px 0;
+}
+
+.cardStat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.statIconCard {
+  font-size: 1.5rem;
+}
+
+.statContentCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statLabelCard {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.statNumberCard {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.statNumberCard.hasData {
+  color: #10b981;
+}
+
+.statNumberCard.noData {
+  color: #9ca3af;
+}
+
+.cardViewAreasBtn {
+  background: #e0e7ff;
+  color: #4f46e5;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+
+.cardViewAreasBtn:hover {
+  background: #c7d2fe;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.emptyIcon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.emptyState h3 {
+  color: #1f2937;
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+}
+
+.emptyState p {
+  color: #6b7280;
+  margin: 0 0 20px 0;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.emptyButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.emptyButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Loading */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  gap: 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingContainer p {
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 16px;
+  }
+  
+  .headerContent {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .createButton {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .searchContainer {
+    min-width: auto;
+  }
+  
+  .controlsRight {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filterSelect {
+    width: 100%;
+  }
+  
+  .buttonGroup {
+    width: 100%;
+  }
+  
+  .secondaryButton {
+    width: 100%;
+  }
+  
+  .mobileCards {
+    padding: 16px;
+  }
+  
+  .cardRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .cardValue {
+    text-align: left;
+    margin-left: 0;
+    width: 100%;
+  }
+  
+  .cardStats {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .pageTitle {
+    font-size: 1.75rem;
+  }
+  
+  .statCard {
+    padding: 16px;
+  }
+  
+  .statNumber {
+    font-size: 1.75rem;
+  }
+}
+
+/* Agregar esta clase en la sección de estilos móviles */
+.clientNameMobile {
+    margin: 0 0 4px 0;
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 1.1rem;
+    line-height: 1.3;
+}
+
+/* Agregar estos estilos para mejorar la visualización móvil */
+@media (max-width: 768px) {
+    .cardRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .cardValue {
+        text-align: left;
+        margin-left: 0;
+        width: 100%;
+    }
+}

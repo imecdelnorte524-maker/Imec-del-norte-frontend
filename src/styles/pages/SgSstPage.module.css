@@ -1,0 +1,191 @@
+/* src/styles/pages/SgSstPage.module.css */
+
+.container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerLeft {
+  flex: 1;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.subtitle {
+  font-size: 1.125rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.headerRight {
+  display: flex;
+  gap: 1rem;
+}
+
+.primaryButton {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.primaryButton:hover {
+  background: #1d4ed8;
+}
+
+.secondaryButton {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.secondaryButton:hover {
+  background: #e5e7eb;
+}
+
+.section {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+  font-size: 1.125rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .headerRight {
+    justify-content: flex-start;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+}
+
+.accessDenied {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.accessDeniedIcon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.accessDeniedTitle {
+  color: #dc2626;
+  margin-bottom: 16px;
+  font-size: 1.5rem;
+}
+
+.accessDeniedMessage {
+  color: #6b7280;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+
+.accessDeniedDetail {
+  color: #9ca3af;
+  margin-bottom: 30px;
+}
+
+.accessDeniedButton {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.accessDeniedButton:hover {
+  background: #2563eb;
+}
+
+.userNote {
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 4px solid #3b82f6;
+  margin: 8px 0 0 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.accessDebug {
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 16px 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: left;
+}
+
+.accessDebug p {
+  margin: 4px 0;
+}

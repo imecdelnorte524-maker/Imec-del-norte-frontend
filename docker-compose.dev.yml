@@ -1,0 +1,19 @@
+services:
+  frontend:
+    container_name: react_frontend_dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3032:3032"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
