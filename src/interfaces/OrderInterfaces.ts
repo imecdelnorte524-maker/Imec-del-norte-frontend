@@ -1,5 +1,15 @@
 // src/interfaces/OrderInterfaces.ts
 
+export type OrderEstado =
+  | 'Pendiente'
+  | 'Solicitada asignada'
+  | 'En Proceso'
+  | 'Completado' 
+  | 'Cancelada'
+  | 'Rechazada';
+
+export type BillingEstado = 'No facturado' | 'Facturado';
+
 export interface Order {
   orden_id: number;
   servicio_id: number;
@@ -8,8 +18,12 @@ export interface Order {
   fecha_solicitud: string;
   fecha_inicio: string | null;
   fecha_finalizacion: string | null;
-  estado: 'Pendiente' | 'En Proceso' | 'Completado' | 'Cancelada' | 'Rechazada';
+  estado: OrderEstado;
   comentarios: string | null;
+
+  // 🔹 Nuevo: facturación
+  estado_facturacion: BillingEstado;
+  factura_pdf_url?: string | null;
 
   servicio: {
     servicio_id: number;

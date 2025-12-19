@@ -1,6 +1,6 @@
 // src/pages/ClientsPage.tsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useClients } from "../hooks/useClients";
 import ClientModal from '../components/clients/ClientModal';
@@ -9,7 +9,7 @@ import styles from '../styles/pages/ClientsPage.module.css';
 
 export default function ClientsPage() {
     const { clients, loading, error, deleteClient, refreshClients } = useClients();
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
 
     const [showModal, setShowModal] = useState(false);
     const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -173,14 +173,14 @@ export default function ClientsPage() {
                             <option value="withoutAreas">Sin áreas</option>
                         </select>
 
-                        <div className={styles.buttonGroup}>
+                        {/* <div className={styles.buttonGroup}>
                             <button
                                 className={styles.secondaryButton}
                                 onClick={() => navigate('/users')}
                             >
                                 👥 Gestión de Usuarios
                             </button>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 

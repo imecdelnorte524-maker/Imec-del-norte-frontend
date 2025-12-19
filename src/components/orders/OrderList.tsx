@@ -2,7 +2,7 @@
 
 import { useOrders } from '../../hooks/useOrders';
 import type { Order } from '../../interfaces/OrderInterfaces';
-import { getStatusColor } from '../../utils/statusUtils';
+import { getStatusClass } from '../../utils/statusUtils';
 import styles from '../../styles/components/orders/OrderList.module.css';
 
 interface Props {
@@ -28,7 +28,7 @@ export default function OrderList({ userRole, onViewOrder, filter = 'all' }: Pro
         {orders.map(order => (
           <div
             key={order.orden_id}
-            className={styles.orderCard}
+            className={` ${styles.orderCard} ${styles[getStatusClass(order.estado, 'orderCard',)]}`}
             onClick={() => onViewOrder(order)}
           >
             <div className={styles.cardHeader}>
@@ -60,8 +60,23 @@ export default function OrderList({ userRole, onViewOrder, filter = 'all' }: Pro
             </div>
 
             <div className={styles.cardFooter}>
-              <div className={`${styles.status} ${styles[getStatusColor(order.estado)]}`}>
-                {order.estado}
+              <div className={styles.statusRow}>
+                <span
+                  className={`${styles.status} ${styles[getStatusClass(order.estado, 'status')]}`}
+                >
+                  {order.estado}
+                </span>
+                <span
+                  className={
+                    styles.billingBadge +
+                    ' ' +
+                    (order.estado_facturacion === 'Facturado'
+                      ? styles.billingBilled
+                      : styles.billingNotBilled)
+                  }
+                >
+                  {order.estado_facturacion}
+                </span>
               </div>
               <button className={styles.viewButton}>
                 Ver Detalles

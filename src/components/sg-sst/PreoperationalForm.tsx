@@ -18,7 +18,6 @@ interface Tool {
   caracteristicasTecnicas?: string;
   observacion?: string;
   valorUnitario?: number;
-  fotoUrl?: string;
 }
 
 interface PreoperationalFormProps {

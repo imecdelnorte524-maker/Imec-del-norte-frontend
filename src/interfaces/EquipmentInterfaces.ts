@@ -27,7 +27,7 @@ export interface Equipment {
     idSubArea: number;
     nombreSubArea: string;
   } | null;
-
+  orderId: number;
   category: string; // Ej: "Aires Acondicionados"
   name: string;
   code?: string | null;

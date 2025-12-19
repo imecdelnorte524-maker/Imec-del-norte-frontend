@@ -1,3 +1,4 @@
+// src/pages/EquipmentDetailPage.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -42,7 +43,7 @@ export default function EquipmentDetailPage() {
 
   // Estado para fotos / carrusel
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoDescription, setPhotoDescription] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -189,8 +190,8 @@ export default function EquipmentDetailPage() {
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!equipment) return;
-    if (!photoUrl.trim()) {
-      setPhotoError("La URL de la foto es obligatoria");
+    if (!photoFile) {
+      setPhotoError("Debe seleccionar un archivo de imagen");
       return;
     }
 
@@ -198,10 +199,10 @@ export default function EquipmentDetailPage() {
     setPhotoError(null);
 
     try {
-      const newPhoto = await addEquipmentPhotoRequest(equipment.equipmentId, {
-        url: photoUrl,
-        description: photoDescription || undefined,
-      });
+      const newPhoto = await addEquipmentPhotoRequest(
+        equipment.equipmentId,
+        photoFile // CORREGIDO: Solo pasar el archivo
+      );
 
       // Actualizar estado localmente sin recargar todo el equipo
       setEquipment((prev) =>
@@ -213,7 +214,7 @@ export default function EquipmentDetailPage() {
           : prev
       );
 
-      setPhotoUrl("");
+      setPhotoFile(null);
       setPhotoDescription("");
       setShowAddPhotoModal(false);
       setCurrentPhotoIndex(photosCount); // ir a la última añadida
@@ -238,7 +239,8 @@ export default function EquipmentDetailPage() {
     setPhotoError(null);
 
     try {
-      await deleteEquipmentPhotoRequest(equipment.equipmentId, photoId);
+      // CORREGIDO: Solo pasar photoId, no equipmentId
+      await deleteEquipmentPhotoRequest(photoId);
 
       // Actualizar estado localmente sin recargar todo el equipo
       setEquipment((prev) => {
@@ -255,7 +257,6 @@ export default function EquipmentDetailPage() {
         };
       });
 
-      // Cerrar el modal de imagen apenas se elimine
       closePhotoModal();
     } catch (err: any) {
       console.error("Error eliminando foto:", err);
@@ -270,8 +271,6 @@ export default function EquipmentDetailPage() {
   };
 
   const handleOpenHistory = () => {
-    // TODO: implementar historial más adelante
-    // Por ahora solo dejamos el hook preparado.
     console.log("Historial de equipo - pendiente de implementación");
   };
 
@@ -298,7 +297,7 @@ export default function EquipmentDetailPage() {
                 className={styles.secondaryButton}
                 onClick={() => {
                   setPhotoError(null);
-                  setPhotoUrl("");
+                  setPhotoFile(null);
                   setPhotoDescription("");
                   setShowAddPhotoModal(true);
                 }}
@@ -317,12 +316,11 @@ export default function EquipmentDetailPage() {
         </div>
 
         {loading && <p className={styles.loading}>Cargando equipo...</p>}
-
         {error && !loading && <div className={styles.error}>{error}</div>}
 
         {!loading && !error && equipment && (
           <>
-            {/* FOTOS - CARRUSEL ARRIBA */}
+            {/* Carrusel */}
             <div className={styles.section}>
               <h3>Fotos del Equipo</h3>
 
@@ -393,6 +391,12 @@ export default function EquipmentDetailPage() {
                       <span>{equipment.code}</span>
                     </div>
                   )}
+                  {equipment.orderId && (
+                    <div className={styles.detailItem}>
+                      <strong>Orden Id:</strong>
+                      <span>{`#${equipment.orderId}`}</span>
+                    </div>
+                  )}
                   <div className={styles.detailItem}>
                     <strong>Categoría:</strong>
                     <span>{equipment.category}</span>
@@ -415,7 +419,12 @@ export default function EquipmentDetailPage() {
                   </div>
                   <div className={styles.formRow}>
                     <label>Código interno (generado automáticamente)</label>
-                    <input disabled name="code" value={editForm.code} readOnly />
+                    <input
+                      disabled
+                      name="code"
+                      value={editForm.code}
+                      readOnly
+                    />
                     <span className={styles.helperText}>
                       Este código es generado por el sistema (ej: AACI001,
                       RCICI001) y no se puede editar manualmente.
@@ -557,10 +566,6 @@ export default function EquipmentDetailPage() {
                   <strong>Creado en el sistema:</strong>
                   <span>{new Date(equipment.createdAt).toLocaleString()}</span>
                 </div>
-                <div className={styles.detailItem}>
-                  <strong>Última actualización:</strong>
-                  <span>{new Date(equipment.updatedAt).toLocaleString()}</span>
-                </div>
                 {equipment.notes && (
                   <div className={styles.notes}>
                     <strong>Observaciones:</strong>
@@ -591,10 +596,13 @@ export default function EquipmentDetailPage() {
 
                   <form onSubmit={handleAddPhoto}>
                     <div className={styles.formRow}>
-                      <label>URL de la foto *</label>
+                      <label>Archivo de imagen *</label>
                       <input
-                        value={photoUrl}
-                        onChange={(e) => setPhotoUrl(e.target.value)}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setPhotoFile(e.target.files?.[0] || null)
+                        }
                         required
                       />
                     </div>
@@ -622,7 +630,7 @@ export default function EquipmentDetailPage() {
               </div>
             )}
 
-            {/* MODAL: Ver imagen grande */}
+            {/* Modal: Ver imagen grande */}
             {showPhotoModal && selectedPhoto && (
               <div className={styles.modalOverlay}>
                 <div className={styles.imageModal}>

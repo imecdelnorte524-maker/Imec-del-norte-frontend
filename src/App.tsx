@@ -22,6 +22,7 @@ import Roles from "./pages/Roles";
 import Clients from "./pages/Clients";
 import EquipmentDetailPage from "./pages/EquipmentDetail";
 import EquipmentListPage from "./pages/EquipmentList";
+import UserProfilePage from "./pages/UserProfile";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -174,6 +175,15 @@ function App() {
           element={
             <ProtectedRoute>
               <EquipmentDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfilePage />
             </ProtectedRoute>
           }
         />

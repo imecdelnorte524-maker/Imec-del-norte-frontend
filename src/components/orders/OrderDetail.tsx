@@ -5,6 +5,7 @@ import {
   cancelOrderRequest,
   rejectOrderRequest,
   assignTechnicianRequest,
+  uploadInvoiceRequest,
 } from "../../api/orders";
 import { users } from "../../api/users";
 import type { Order, UpdateOrderData } from "../../interfaces/OrderInterfaces";
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export default function OrderDetail({ order, onBack, userRole }: Props) {
-  const navigate = useNavigate(); // ✅ hook correcto
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const [technicians, setTechnicians] = useState<Usuario[]>([]);
   const [techLoading, setTechLoading] = useState(false);
   const [techError, setTechError] = useState<string | null>(null);
+
+  // Facturación
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   // Estados válidos del frontend
   const validStatuses = {
@@ -147,6 +154,32 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
+  const handleUploadInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invoiceFile) {
+      setInvoiceError("Debe seleccionar un archivo PDF");
+      return;
+    }
+
+    setInvoiceLoading(true);
+    setInvoiceError(null);
+
+    try {
+      await uploadInvoiceRequest(order.orden_id, invoiceFile);
+      setShowInvoiceModal(false);
+      onBack(); // refrescamos vista volviendo al listado (o podrías recargar la orden)
+    } catch (err: any) {
+      console.error("Error subiendo factura:", err);
+      setInvoiceError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Error al subir la factura"
+      );
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
   const getStatusColor = (estado: string) => {
     switch (estado) {
       case validStatuses.PENDIENTE:
@@ -164,6 +197,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
+  const getBillingColor = (estadoFact: Order["estado_facturacion"]) => {
+    return estadoFact === "Facturado"
+      ? styles.billingBilled
+      : styles.billingNotBilled;
+  };
+
   // Lógica de equipo / tipo de servicio
   const categoria = order.servicio.categoria_servicio || "";
   const tipoTrabajo = order.servicio.tipo_trabajo || "";
@@ -179,6 +218,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const isMaintenance = tipoTrabajo === "Mantenimiento";
   const hasEquipment = !!order.equipo;
 
+  const canUploadInvoice =
+    (userRole === "admin" || userRole === "secretaria") &&
+    order.estado === validStatuses.COMPLETADO &&
+    order.estado_facturacion === "No facturado";
+
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -186,10 +232,31 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           ← Volver
         </button>
         <h1>Orden de Servicio #{order.orden_id}</h1>
-        <div
-          className={styles.statusBadge + " " + getStatusColor(order.estado)}
-        >
-          {order.estado}
+        <div className={styles.statusRow}>
+          <span
+            className={styles.statusBadge + " " + getStatusColor(order.estado)}
+          >
+            {order.estado}
+          </span>
+          <span
+            className={
+              styles.billingBadge +
+              " " +
+              getBillingColor(order.estado_facturacion)
+            }
+          >
+            {order.estado_facturacion}
+          </span>
+          {order.factura_pdf_url && (
+            <a
+              href={`${apiUrl}${order.factura_pdf_url}`}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.invoiceLink}
+            >
+              Ver factura
+            </a>
+          )}
         </div>
       </div>
 
@@ -371,6 +438,25 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
       {/* Acciones según el rol */}
       <div className={styles.actions}>
+        {/* Ver equipos de la empresa (cualquiera que vea la orden) */}
+        {order.cliente_empresa && (
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={() =>
+              navigate("/equipment", {
+                state: {
+                  clientId: order.cliente_empresa?.id_cliente ?? null,
+                  clientName: order.cliente_empresa?.nombre ?? "",
+                  clientNit: order.cliente_empresa?.nit ?? "",
+                },
+              })
+            }
+          >
+            Ver equipos de la empresa
+          </button>
+        )}
+
         {/* Cliente: puede cancelar su orden pendiente (frontend; backend valida 3 días hábiles) */}
         {userRole === "cliente" && order.estado === validStatuses.PENDIENTE && (
           <button
@@ -427,26 +513,41 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         {/* Admin: puede asignar y rechazar */}
         {userRole === "admin" && (
           <div className={styles.adminActions}>
-            {order.estado === validStatuses.PENDIENTE && !order.tecnico_id && (
-              <>
-                <button
-                  onClick={() => setShowAssignForm(true)}
-                  className={styles.assignButton}
-                >
-                  Asignar Técnico
-                </button>
-                <button
-                  onClick={() => setShowRejectForm(true)}
-                  className={styles.rejectButton}
-                >
-                  Rechazar Orden
-                </button>
-              </>
-            )}
+            {order.estado !== validStatuses.CANCELADA &&
+              order.estado !== validStatuses.RECHAZADA && (
+                <>
+                  <button
+                    onClick={() => setShowAssignForm(true)}
+                    className={styles.assignButton}
+                  >
+                    Asignar Técnico
+                  </button>
+                  <button
+                    onClick={() => setShowRejectForm(true)}
+                    className={styles.rejectButton}
+                  >
+                    Rechazar Orden
+                  </button>
+                </>
+              )}
           </div>
         )}
 
-        {/* Secretaria: solo lectura */}
+        {/* Admin / Secretaria: subir factura */}
+        {canUploadInvoice && (
+          <button
+            type="button"
+            onClick={() => {
+              setInvoiceError(null);
+              setInvoiceFile(null);
+              setShowInvoiceModal(true);
+            }}
+            className={styles.invoiceButton}
+            disabled={loading}
+          >
+            Subir factura
+          </button>
+        )}
       </div>
 
       {/* Modal para asignar técnico */}
@@ -513,6 +614,48 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                 {loading ? "Rechazando..." : "Rechazar Orden"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para subir factura */}
+      {showInvoiceModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeaderRow}>
+              <h3>Subir factura (PDF)</h3>
+              <button
+                type="button"
+                className={styles.modalCloseButton}
+                onClick={() => setShowInvoiceModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {invoiceError && <div className={styles.error}>{invoiceError}</div>}
+
+            <form onSubmit={handleUploadInvoice}>
+              <div className={styles.formRow}>
+                <label>Archivo PDF *</label>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" disabled={invoiceLoading}>
+                  {invoiceLoading ? "Subiendo..." : "Subir factura"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

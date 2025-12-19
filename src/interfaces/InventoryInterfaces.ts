@@ -19,7 +19,6 @@ export interface Herramienta {
   tipo: ToolType;
   estado: ToolStatus;
   valorUnitario: number | null;
-  fotoUrl?: string;
   // NUEVO: Campos del inventario asociado
   inventarioId?: number;
   cantidadActual?: number;
@@ -36,7 +35,6 @@ export interface Insumo {
   fechaRegistro?: string;
   stockMin: number;
   valorUnitario: number | null;
-  fotoUrl?: string;
   // NUEVO: Campos del inventario asociado
   inventarioId?: number;
   cantidadActual?: number;
@@ -61,7 +59,7 @@ export interface Inventory {
     estado: SupplyStatus;
     stockMin: number;
     valorUnitario: number;
-    fotoUrl?: string;
+
   };
   tool?: {
     herramientaId: number;
@@ -71,7 +69,7 @@ export interface Inventory {
     modelo?: string;
     estado: ToolStatus;
     valorUnitario: number;
-    fotoUrl?: string;
+
   };
 }
 

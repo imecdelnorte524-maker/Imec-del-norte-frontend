@@ -1,5 +1,12 @@
+// src/api/orders.ts
+
 import api from './axios';
-import type { Order, CreateOrderData, UpdateOrderData } from '../interfaces/OrderInterfaces';
+import type {
+  Order,
+  CreateOrderData,
+  UpdateOrderData,
+  BillingEstado,
+} from '../interfaces/OrderInterfaces';
 
 // Helpers de mapeo de estados backend ↔ frontend
 const mapStatusFromApi = (apiEstado: string): Order['estado'] => {
@@ -34,6 +41,11 @@ const mapStatusToApi = (uiEstado: Order['estado']): string => {
   }
 };
 
+const mapBillingFromApi = (apiEstado: string | undefined): BillingEstado => {
+  if (apiEstado === 'Facturado') return 'Facturado';
+  return 'No facturado';
+};
+
 const mapApiOrderToOrder = (apiOrder: any): Order => {
   return {
     orden_id: apiOrder.ordenId,
@@ -45,6 +57,10 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     fecha_finalizacion: apiOrder.fechaFinalizacion ?? null,
     estado: mapStatusFromApi(apiOrder.estado),
     comentarios: apiOrder.comentarios ?? null,
+
+    // 🔹 Facturación
+    estado_facturacion: mapBillingFromApi(apiOrder.estadoFacturacion),
+    factura_pdf_url: apiOrder.facturaPdfUrl ?? null,
 
     servicio: {
       servicio_id: apiOrder.service?.servicioId ?? 0,
@@ -135,34 +151,26 @@ export const getMyAssignedOrdersRequest = async (): Promise<Order[]> => {
 };
 
 // Cliente: filtra por su ID
-// src/api/orders.ts
-
-// Mis órdenes como CLIENTE (usa query ?cliente=usuarioId)
 export const getMyClientOrdersRequest = async (): Promise<Order[]> => {
   try {
     const userStr = localStorage.getItem('user');
-    
-    // DEBUG: Ver qué hay en el storage
-    console.log('User en storage:', userStr); 
-
-    if (!userStr) return []; // Si no hay usuario, devuelve vacío, NO todo.
+    if (!userStr) return [];
 
     const user = JSON.parse(userStr);
-    const clienteId = user?.usuarioId; // Asegúrate que tu objeto user tiene 'usuarioId'
-
-    console.log('ID Cliente recuperado:', clienteId); // DEBUG
-
+    const clienteId = user?.usuarioId;
     if (!clienteId) return [];
 
-    // Llamada con filtro explícito
     const response = await api.get(
-      `/work-orders?cliente=${encodeURIComponent(clienteId.toString())}`
+      `/work-orders?cliente=${encodeURIComponent(clienteId.toString())}`,
     );
-    
+
     const data = response.data?.data || [];
     return data.map(mapApiOrderToOrder);
   } catch (error: any) {
-    console.error('❌ Frontend: Error al obtener mis solicitudes (cliente):', error);
+    console.error(
+      '❌ Frontend: Error al obtener mis solicitudes (cliente):',
+      error,
+    );
     throw error;
   }
 };
@@ -232,8 +240,11 @@ export const getOrderByIdRequest = async (orderId: number): Promise<Order> => {
   return mapApiOrderToOrder(apiOrder);
 };
 
+// 🔹 Cliente: cancelar usando endpoint específico PATCH /work-orders/:id/cancel
 export const cancelOrderRequest = async (orderId: number): Promise<Order> => {
-  return updateOrderRequest(orderId, { estado: 'Cancelada' });
+  const response = await api.patch(`/work-orders/${orderId}/cancel`);
+  const apiOrder = response.data?.data;
+  return mapApiOrderToOrder(apiOrder);
 };
 
 export const rejectOrderRequest = async (
@@ -244,4 +255,24 @@ export const rejectOrderRequest = async (
     estado: 'Cancelada',
     comentarios: motivo,
   });
+};
+
+// 🔹 Subir factura (Admin/Secretaria)
+export const uploadInvoiceRequest = async (
+  orderId: number,
+  file: File,
+): Promise<Order> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post(
+    `/work-orders/${orderId}/invoice`,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    },
+  );
+
+  const apiOrder = response.data?.data;
+  return mapApiOrderToOrder(apiOrder);
 };

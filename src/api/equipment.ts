@@ -1,17 +1,18 @@
-import api from './axios';
+// src/api/equipment.ts
+import api from "./axios";
 import type {
   Equipment,
   EquipmentPhoto,
   CreateEquipmentData,
-} from '../interfaces/EquipmentInterfaces';
+} from "../interfaces/EquipmentInterfaces";
 
-// Mapear foto
+// Mapear foto - CORREGIR
 const mapPhotoFromBackend = (p: any): EquipmentPhoto => ({
-  photoId: p.photoId,
+  photoId: p.id || p.photoId, // El backend devuelve 'id'
   equipmentId: p.equipmentId,
   url: p.url,
   description: p.description ?? null,
-  createdAt: p.createdAt,
+  createdAt: p.created_at || p.createdAt, // El backend devuelve 'created_at'
 });
 
 // Mapear equipment del backend al frontend
@@ -39,6 +40,7 @@ const mapEquipmentFromBackend = (data: any): Equipment => ({
         nombreSubArea: data.subArea.nombreSubArea,
       }
     : null,
+  orderId: data.orderId, 
   category: data.category,
   name: data.name,
   code: data.code ?? null,
@@ -62,11 +64,11 @@ const mapEquipmentFromBackend = (data: any): Equipment => ({
 
 export const getEquipmentByClientRequest = async (
   clientId: number,
-  search?: string,
+  search?: string
 ) => {
   const params = new URLSearchParams();
-  params.append('clientId', clientId.toString());
-  if (search) params.append('search', search);
+  params.append("clientId", clientId.toString());
+  if (search) params.append("search", search);
 
   const response = await api.get(`/equipment?${params.toString()}`);
   const data = response.data?.data || [];
@@ -74,14 +76,14 @@ export const getEquipmentByClientRequest = async (
 };
 
 export const getEquipmentByIdRequest = async (
-  equipmentId: number,
+  equipmentId: number
 ): Promise<Equipment> => {
   const response = await api.get(`/equipment/${equipmentId}`);
   return mapEquipmentFromBackend(response.data?.data);
 };
 
 export const createEquipmentRequest = async (
-  data: CreateEquipmentData,
+  data: CreateEquipmentData
 ): Promise<Equipment> => {
   const payload = {
     clientId: data.clientId,
@@ -102,13 +104,13 @@ export const createEquipmentRequest = async (
     notes: data.notes ?? null,
   };
 
-  const response = await api.post('/equipment', payload);
+  const response = await api.post("/equipment", payload);
   return mapEquipmentFromBackend(response.data?.data);
 };
 
 export const updateEquipmentRequest = async (
   equipmentId: number,
-  data: Partial<CreateEquipmentData>,
+  data: Partial<CreateEquipmentData>
 ): Promise<Equipment> => {
   const payload: any = {};
 
@@ -138,24 +140,27 @@ export const updateEquipmentRequest = async (
 
 export const addEquipmentPhotoRequest = async (
   equipmentId: number,
-  data: { url: string; description?: string },
+  file: File
 ): Promise<EquipmentPhoto> => {
-  const payload = {
-    url: data.url,
-    description: data.description ?? null,
-  };
+  const formData = new FormData();
+  formData.append("file", file);
 
   const response = await api.post(
-    `/equipment/${equipmentId}/photos`,
-    payload,
+    `/images/equipment/${equipmentId}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
-  const photoData = response.data?.data;
+
+  const photoData = response.data;
   return mapPhotoFromBackend(photoData);
 };
 
 export const deleteEquipmentPhotoRequest = async (
-  equipmentId: number,
-  photoId: number,
+  photoId: number
 ): Promise<void> => {
-  await api.delete(`/equipment/${equipmentId}/photos/${photoId}`);
+  await api.delete(`/images/${photoId}`);
 };

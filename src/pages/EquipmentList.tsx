@@ -460,6 +460,12 @@ export default function EquipmentListPage() {
                           <span className={listStyles.value}>{eq.code}</span>
                         </div>
                       )}
+                      {eq.orderId && (
+                        <div className={listStyles.row}>
+                          <span className={listStyles.label}>Orden ID:</span>
+                          <span className={listStyles.value}>{`#${eq.orderId}`}</span>
+                        </div>
+                      )}
                       <div className={listStyles.row}>
                         <span className={listStyles.label}>Categoría:</span>
                         <span className={listStyles.value}>{eq.category}</span>

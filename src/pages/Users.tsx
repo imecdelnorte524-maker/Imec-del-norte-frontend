@@ -125,12 +125,12 @@ export default function Users() {
             >
               📋 Gestión de Roles
             </button>
-            <button
+            {/* <button
               className={styles.btnSecondary}
               onClick={() => navigate('/clients')}
             >
               📋 Gestión de Clientes
-            </button>
+            </button> */}
             <button
               className={styles.btnPrimary}
               onClick={handleCreate}
