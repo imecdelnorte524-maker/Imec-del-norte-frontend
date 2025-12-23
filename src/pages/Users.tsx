@@ -154,12 +154,12 @@ export default function Users() {
                     <tr>
                       <th>Nombre</th>
                       <th>Email</th>
-                      <th>Usuario</th>
+                      {/* <th>Usuario</th> */}
                       <th>Cédula</th>
                       <th>Rol</th>
                       <th>Teléfono</th>
                       <th>Estado</th>
-                      <th>Fecha Registro</th>
+                      {/* <th>Fecha Registro</th> */}
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -172,7 +172,7 @@ export default function Users() {
                           </div>
                         </td>
                         <td>{usuario.email}</td>
-                        <td>{usuario.username}</td>
+                        {/* <td>{usuario.username}</td> */}
                         <td>{usuario.tipoCedula} {usuario.cedula}</td>
                         <td>
                           <span className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}>
@@ -185,9 +185,9 @@ export default function Users() {
                             {usuario.activo ? 'Activo' : 'Inactivo'}
                           </span>
                         </td>
-                        <td>
+                        {/* <td>
                           {new Date(usuario.fechaCreacion).toLocaleDateString()}
-                        </td>
+                        </td> */}
                         <td>
                           <div className={styles.actions}>
                             <button

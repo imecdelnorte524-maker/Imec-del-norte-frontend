@@ -1,5 +1,3 @@
-/* src/styles/components/sg-sst/FormDetailsModal.module.css */
-
 /* Variables para mantener consistencia */
 :root {
   --primary-color: #3b82f6;
@@ -45,7 +43,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Header */
@@ -329,6 +328,7 @@
   text-align: center;
 }
 
+/* No se usan directamente estas dos, pero se dejan por consistencia */
 .checkValue.good {
   background: #d1fae5;
   color: #065f46;
@@ -527,7 +527,8 @@
   opacity: 0.7;
 }
 
-.unauthorized, .alreadySigned {
+.unauthorized,
+.alreadySigned {
   text-align: center;
   padding: 40px var(--spacing-xl);
   color: var(--text-light);
@@ -602,7 +603,7 @@
   background: #f0fdf4;
 }
 
-.verificationCheckbox input[type="checkbox"] {
+.verificationCheckbox input[type='checkbox'] {
   width: 20px;
   height: 20px;
   border: 2px solid #d1d5db;
@@ -1061,6 +1062,44 @@
   line-height: 1.5;
 }
 
+/* ====== BOTÓN DESCARGAR PDF ====== */
+.downloadDescription {
+  margin-bottom: var(--spacing-lg);
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.downloadButton {
+  padding: var(--spacing-md) var(--spacing-2xl);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.downloadButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.downloadButton:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 /* ==================== RESPONSIVE MEDIA QUERIES ==================== */
 
 /* Tablets y móviles grandes (768px y menos) */
@@ -1070,112 +1109,113 @@
     max-height: 90vh;
     margin: 0;
   }
-  
+
   .header {
     padding: var(--spacing-lg);
   }
-  
+
   .title {
     font-size: 1.3rem;
   }
-  
+
   .tabs {
     padding: 0 var(--spacing-lg);
   }
-  
+
   .tab {
     padding: var(--spacing-md) var(--spacing-lg);
     font-size: 0.9rem;
   }
-  
+
   .content {
     padding: var(--spacing-lg);
   }
-  
+
   .detailSection {
     padding: var(--spacing-lg);
   }
-  
+
   .sectionTitle {
     font-size: 1.1rem;
   }
-  
+
   .detailGrid {
     grid-template-columns: 1fr;
     gap: var(--spacing-md);
   }
-  
+
   .risksContainer,
   .ppeContainer,
   .protectionList {
     grid-template-columns: 1fr;
   }
-  
+
   .ppeItem,
   .checkItem,
   .protectionItem {
     padding: var(--spacing-md);
   }
-  
+
   .signatureDetail {
     flex-direction: column;
     gap: var(--spacing-md);
     align-items: flex-start;
   }
-  
+
   .signatureImageContainer {
     margin-left: 0;
     align-self: flex-start;
     margin-top: var(--spacing-md);
   }
-  
+
   .signatureImageSmall {
     width: 100px;
     height: 50px;
   }
-  
+
   .formGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .verificationCheckbox {
     padding: var(--spacing-md);
   }
-  
+
   .authorizationActions {
     flex-direction: column;
   }
-  
+
   .authorizeButton {
     width: 100%;
   }
-  
+
   .signActions {
     flex-direction: column;
     gap: var(--spacing-md);
   }
-  
+
   .cancelButton,
-  .signButton {
+  .signButton,
+  .downloadButton {
     width: 100%;
     text-align: center;
   }
-  
+
   .summaryStats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .conclusionContent {
     flex-direction: column;
   }
-  
+
   .successConclusion,
   .warningConclusion {
     flex-direction: column;
     text-align: center;
     gap: var(--spacing-md);
   }
-  
+
   .conclusionIcon {
     align-self: center;
   }
@@ -1186,62 +1226,62 @@
   .overlay {
     padding: var(--spacing-sm);
   }
-  
+
   .modal {
     width: 100%;
     max-height: 85vh;
     border-radius: 6px;
   }
-  
+
   .header {
     padding: var(--spacing-md);
   }
-  
+
   .title {
     font-size: 1.2rem;
   }
-  
+
   .closeButton {
     padding: var(--spacing-xs);
     font-size: 1.3rem;
   }
-  
+
   .tabs {
     padding: 0 var(--spacing-md);
     overflow-x: auto;
   }
-  
+
   .tab {
     padding: var(--spacing-sm) var(--spacing-md);
     font-size: 0.85rem;
     min-width: 80px;
   }
-  
+
   .content {
     padding: var(--spacing-md);
   }
-  
+
   .detailSection {
     padding: var(--spacing-md);
     border-radius: 6px;
   }
-  
+
   .sectionTitle {
     font-size: 1rem;
     margin-bottom: var(--spacing-md);
     padding-bottom: var(--spacing-sm);
   }
-  
+
   .detailItem label {
     font-size: 0.85rem;
   }
-  
+
   .detailItem span {
     font-size: 0.9rem;
     padding: var(--spacing-sm) var(--spacing-md);
     min-height: 40px;
   }
-  
+
   .workDescription,
   .observations,
   .textValue {
@@ -1249,7 +1289,7 @@
     font-size: 0.9rem;
     min-height: 50px;
   }
-  
+
   .authorizationInfo,
   .verificationsSection,
   .authorizerSection,
@@ -1257,37 +1297,37 @@
     padding: var(--spacing-md);
     border-radius: 8px;
   }
-  
+
   .summaryStats {
     grid-template-columns: 1fr;
     gap: var(--spacing-sm);
   }
-  
+
   .statItem {
     padding: var(--spacing-md);
   }
-  
+
   .statNumber {
     font-size: 1.3rem;
   }
-  
+
   .signatureImage {
     max-width: 150px;
     max-height: 60px;
   }
-  
+
   .suggestionsList {
     max-height: 200px;
   }
-  
+
   .suggestionItem {
     padding: var(--spacing-sm) var(--spacing-md);
   }
-  
+
   .conclusionContent strong {
     font-size: 1rem;
   }
-  
+
   .conclusionContent p {
     font-size: 0.9rem;
   }
@@ -1298,33 +1338,33 @@
   .title {
     font-size: 1.1rem;
   }
-  
+
   .tab {
     padding: 10px 12px;
     font-size: 0.8rem;
   }
-  
+
   .detailGrid,
   .risksContainer,
   .ppeContainer,
   .protectionList {
     gap: 10px;
   }
-  
+
   .checkItem {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .checkValue {
     align-self: flex-start;
   }
-  
+
   .signatureInfo strong {
     font-size: 0.95rem;
   }
-  
+
   .signatureInfo small {
     font-size: 0.8rem;
   }
@@ -1335,16 +1375,16 @@
   .modal {
     max-height: 85vh;
   }
-  
+
   .overlay {
     align-items: flex-start;
     padding-top: 20px;
   }
-  
+
   .header {
     padding: 12px 16px;
   }
-  
+
   .content {
     max-height: 60vh;
   }
@@ -1355,11 +1395,11 @@
   .detailGrid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .summaryStats {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .risksContainer {
     grid-template-columns: repeat(2, 1fr);
   }

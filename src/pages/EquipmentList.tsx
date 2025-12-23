@@ -632,8 +632,9 @@ export default function EquipmentListPage() {
                   <label>Fabricante</label>
                   <input
                     name="manufacturer"
-                    value={createForm.manufacturer}
+                    value={createForm.brand}
                     onChange={handleCreateFormChange}
+                    disabled
                   />
                 </div>
 

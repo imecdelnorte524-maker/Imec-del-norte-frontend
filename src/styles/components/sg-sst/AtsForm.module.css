@@ -82,13 +82,15 @@
   background: white;
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 2px solid #e5e7eb;
   transition: all 0.3s ease;
 }
 
 .section:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .sectionIncomplete {
@@ -98,8 +100,13 @@
 }
 
 @keyframes pulseIncomplete {
-  0%, 100% { background-color: #fef2f2; }
-  50% { background-color: #fee2e2; }
+  0%,
+  100% {
+    background-color: #fef2f2;
+  }
+  50% {
+    background-color: #fee2e2;
+  }
 }
 
 .sectionHeader {
@@ -136,9 +143,15 @@
 }
 
 @keyframes pulseComplete {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .sectionSubtitle {
@@ -172,6 +185,13 @@
   margin-bottom: 1.5rem;
 }
 
+/* Layout específico para SECCIÓN 2 (Orden / Cliente) en escritorio */
+.section:nth-of-type(2) .formGrid {
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.2fr);
+  align-items: flex-start;
+}
+
+/* FORMULARIO - grupos */
 .formGroup {
   display: flex;
   flex-direction: column;
@@ -216,9 +236,16 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .textarea {
@@ -369,7 +396,7 @@
   transform: translateY(-1px);
 }
 
-.riskCheckbox input[type="checkbox"] {
+.riskCheckbox input[type='checkbox'] {
   width: 1.25rem;
   height: 1.25rem;
   border: 2px solid #d1d5db;
@@ -381,7 +408,7 @@
   min-height: 24px;
 }
 
-.riskCheckbox input[type="checkbox"]:checked {
+.riskCheckbox input[type='checkbox']:checked {
   background-color: #3b82f6;
   border-color: #3b82f6;
 }
@@ -435,7 +462,7 @@
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
 }
 
-.ppeCheckbox input[type="checkbox"] {
+.ppeCheckbox input[type='checkbox'] {
   width: 1.25rem;
   height: 1.25rem;
   border: 2px solid #d1d5db;
@@ -447,7 +474,7 @@
   min-height: 24px;
 }
 
-.ppeCheckbox input[type="checkbox"]:checked {
+.ppeCheckbox input[type='checkbox']:checked {
   background-color: #3b82f6;
   border-color: #3b82f6;
 }
@@ -487,7 +514,7 @@
   transform: translateY(-1px);
 }
 
-.toolCheckbox input[type="checkbox"] {
+.toolCheckbox input[type='checkbox'] {
   width: 1.125rem;
   height: 1.125rem;
   border: 2px solid #d1d5db;
@@ -499,7 +526,7 @@
   min-height: 24px;
 }
 
-.toolCheckbox input[type="checkbox"]:checked {
+.toolCheckbox input[type='checkbox']:checked {
   background-color: #10b981;
   border-color: #10b981;
 }
@@ -551,7 +578,7 @@
   background: #f0f9ff;
 }
 
-.privacyCheckbox input[type="checkbox"] {
+.privacyCheckbox input[type='checkbox'] {
   width: 1.25rem;
   height: 1.25rem;
   border: 2px solid #d1d5db;
@@ -564,7 +591,7 @@
   min-height: 24px;
 }
 
-.privacyCheckbox input[type="checkbox"]:checked {
+.privacyCheckbox input[type='checkbox']:checked {
   background-color: #3b82f6;
   border-color: #3b82f6;
 }
@@ -697,6 +724,7 @@
 /* =============================================
    CLIENTE - ESTILOS MEJORADOS
    ============================================= */
+
 .clientAutocompleteContainer {
   position: relative;
   width: 100%;
@@ -761,7 +789,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .clientSuggestionsList {
@@ -980,7 +1010,7 @@
 }
 
 /* =============================================
-   MEDIA QUERIES - RESPONSIVE (Nubia Neo GT 03)
+   MEDIA QUERIES - RESPONSIVE
    ============================================= */
 
 /* TABLET GRANDE (1024px o menos) */
@@ -1029,8 +1059,13 @@
   }
 
   .formGrid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1rem;
+  }
+
+  /* Mantener el layout de 2 columnas en sección 2 si hay espacio */
+  .section:nth-of-type(2) .formGrid {
+    grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.1fr);
   }
 
   .clientCardDetails {
@@ -1099,7 +1134,6 @@
     font-size: 1.25rem;
   }
 
-  /* CORRECCIÓN CRÍTICA: Cambié 0.5fr por 1fr */
   .formGrid {
     grid-template-columns: 1fr !important;
     gap: 1rem;
@@ -1109,7 +1143,9 @@
     width: 100%;
   }
 
-  .input, .textarea, select.input {
+  .input,
+  .textarea,
+  select.input {
     width: 100%;
   }
 
@@ -1158,7 +1194,7 @@
     margin-bottom: 0.5rem;
   }
 
-  /* Dropdowns móviles - CORREGIDO */
+  /* Dropdowns móviles como modal centrado */
   .clientSuggestionsList,
   .suggestionsList {
     position: fixed !important;
@@ -1174,21 +1210,17 @@
     border: 3px solid #3b82f6 !important;
   }
 
-  /* Fondo oscuro para dropdowns */
   .clientSuggestionsList::before,
   .suggestionsList::before {
     content: '';
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: -1;
   }
 }
 
-/* MÓVIL PEQUEÑO (480px o menos - Nubia Neo GT 03: 720x1600px) */
+/* MÓVIL PEQUEÑO (480px o menos) */
 @media (max-width: 480px) {
   .container {
     padding: 0.5rem;
@@ -1367,7 +1399,6 @@
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
 
-  /* Reducir altura máxima de listas de sugerencias */
   .clientSuggestionsList,
   .suggestionsList {
     max-height: 150px;
@@ -1376,7 +1407,6 @@
 
 /* MEJORAS PARA DISPOSITIVOS TÁCTILES */
 @media (hover: none) and (pointer: coarse) {
-  /* Feedback táctil */
   .riskCheckbox:active,
   .ppeCheckbox:active,
   .toolCheckbox:active,

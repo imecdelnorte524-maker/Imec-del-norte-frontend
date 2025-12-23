@@ -8,15 +8,29 @@
   padding: 0;
 }
 
+/* Para que el navegador adapte scrollbars/controles nativos al tema */
+:root {
+  color-scheme: light;
+  overflow: hidden;
+}
+
+:root[data-theme='dark'],
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-base);
   color: var(--text-primary);
   background-color: var(--background);
 }
 
 /* Reset básico para elementos de formulario */
-input, button, textarea, select {
+input,
+button,
+textarea,
+select {
   font-family: inherit;
   font-size: inherit;
 }
@@ -37,7 +51,7 @@ input, button, textarea, select {
   display: none;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 768px) { /* 768px ≈ --breakpoint-mobile */
   .hidden-mobile {
     display: block;
   }

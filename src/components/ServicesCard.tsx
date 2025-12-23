@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { Service } from '../interfaces/ServicesInterface';
-import { getStatusColor, getPriorityIcon, formatDateTime } from '../utils/statusUtils';
+import { getStatusClass, getPriorityIcon, formatDateTime } from '../utils/statusUtils';
 import styles from '../styles/components/ServicesCard.module.css';
 
 interface ServicesCardProps {
@@ -74,7 +74,7 @@ const ServicesCard: React.FC<ServicesCardProps> = ({ service, onClick }) => {
       </div>
 
       <div className={styles.cardFooter}>
-        <div className={`${styles.status} ${styles[getStatusColor(service.estado)]}`}>
+        <div className={`${styles.status} ${styles[getStatusClass('estado', service.estado)]}`}>
           {service.estado}
         </div>
         <div className={styles.serviceNumber}>

@@ -1,8 +1,8 @@
+// src/hooks/useOrders.ts
+
 import { useState, useEffect } from 'react';
 import {
   getAllOrdersRequest,
-  getMyAssignedOrdersRequest,
-  getMyClientOrdersRequest,
 } from '../api/orders';
 import type { Order } from '../interfaces/OrderInterfaces';
 
@@ -20,42 +20,33 @@ export const useOrders = (
         setLoading(true);
         setError(null);
 
-        let response: Order[] = [];
-
-        // El backend ya filtra por rol, así que podemos usar un solo endpoint
-        switch (userRole) {
-          case 'admin':
-            response = await getAllOrdersRequest();
-            break;
-          case 'tecnico':
-            response = await getMyAssignedOrdersRequest();
-            break;
-          case 'cliente':
-            response = await getMyClientOrdersRequest();
-            break;
-          default:
-            response = [];
-        }
+        // El backend ya filtra por rol usando el token:
+        // - Admin / Secretaria / Supervisor: todas
+        // - Técnico: solo sus órdenes
+        // - Cliente: solo sus órdenes
+        let response: Order[] = await getAllOrdersRequest();
 
         // Filtros adicionales en frontend (solo admin)
         let filteredOrders = response;
         if (userRole === 'admin') {
           if (filter === 'pending') {
-            // Pendientes sin técnico
+            // Pendientes sin técnico asignado
             filteredOrders = response.filter(
               (order) =>
                 order.estado === 'Pendiente' && !order.tecnico_id,
             );
           } else if (filter === 'assigned') {
             // Cualquier orden con técnico asignado
-            filteredOrders = response.filter((order) => order.tecnico_id);
+            filteredOrders = response.filter((order) => !!order.tecnico_id);
           }
         }
 
         setOrders(filteredOrders);
       } catch (err: any) {
         const errorMessage =
-          err.response?.data?.error || 'Error al cargar las órdenes';
+          err.response?.data?.error ||
+          err.response?.data?.message ||
+          'Error al cargar las órdenes';
         setError(errorMessage);
       } finally {
         setLoading(false);

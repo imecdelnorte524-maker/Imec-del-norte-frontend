@@ -12,8 +12,9 @@ import type {
 const mapStatusFromApi = (apiEstado: string): Order['estado'] => {
   switch (apiEstado) {
     case 'Solicitada sin asignar':
-    case 'Solicitada asignada':
       return 'Pendiente';
+    case 'Solicitada asignada':
+      return 'Asignada';
     case 'En proceso':
       return 'En Proceso';
     case 'Finalizada':
@@ -28,7 +29,9 @@ const mapStatusFromApi = (apiEstado: string): Order['estado'] => {
 const mapStatusToApi = (uiEstado: Order['estado']): string => {
   switch (uiEstado) {
     case 'Pendiente':
-      return 'Solicitada asignada'; // por simplicidad
+      return 'Solicitada sin asignar';
+    case 'Asignada':
+      return 'Solicitada asignada';
     case 'En Proceso':
       return 'En proceso';
     case 'Completado':
@@ -47,6 +50,12 @@ const mapBillingFromApi = (apiEstado: string | undefined): BillingEstado => {
 };
 
 const mapApiOrderToOrder = (apiOrder: any): Order => {
+  // El backend devuelve "equipos" (array). Tomamos el primero para el frontend actual.
+  const firstEquipment =
+    Array.isArray(apiOrder.equipos) && apiOrder.equipos.length > 0
+      ? apiOrder.equipos[0]
+      : null;
+
   return {
     orden_id: apiOrder.ordenId,
     servicio_id: apiOrder.service?.servicioId ?? 0,
@@ -78,7 +87,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
       nombre: apiOrder.cliente?.nombre ?? '',
       apellido: apiOrder.cliente?.apellido ?? null,
       email: apiOrder.cliente?.email ?? '',
-      telefono: null,
+      telefono: apiOrder.cliente?.telefono ?? null,
     },
 
     tecnico: apiOrder.tecnico
@@ -101,12 +110,13 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
         }
       : null,
 
-    equipo: apiOrder.equipo
+    // Tomamos solo el primer equipo (si existe) para el modelo actual
+    equipo: firstEquipment
       ? {
-          equipo_id: apiOrder.equipo.equipmentId,
-          nombre: apiOrder.equipo.name,
-          codigo: apiOrder.equipo.code ?? null,
-          categoria: apiOrder.equipo.category ?? null,
+          equipo_id: firstEquipment.equipmentId,
+          nombre: firstEquipment.name,
+          codigo: firstEquipment.code ?? null,
+          categoria: firstEquipment.category ?? null,
         }
       : null,
 
@@ -115,7 +125,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
   };
 };
 
-// Admin / Secretaria (ven todo)
+// Admin / Secretaria (ven todo; backend ya filtra por rol)
 export const getAllOrdersRequest = async (filters?: {
   status?: string;
   startDate?: string;
@@ -126,8 +136,10 @@ export const getAllOrdersRequest = async (filters?: {
   if (filters?.status) {
     params.append('estado', filters.status);
   }
-  if (filters?.startDate && filters?.endDate) {
+  if (filters?.startDate) {
     params.append('fecha-inicio', filters.startDate);
+  }
+  if (filters?.endDate) {
     params.append('fecha-fin', filters.endDate);
   }
 
@@ -137,33 +149,17 @@ export const getAllOrdersRequest = async (filters?: {
   return data.map(mapApiOrderToOrder);
 };
 
-// Técnico: filtra por su ID
+// Técnico: usa el mismo endpoint; el backend filtra por tecnicoId del token
 export const getMyAssignedOrdersRequest = async (): Promise<Order[]> => {
-  const userStr = localStorage.getItem('user');
-  if (!userStr) return [];
-  const user = JSON.parse(userStr);
-  const tecnicoId = user?.usuarioId;
-  if (!tecnicoId) return [];
-
-  const response = await api.get(`/work-orders?tecnico=${tecnicoId}`);
+  const response = await api.get('/work-orders');
   const data = response.data?.data || [];
   return data.map(mapApiOrderToOrder);
 };
 
-// Cliente: filtra por su ID
+// Cliente: usa el mismo endpoint; el backend filtra por clienteId del token
 export const getMyClientOrdersRequest = async (): Promise<Order[]> => {
   try {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return [];
-
-    const user = JSON.parse(userStr);
-    const clienteId = user?.usuarioId;
-    if (!clienteId) return [];
-
-    const response = await api.get(
-      `/work-orders?cliente=${encodeURIComponent(clienteId.toString())}`,
-    );
-
+    const response = await api.get('/work-orders');
     const data = response.data?.data || [];
     return data.map(mapApiOrderToOrder);
   } catch (error: any) {
@@ -234,13 +230,22 @@ export const assignTechnicianRequest = async (
   return mapApiOrderToOrder(apiOrder);
 };
 
+// Desasignar técnico
+export const unassignTechnicianRequest = async (
+  orderId: number,
+): Promise<Order> => {
+  const response = await api.delete(`/work-orders/${orderId}/technician`);
+  const apiOrder = response.data?.data;
+  return mapApiOrderToOrder(apiOrder);
+};
+
 export const getOrderByIdRequest = async (orderId: number): Promise<Order> => {
   const response = await api.get(`/work-orders/${orderId}`);
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
 };
 
-// 🔹 Cliente: cancelar usando endpoint específico PATCH /work-orders/:id/cancel
+// Cliente: cancelar usando endpoint específico PATCH /work-orders/:id/cancel
 export const cancelOrderRequest = async (orderId: number): Promise<Order> => {
   const response = await api.patch(`/work-orders/${orderId}/cancel`);
   const apiOrder = response.data?.data;
@@ -257,7 +262,7 @@ export const rejectOrderRequest = async (
   });
 };
 
-// 🔹 Subir factura (Admin/Secretaria)
+// Subir factura (Admin/Secretaria)
 export const uploadInvoiceRequest = async (
   orderId: number,
   file: File,

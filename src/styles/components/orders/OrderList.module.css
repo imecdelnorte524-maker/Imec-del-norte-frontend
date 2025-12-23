@@ -1,5 +1,6 @@
 .container {
   padding: var(--spacing-lg);
+  box-sizing: border-box;
 }
 
 .ordersGrid {
@@ -9,6 +10,7 @@
   margin-top: var(--spacing-lg);
 }
 
+/* Tarjeta de orden */
 .orderCard {
   background: var(--white);
   border: 1px solid var(--gray-200);
@@ -17,6 +19,8 @@
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .orderCard:hover {
@@ -31,6 +35,7 @@
   align-items: flex-start;
   margin-bottom: var(--spacing-md);
   gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .cardHeader h3 {
@@ -48,6 +53,7 @@
   font-weight: 500;
   background: var(--primary-50);
   color: var(--primary-700);
+  white-space: nowrap;
 }
 
 .serviceInfo {
@@ -66,18 +72,22 @@
   font-size: var(--font-size-sm);
 }
 
+/* Información de cliente */
 .clientInfo {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-md);
+  min-width: 0;
 }
 
 .clientInfo span {
   color: var(--gray-600);
   font-size: var(--font-size-sm);
+  word-break: break-word;
 }
 
+/* Fechas */
 .dates {
   display: flex;
   flex-direction: column;
@@ -88,6 +98,7 @@
 .dates span {
   color: var(--gray-500);
   font-size: var(--font-size-xs);
+  word-break: break-word;
 }
 
 /* Footer de la tarjeta: estado + facturación + botón */
@@ -116,6 +127,7 @@
   letter-spacing: 0.5px;
 }
 
+/* Colores de estado (pill) */
 .statusPending {
   background: #ffffff;
   color: #d97706;
@@ -145,6 +157,8 @@
   color: #dc2626;
   border: 1px solid #ff8c8c;
 }
+
+/* Colores de fondo de la tarjeta según estado */
 .orderCardPending {
   background: #fffbeb;
   color: #d97706;
@@ -239,6 +253,12 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .ordersGrid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .ordersGrid {
     grid-template-columns: 1fr;
@@ -246,17 +266,39 @@
 
   .cardHeader {
     flex-direction: column;
-    gap: var(--spacing-sm);
+    align-items: flex-start;
   }
 
   .cardFooter {
     flex-direction: column;
-    gap: var(--spacing-sm);
     align-items: stretch;
   }
 
   .viewButton {
     width: 100%;
     text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
+  .orderCard {
+    padding: var(--spacing-md);
+  }
+
+  .cardHeader h3 {
+    font-size: var(--font-size-base);
+  }
+
+  .serviceBadge {
+    font-size: var(--font-size-2xs);
+  }
+
+  .status,
+  .billingBadge {
+    font-size: var(--font-size-2xs);
   }
 }

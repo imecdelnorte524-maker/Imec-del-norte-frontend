@@ -188,7 +188,7 @@ export default function UserModal({
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label htmlFor="nombre">Nombre *</label>
+              <label htmlFor="nombre">Nombre </label>
               <input
                 type="text"
                 id="nombre"
@@ -202,7 +202,7 @@ export default function UserModal({
               />
             </div>
             <div className={styles.formGroup}>
-              <label htmlFor="apellido">Apellido *</label>
+              <label htmlFor="apellido">Apellido </label>
               <input
                 type="text"
                 id="apellido"
@@ -219,7 +219,7 @@ export default function UserModal({
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label htmlFor="tipoCedula">Tipo Cédula *</label>
+              <label htmlFor="tipoCedula">Tipo Cédula </label>
               <select
                 id="tipoCedula"
                 name="tipoCedula"
@@ -234,7 +234,7 @@ export default function UserModal({
               </select>
             </div>
             <div className={styles.formGroup}>
-              <label htmlFor="cedula">Cédula *</label>
+              <label htmlFor="cedula">Cédula </label>
               <input
                 type="text"
                 id="cedula"
@@ -252,7 +252,7 @@ export default function UserModal({
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="email">Email *</label>
+            <label htmlFor="email">Email </label>
             <input
               type="email"
               id="email"
@@ -267,7 +267,7 @@ export default function UserModal({
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="username">Nombre de Usuario *</label>
+            <label htmlFor="username">Nombre de Usuario </label>
             <input
               type="text"
               id="username"
@@ -283,7 +283,7 @@ export default function UserModal({
 
           <div className={styles.formGroup}>
             <label htmlFor="password">
-              Contraseña {!editingUser && '*'}
+              Contraseña {!editingUser && ''}
             </label>
             <input
               type="password"
@@ -319,7 +319,7 @@ export default function UserModal({
               />
             </div>
             <div className={styles.formGroup}>
-              <label htmlFor="rolId">Rol *</label>
+              <label htmlFor="rolId">Rol </label>
               <select
                 id="rolId"
                 name="rolId"

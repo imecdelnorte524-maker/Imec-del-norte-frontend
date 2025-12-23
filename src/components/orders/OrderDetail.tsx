@@ -1,3 +1,5 @@
+// src/components/orders/OrderDetail.tsx
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -6,6 +8,7 @@ import {
   rejectOrderRequest,
   assignTechnicianRequest,
   uploadInvoiceRequest,
+  unassignTechnicianRequest,
 } from "../../api/orders";
 import { users } from "../../api/users";
 import type { Order, UpdateOrderData } from "../../interfaces/OrderInterfaces";
@@ -50,9 +53,9 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     RECHAZADA: "Rechazada" as const,
   };
 
-  // Cargar técnicos desde backend (solo Admin)
+  // Cargar técnicos desde backend (Admin y Secretaria)
   useEffect(() => {
-    if (userRole !== "admin") return;
+    if (userRole !== "admin" && userRole !== "secretaria") return;
 
     const loadTechnicians = async () => {
       try {
@@ -116,6 +119,24 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
+  const handleUnassignTechnician = async () => {
+    if (!order.tecnico) return;
+
+    setLoading(true);
+    try {
+      await unassignTechnicianRequest(order.orden_id);
+      onBack();
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Error al quitar el técnico de la orden"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRejectOrder = async () => {
     if (!rejectReason.trim()) return;
 
@@ -167,7 +188,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     try {
       await uploadInvoiceRequest(order.orden_id, invoiceFile);
       setShowInvoiceModal(false);
-      onBack(); // refrescamos vista volviendo al listado (o podrías recargar la orden)
+      onBack(); // refrescamos vista volviendo al listado
     } catch (err: any) {
       console.error("Error subiendo factura:", err);
       setInvoiceError(
@@ -218,6 +239,9 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const isMaintenance = tipoTrabajo === "Mantenimiento";
   const hasEquipment = !!order.equipo;
 
+  const isBilled = order.estado_facturacion === "Facturado";
+  const isReadOnly = isBilled;
+
   const canUploadInvoice =
     (userRole === "admin" || userRole === "secretaria") &&
     order.estado === validStatuses.COMPLETADO &&
@@ -252,9 +276,9 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
               href={`${apiUrl}${order.factura_pdf_url}`}
               target="_blank"
               rel="noreferrer"
-              className={styles.invoiceLink}
+              className={styles.invoiceLinkButton}
             >
-              Ver factura
+              Ver factura PDF
             </a>
           )}
         </div>
@@ -278,7 +302,11 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           </div>
           <div className={styles.detailItem}>
             <strong>Teléfono:</strong>
-            <span>{order.cliente.telefono || "No proporcionado"}</span>
+            <span>
+              {order.cliente_empresa?.telefono ||
+                order.cliente.telefono ||
+                "No proporcionado"}
+            </span>
           </div>
           {order.cliente_empresa && (
             <>
@@ -420,7 +448,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             <p>
               Esta orden corresponde a un{" "}
               <strong>
-                Mantenimiento{tipoMantenimiento ? ` ${tipoMantenimiento}` : ""}
+                Mantenimiento
+                {tipoMantenimiento ? ` ${tipoMantenimiento}` : ""}
               </strong>{" "}
               de un equipo ({categoria}), pero aún no hay una hoja de vida
               asociada.
@@ -438,7 +467,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
       {/* Acciones según el rol */}
       <div className={styles.actions}>
-        {/* Ver equipos de la empresa (cualquiera que vea la orden) */}
+        {/* Ver equipos de la empresa (cualquiera que vea la orden, incluso facturada) */}
         {order.cliente_empresa && (
           <button
             type="button"
@@ -449,6 +478,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                   clientId: order.cliente_empresa?.id_cliente ?? null,
                   clientName: order.cliente_empresa?.nombre ?? "",
                   clientNit: order.cliente_empresa?.nit ?? "",
+                  workOrderId: order.orden_id,
                 },
               })
             }
@@ -458,18 +488,20 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         )}
 
         {/* Cliente: puede cancelar su orden pendiente (frontend; backend valida 3 días hábiles) */}
-        {userRole === "cliente" && order.estado === validStatuses.PENDIENTE && (
-          <button
-            onClick={handleCancelOrder}
-            disabled={loading}
-            className={styles.cancelButton}
-          >
-            Cancelar Orden
-          </button>
-        )}
+        {userRole === "cliente" &&
+          order.estado === validStatuses.PENDIENTE &&
+          !isReadOnly && (
+            <button
+              onClick={handleCancelOrder}
+              disabled={loading}
+              className={styles.cancelButton}
+            >
+              Cancelar Orden
+            </button>
+          )}
 
-        {/* Técnico: puede iniciar, completar y crear equipo */}
-        {userRole === "tecnico" && order.tecnico_id && (
+        {/* Técnico: puede iniciar, completar y crear equipo (solo si no está facturada) */}
+        {userRole === "tecnico" && order.tecnico_id && !isReadOnly && (
           <>
             {order.estado === validStatuses.EN_PROCESO && (
               <>
@@ -510,31 +542,50 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           </>
         )}
 
-        {/* Admin: puede asignar y rechazar */}
-        {userRole === "admin" && (
-          <div className={styles.adminActions}>
-            {order.estado !== validStatuses.CANCELADA &&
-              order.estado !== validStatuses.RECHAZADA && (
-                <>
-                  <button
-                    onClick={() => setShowAssignForm(true)}
-                    className={styles.assignButton}
-                  >
-                    Asignar Técnico
-                  </button>
-                  <button
-                    onClick={() => setShowRejectForm(true)}
-                    className={styles.rejectButton}
-                  >
-                    Rechazar Orden
-                  </button>
-                </>
-              )}
-          </div>
-        )}
+        {/* Admin / Secretaria: pueden asignar técnico.
+            Solo Admin puede rechazar la orden.
+            Ninguna acción si la orden está facturada (solo lectura). */}
+        {(userRole === "admin" || userRole === "secretaria") &&
+          !isReadOnly && (
+            <div className={styles.adminActions}>
+              {order.estado !== validStatuses.CANCELADA &&
+                order.estado !== validStatuses.RECHAZADA && (
+                  <>
+                    <button
+                      onClick={() => setShowAssignForm(true)}
+                      className={styles.assignButton}
+                    >
+                      {order.tecnico ? "Cambiar Técnico" : "Asignar Técnico"}
+                    </button>
 
-        {/* Admin / Secretaria: subir factura */}
-        {canUploadInvoice && (
+                    {/* Solo admin puede rechazar */}
+                    {userRole === "admin" && (
+                      <button
+                        onClick={() => setShowRejectForm(true)}
+                        className={styles.rejectButton}
+                      >
+                        Rechazar Orden
+                      </button>
+                    )}
+
+                    {/* Quitar técnico: solo cuando hay técnico y la orden está Pendiente */}
+                    {order.tecnico &&
+                      order.estado === validStatuses.PENDIENTE && (
+                        <button
+                          onClick={handleUnassignTechnician}
+                          disabled={loading}
+                          className={styles.cancelButton}
+                        >
+                          Quitar Técnico
+                        </button>
+                      )}
+                  </>
+                )}
+            </div>
+          )}
+
+        {/* Admin / Secretaria: subir factura (solo si no está facturada aún) */}
+        {canUploadInvoice && !isReadOnly && (
           <button
             type="button"
             onClick={() => {
@@ -551,7 +602,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       </div>
 
       {/* Modal para asignar técnico */}
-      {showAssignForm && userRole === "admin" && (
+      {showAssignForm && (userRole === "admin" || userRole === "secretaria") && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <h3>Asignar Técnico</h3>
@@ -592,8 +643,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         </div>
       )}
 
-      {/* Modal para rechazar orden */}
-      {showRejectForm && userRole === "admin" && (
+      {/* Modal para rechazar orden (solo admin) */}
+      {showRejectForm && userRole === "admin" && !isReadOnly && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <h3>Rechazar Orden</h3>
@@ -619,7 +670,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       )}
 
       {/* Modal para subir factura */}
-      {showInvoiceModal && (
+      {showInvoiceModal && !isReadOnly && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeaderRow}>

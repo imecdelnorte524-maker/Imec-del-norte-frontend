@@ -2,9 +2,9 @@
 
 export type OrderEstado =
   | 'Pendiente'
-  | 'Solicitada asignada'
+  | 'Asignada'
   | 'En Proceso'
-  | 'Completado' 
+  | 'Completado'
   | 'Cancelada'
   | 'Rechazada';
 
@@ -21,7 +21,7 @@ export interface Order {
   estado: OrderEstado;
   comentarios: string | null;
 
-  // 🔹 Nuevo: facturación
+  // Facturación
   estado_facturacion: BillingEstado;
   factura_pdf_url?: string | null;
 
@@ -51,6 +51,7 @@ export interface Order {
     email: string;
   } | null;
 
+  // Cliente empresa asociado a la orden
   cliente_empresa?: {
     id_cliente: number;
     nombre: string;
@@ -58,6 +59,11 @@ export interface Order {
     email: string;
     telefono: string;
     localizacion: string;
+
+    // Campos adicionales que sí vienen del backend
+    direccion?: string | null;
+    contacto?: string | null;
+    id_usuario_contacto?: number | null;
   } | null;
 
   equipo?: {

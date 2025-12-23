@@ -1,8 +1,3 @@
-/**
- * Checklists preoperacionales por tipo de herramienta
- * Basado en los documentos proporcionados
- */
-
 // Tipos básicos
 export interface ChecklistParameter {
   id: string;

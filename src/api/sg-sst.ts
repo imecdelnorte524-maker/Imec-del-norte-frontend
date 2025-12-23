@@ -1,5 +1,3 @@
-// src/api/sg-sst.ts
-
 import api from './axios';
 import type {
   AtsFormData,
@@ -9,7 +7,7 @@ import type {
   ApiResponse,
   FormsListResponse,
   FormDetailResponse,
-  SgSstStats
+  SgSstStats,
 } from '../interfaces/SgSstInterface';
 
 export const sgSstService = {
@@ -25,30 +23,44 @@ export const sgSstService = {
     return response.data;
   },
 
-  createHeightWorkWithSignature: async (data: HeightWorkFormData): Promise<ApiResponse> => {
+  createHeightWorkWithSignature: async (
+    data: HeightWorkFormData,
+  ): Promise<ApiResponse> => {
     const response = await api.post('/sg-sst/height-work-with-signature', data);
     return response.data;
   },
 
   // ========== TRABAJO EN ALTURAS ==========
-  createHeightWork: async (data: HeightWorkFormData): Promise<ApiResponse> => {
+  createHeightWork: async (
+    data: HeightWorkFormData,
+  ): Promise<ApiResponse> => {
     const response = await api.post('/sg-sst/height-work', data);
     return response.data;
   },
-  
+
   // ========== PREOPERACIONAL ==========
-  createPreoperational: async (data: PreoperationalFormData): Promise<ApiResponse> => {
+  createPreoperational: async (
+    data: PreoperationalFormData,
+  ): Promise<ApiResponse> => {
     const response = await api.post('/sg-sst/preoperational', data);
     return response.data;
   },
-  
-  createPreoperationalWithSignature: async (data: PreoperationalFormData): Promise<ApiResponse> => {
-    const response = await api.post('/sg-sst/preoperational-with-signature', data);
+
+  createPreoperationalWithSignature: async (
+    data: PreoperationalFormData,
+  ): Promise<ApiResponse> => {
+    const response = await api.post(
+      '/sg-sst/preoperational-with-signature',
+      data,
+    );
     return response.data;
   },
-  
+
   // ========== FIRMAS ==========
-  signForm: async (formId: number, data: SignFormData): Promise<ApiResponse> => {
+  signForm: async (
+    formId: number,
+    data: SignFormData,
+  ): Promise<ApiResponse> => {
     const response = await api.post(`/sg-sst/forms/${formId}/sign`, data);
     return response.data;
   },
@@ -76,9 +88,12 @@ export const sgSstService = {
   },
 
   // ========== UTILIDAD ==========
-  canEditForm: async (formId: number, userId: number): Promise<ApiResponse<{ canEdit: boolean }>> => {
+  canEditForm: async (
+    formId: number,
+    userId: number,
+  ): Promise<ApiResponse<{ canEdit: boolean }>> => {
     const response = await api.get(`/sg-sst/forms/${formId}/can-edit`, {
-      params: { userId }
+      params: { userId },
     });
     return response.data;
   },
@@ -88,16 +103,29 @@ export const sgSstService = {
     return response.data;
   },
 
+  // DESCARGA DIRECTA DE PDF (blob)
+  downloadPdf: async (formId: number) => {
+    const response = await api.get(`/sg-sst/forms/${formId}/download-pdf`, {
+      responseType: 'blob',
+    });
+    return response; // AxiosResponse<Blob>
+  },
+
   // ========== DASHBOARD ==========
-  getDashboardStats: async (userId?: number): Promise<ApiResponse<SgSstStats>> => {
+  getDashboardStats: async (
+    userId?: number,
+  ): Promise<ApiResponse<SgSstStats>> => {
     const params = userId ? { userId } : {};
     const response = await api.get('/sg-sst/dashboard/stats', { params });
     return response.data;
   },
-  
+
   authorizeHeightWork: async (formId: number, authorizationData: any) => {
     try {
-      const response = await api.post(`/sg-sst/forms/${formId}/authorize-height-work`, authorizationData);
+      const response = await api.post(
+        `/sg-sst/forms/${formId}/authorize-height-work`,
+        authorizationData,
+      );
       return response.data;
     } catch (error) {
       console.error('Error autorizando trabajo en alturas:', error);

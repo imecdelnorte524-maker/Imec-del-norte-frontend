@@ -1,6 +1,6 @@
 /* src/styles/components/inventory/AddInventoryModal.module.css */
 
-/* Estilos base */
+/* Estilos base responsivos */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -12,24 +12,39 @@
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 20px;
+  padding: clamp(10px, 3vw, 20px);
+  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border-radius: clamp(8px, 2vw, 12px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: 600px;
-  max-height: 90vh;
+  max-width: min(95vw, 600px);
+  max-height: min(90vh, 800px);
   overflow-y: auto;
   animation: modalSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
 }
 
 @keyframes modalSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-30px) scale(0.9);
+    transform: translateY(-20px) scale(0.95);
   }
   to {
     opacity: 1;
@@ -42,40 +57,46 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px;
+  padding: clamp(16px, 3vw, 24px);
   border-bottom: 1px solid #e5e7eb;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
-  border-radius: 12px 12px 0 0;
+  border-radius: clamp(8px, 2vw, 12px) clamp(8px, 2vw, 12px) 0 0;
   position: sticky;
   top: 0;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .modalHeader h2 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .closeButton {
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  font-size: 1.5rem;
-  width: 32px;
-  height: 32px;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  width: clamp(32px, 6vw, 36px);
+  height: clamp(32px, 6vw, 36px);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
   flex-shrink: 0;
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .closeButton:hover {
   background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
 }
 
 /* Tabs */
@@ -84,13 +105,15 @@
   border-bottom: 1px solid #e5e7eb;
   background: #f8fafc;
   position: sticky;
-  top: 73px;
+  top: clamp(64px, 13vw, 73px);
   z-index: 9;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 .tab {
-  flex: 1;
-  padding: 16px 20px;
+  flex: 1 1 auto;
+  padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 20px);
   border: none;
   background: transparent;
   cursor: pointer;
@@ -98,8 +121,12 @@
   color: #6b7280;
   transition: all 0.2s;
   border-bottom: 3px solid transparent;
-  font-size: 0.95rem;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
   white-space: nowrap;
+  min-width: min(150px, 50%);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tab:hover {
@@ -111,25 +138,28 @@
   color: #10b981;
   border-bottom-color: #10b981;
   background: white;
+  font-weight: 600;
 }
 
 /* Body y Formulario */
 .modalBody {
   padding: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .form {
-  padding: 24px;
+  padding: clamp(16px, 3vw, 24px);
 }
 
 .formRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
+  gap: clamp(12px, 2vw, 16px);
 }
 
 .formGroup {
-  margin-bottom: 20px;
+  margin-bottom: clamp(16px, 2vw, 20px);
 }
 
 .formGroup label {
@@ -137,25 +167,28 @@
   margin-bottom: 6px;
   font-weight: 500;
   color: #374151;
-  font-size: 0.9rem;
+  font-size: clamp(0.85rem, 2vw, 0.9rem);
+  line-height: 1.4;
 }
 
 .required {
   color: #dc2626;
   font-weight: bold;
+  margin-left: 2px;
 }
 
 .input,
 .select,
 .textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: clamp(10px, 2vw, 12px) clamp(12px, 2vw, 14px);
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: clamp(0.9rem, 2vw, 0.95rem);
   transition: all 0.2s;
   background-color: white;
   box-sizing: border-box;
+  line-height: 1.5;
 }
 
 .input:focus,
@@ -166,18 +199,162 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
 .textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: clamp(60px, 10vw, 80px);
   font-family: inherit;
+  line-height: 1.5;
 }
 
 .helpText {
   color: #6b7280;
-  font-size: 0.8rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.8rem);
   margin-top: 4px;
   display: block;
   line-height: 1.4;
+}
+
+/* Campos de moneda */
+.currencyInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.currencySymbol {
+  position: absolute;
+  left: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 1;
+  font-size: clamp(0.9rem, 2vw, 0.95rem);
+}
+
+.currencyInput .input {
+  padding-left: 30px;
+}
+
+/* Sección de carga de imágenes */
+.fileUpload {
+  margin-top: 8px;
+}
+
+.imageControls {
+  display: flex;
+  gap: clamp(8px, 1.5vw, 12px);
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileButton {
+  background: #f3f4f6;
+  border: 2px solid #d1d5db;
+  color: #374151;
+  padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: clamp(0.85rem, 2vw, 0.9rem);
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  justify-content: center;
+  flex: 1;
+}
+
+.fileButton:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.removeFile {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: clamp(0.85rem, 2vw, 0.9rem);
+  transition: all 0.2s;
+  font-weight: 500;
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.removeFile:hover {
+  background-color: #fee2e2;
+  border-color: #f87171;
+}
+
+.fileInfo {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: clamp(8px, 1.5vw, 10px) clamp(10px, 1.5vw, 12px);
+  margin: 12px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: clamp(0.85rem, 2vw, 0.9rem);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fileName {
+  font-weight: 500;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.fileSize {
+  color: #6b7280;
+  font-size: clamp(0.75rem, 1.5vw, 0.8rem);
+  flex-shrink: 0;
+}
+
+.preview {
+  margin: 16px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: min(300px, 100%);
+  max-height: 200px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
 }
 
 /* Mensajes de error */
@@ -185,49 +362,64 @@
   background-color: #fef2f2;
   border: 1px solid #fecaca;
   color: #dc2626;
-  padding: 12px 16px;
+  padding: clamp(10px, 2vw, 12px) clamp(14px, 2vw, 16px);
   border-radius: 6px;
-  margin: 0 24px 24px 24px;
-  font-size: 0.9rem;
+  margin: 0 clamp(16px, 3vw, 24px) clamp(16px, 2vw, 20px);
+  font-size: clamp(0.85rem, 2vw, 0.9rem);
+  text-align: center;
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 .errorText {
   display: block;
   margin-top: 4px;
   color: #dc2626;
-  font-size: 0.8rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.8rem);
   font-weight: 500;
 }
 
 /* Loading */
 .loading {
   text-align: center;
-  padding: 40px;
+  padding: clamp(30px, 6vw, 40px);
   color: #6b7280;
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 2vw, 1rem);
 }
 
 /* Botones de acción */
 .formActions {
   display: flex;
-  gap: 12px;
+  gap: clamp(8px, 2vw, 12px);
   justify-content: flex-end;
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
 }
 
 .btnPrimary {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: clamp(10px, 2vw, 12px) clamp(16px, 3vw, 20px);
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.95rem;
-  min-width: 120px;
+  font-size: clamp(0.9rem, 2vw, 1rem);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  min-width: min(120px, 100%);
 }
 
 .btnPrimary:hover:not(:disabled) {
@@ -245,268 +437,301 @@
   background: #6b7280;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: clamp(10px, 2vw, 12px) clamp(16px, 3vw, 20px);
   border-radius: 6px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.95rem;
-  min-width: 100px;
+  font-size: clamp(0.9rem, 2vw, 1rem);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+  min-width: min(120px, 100%);
 }
 
 .btnSecondary:hover:not(:disabled) {
   background: #4b5563;
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btnSecondary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* Campos de moneda */
-.currencyInput {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.currencySymbol {
-  position: absolute;
-  left: 12px;
-  color: #6b7280;
-  font-weight: 500;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.currencyInput .input {
-  padding-left: 30px;
-}
-
-/* Sección de carga de imágenes */
-.imageUploadSection {
-  border: 2px dashed #d1d5db;
-  border-radius: 8px;
-  padding: 16px;
-  background-color: #f9fafb;
-  margin-top: 8px;
-}
-
-.imageControls {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.fileInput {
-  display: none;
-}
-
-.fileButton {
-  background: #f3f4f6;
-  border: 2px solid #d1d5db;
-  color: #374151;
-  padding: 10px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-}
-
-.fileButton:hover {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-}
-
-.removeButton {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
-  padding: 10px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-  font-weight: 500;
-}
-
-.removeButton:hover {
-  background-color: #fee2e2;
-  border-color: #f87171;
-}
-
-.fileInfo {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 6px;
-  padding: 10px 12px;
-  margin: 12px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-}
-
-.fileName {
-  font-weight: 500;
-  color: #374151;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 70%;
-}
-
-.fileSize {
-  color: #6b7280;
-  font-size: 0.8rem;
-}
-
-.imagePreview {
-  position: relative;
-  margin: 16px 0;
-  border-radius: 8px;
-  overflow: hidden;
-  max-width: 200px;
-  max-height: 200px;
-  border: 1px solid #e5e7eb;
-}
-
-.previewImage {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.previewOverlay {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 4px;
-  text-align: center;
-  font-size: 12px;
-}
-
-/* Responsive Design */
+/* Media Queries para responsividad mejorada */
 @media (max-width: 768px) {
-  .modalOverlay {
-    padding: 10px;
-  }
-
   .modal {
-    max-height: 95vh;
+    max-height: 85vh;
+    margin: 10px;
   }
-
-  .modalHeader {
-    padding: 16px 20px;
+  
+  .tabs {
+    top: clamp(60px, 12vw, 70px);
+    flex-direction: row;
   }
-
-  .modalHeader h2 {
-    font-size: 1.3rem;
-  }
-
+  
   .tab {
-    padding: 12px 16px;
-    font-size: 0.9rem;
+    min-width: min(140px, 50%);
+    padding: 12px 14px;
   }
-
-  .form {
-    padding: 20px;
-  }
-
-  .formRow {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .formGroup {
-    margin-bottom: 16px;
-  }
-
-  .input,
-  .select,
-  .textarea {
-    padding: 8px 10px;
-    font-size: 0.9rem;
-  }
-
+  
   .formActions {
-    flex-direction: column-reverse;
-    gap: 10px;
+    flex-direction: column;
   }
-
+  
   .btnPrimary,
   .btnSecondary {
     width: 100%;
-    padding: 12px 20px;
+    min-width: 100%;
   }
-
+  
   .imageControls {
     flex-direction: column;
-    gap: 8px;
   }
-
+  
   .fileButton,
-  .removeButton {
+  .removeFile {
     width: 100%;
     justify-content: center;
   }
-
-  .imagePreview {
-    max-width: 150px;
+  
+  .preview {
+    max-width: min(250px, 100%);
+    max-height: 150px;
+  }
+  
+  .preview img {
     max-height: 150px;
   }
 }
 
 @media (max-width: 480px) {
+  .modalOverlay {
+    padding: 10px;
+  }
+  
+  .modal {
+    max-height: 90vh;
+  }
+  
   .modalHeader {
-    padding: 12px 16px;
+    padding: 16px;
   }
-
+  
   .modalHeader h2 {
-    font-size: 1.2rem;
+    font-size: clamp(1.1rem, 4vw, 1.3rem);
   }
-
-  .closeButton {
-    width: 28px;
-    height: 28px;
-    font-size: 1.3rem;
-  }
-
+  
   .tab {
+    min-width: 100%;
     padding: 10px 12px;
     font-size: 0.85rem;
   }
-
+  
   .form {
     padding: 16px;
   }
-
+  
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
   .textarea {
     min-height: 60px;
   }
-
+  
   .fileInfo {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 6px;
   }
-
+  
   .fileName {
     max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
   }
-
-  .imagePreview {
-    max-width: 120px;
+  
+  .preview {
+    max-width: 100%;
     max-height: 120px;
+  }
+  
+  .preview img {
+    max-height: 120px;
+  }
+  
+  .closeButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 320px) {
+  .modalHeader {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 10px;
+  }
+  
+  .closeButton {
+    align-self: flex-end;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+  }
+  
+  .modalHeader h2 {
+    margin-right: 40px;
+  }
+  
+  .tabs {
+    flex-direction: column;
+  }
+  
+  .tab {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+/* Soporte para orientación landscape */
+@media (max-height: 600px) and (orientation: landscape) {
+  .modal {
+    max-height: 85vh;
+    max-width: 90vw;
+  }
+  
+  .form {
+    padding: 16px;
+  }
+  
+  .formGroup {
+    margin-bottom: 12px;
+  }
+  
+  .preview {
+    max-height: 100px;
+  }
+  
+  .preview img {
+    max-height: 100px;
+  }
+}
+
+/* Soporte para dark mode */
+@media (prefers-color-scheme: dark) {
+  .modal {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .input,
+  .select,
+  .textarea {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .input:disabled,
+  .select:disabled,
+  .textarea:disabled {
+    background-color: #374151;
+    color: #9ca3af;
+  }
+  
+  .formGroup label {
+    color: #d1d5db;
+  }
+  
+  .helpText {
+    color: #9ca3af;
+  }
+  
+  .tabs {
+    background: #374151;
+    border-bottom-color: #4b5563;
+  }
+  
+  .tab {
+    color: #9ca3af;
+  }
+  
+  .tab:hover {
+    background: #4b5563;
+    color: #d1d5db;
+  }
+  
+  .tab.active {
+    background: #1f2937;
+    color: #10b981;
+  }
+  
+  .fileButton {
+    background: #4b5563;
+    border-color: #6b7280;
+    color: #d1d5db;
+  }
+  
+  .fileButton:hover {
+    background: #6b7280;
+    border-color: #9ca3af;
+  }
+  
+  .removeFile {
+    background-color: #7f1d1d;
+    border-color: #991b1b;
+    color: #fecaca;
+  }
+  
+  .removeFile:hover {
+    background-color: #991b1b;
+    border-color: #b91c1c;
+  }
+  
+  .fileInfo {
+    background: #1e3a8a;
+    border-color: #1d4ed8;
+  }
+  
+  .fileName {
+    color: #d1d5db;
+  }
+  
+  .fileSize {
+    color: #9ca3af;
+  }
+  
+  .preview {
+    background: #374151;
+    border-color: #4b5563;
+  }
+  
+  .formActions {
+    border-top-color: #4b5563;
+  }
+  
+  .errorMessage {
+    background-color: #7f1d1d;
+    border-color: #991b1b;
+    color: #fecaca;
+  }
+  
+  .errorText {
+    color: #fca5a5;
+  }
+  
+  .currencySymbol {
+    color: #9ca3af;
   }
 }
 
@@ -529,6 +754,20 @@
   background: #a1a1a1;
 }
 
+@media (prefers-color-scheme: dark) {
+  .modal::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  
+  .modal::-webkit-scrollbar-thumb {
+    background: #6b7280;
+  }
+  
+  .modal::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}
+
 /* Estados de validación */
 .input:invalid:focus,
 .select:invalid:focus,
@@ -543,12 +782,18 @@
   opacity: 0.7;
 }
 
+@media (prefers-color-scheme: dark) {
+  ::placeholder {
+    color: #6b7280;
+  }
+}
+
 /* Transiciones suaves */
 .input,
 .select,
 .textarea,
 .fileButton,
-.removeButton,
+.removeFile,
 .btnPrimary,
 .btnSecondary {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -559,14 +804,51 @@
 .select:focus-visible,
 .textarea:focus-visible,
 .fileButton:focus-visible,
-.removeButton:focus-visible,
+.removeFile:focus-visible,
 .btnPrimary:focus-visible,
-.btnSecondary:focus-visible {
+.btnSecondary:focus-visible,
+.tab:focus-visible,
+.closeButton:focus-visible {
   outline: 2px solid #10b981;
   outline-offset: 2px;
 }
 
-.preview img {
-  width: 300px;
-  height: 300px;
+/* Estados de hover para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+  .btnPrimary:hover,
+  .btnSecondary:hover,
+  .fileButton:hover,
+  .removeFile:hover,
+  .tab:hover,
+  .closeButton:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .btnPrimary:active,
+  .btnSecondary:active,
+  .fileButton:active,
+  .removeFile:active,
+  .tab:active,
+  .closeButton:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Mejoras de accesibilidad para reducción de movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modal,
+  .btnPrimary,
+  .btnSecondary,
+  .fileButton,
+  .removeFile,
+  .closeButton {
+    animation: none;
+    transition: none;
+  }
+  
+  .errorMessage {
+    animation: none;
+  }
 }

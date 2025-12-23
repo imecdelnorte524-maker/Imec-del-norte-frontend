@@ -1,3 +1,5 @@
+/* src/styles/components/orders/OrderDetail.module.css */
+
 .container {
   padding: var(--spacing-lg);
   max-width: 1200px;
@@ -114,15 +116,26 @@
   border: 1px solid #26b05b;
 }
 
-.invoiceLink {
+/* BOTÓN "VER FACTURA" */
+.invoiceLinkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius-full);
+  background: #e0f2fe;
+  color: #0369a1;
   font-size: var(--font-size-xs);
-  color: var(--primary-600);
-  text-decoration: underline;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid #bae6fd;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.invoiceLink:hover {
-  color: var(--primary-700);
+.invoiceLinkButton:hover {
+  background: #bfdbfe;
+  color: #075985;
 }
 
 /* BOTÓN SUBIR FACTURA */
@@ -382,6 +395,8 @@
   width: 100%;
   margin: auto;
   box-sizing: border-box;
+  max-height: calc(100vh - 2 * var(--spacing-lg));
+  overflow-y: auto;
 }
 
 /* HEADER DEL MODAL (USADO EN SUBIR FACTURA) */
@@ -546,15 +561,27 @@
 
   .modalContent {
     padding: var(--spacing-lg);
+    max-height: calc(100vh - 2 * var(--spacing-md));
   }
 
-  .modalActions,
-  .formActions {
-    flex-direction: column;
+  .statusBadge,
+  .billingBadge {
+    font-size: var(--font-size-xs);
+    padding: var(--spacing-xs) var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .header h1 {
+    font-size: var(--font-size-xl);
   }
 
-  .modalActions button,
-  .formActions button {
-    width: 100%;
+  .section {
+    padding: var(--spacing-md);
+  }
+
+  .problemSection,
+  .commentsSection {
+    padding: var(--spacing-md);
   }
 }

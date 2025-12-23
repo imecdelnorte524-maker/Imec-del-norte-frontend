@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import type { SgSstForm, SignatureType } from '../../interfaces/SgSstInterface';
-import type { Usuario } from '../../interfaces/UserInterfaces';
-import { sgSstService } from '../../api/sg-sst';
-import { users } from '../../api/users';
-import SignaturePad from './SignaturePad';
-import styles from '../../styles/components/sg-sst/FormDetailsModal.module.css';
+import { useState, useEffect } from "react";
+import type { SgSstForm, SignatureType } from "../../interfaces/SgSstInterface";
+import type { Usuario } from "../../interfaces/UserInterfaces";
+import { sgSstService } from "../../api/sg-sst";
+import { users } from "../../api/users";
+import SignaturePad from "./SignaturePad";
+import styles from "../../styles/components/sg-sst/FormDetailsModal.module.css";
 
 interface FormDetailsModalProps {
   isOpen: boolean;
@@ -13,6 +13,9 @@ interface FormDetailsModalProps {
   onFormSigned: () => void;
   canSignAsSST: boolean;
   currentUser?: Usuario | null;
+  // NUEVO: descarga PDF
+  onDownloadPdf?: (formId: number) => void;
+  pdfLoading?: boolean;
 }
 
 export default function FormDetailsModal({
@@ -21,21 +24,25 @@ export default function FormDetailsModal({
   onClose,
   onFormSigned,
   canSignAsSST,
-  currentUser
+  currentUser,
+  onDownloadPdf,
+  pdfLoading = false,
 }: FormDetailsModalProps) {
-  const [signatureData, setSignatureData] = useState<string>('');
+  const [signatureData, setSignatureData] = useState<string>("");
   const [isSigning, setIsSigning] = useState(false);
-  const [activeTab, setActiveTab] = useState<'details' | 'sign' | 'authorize'>('details');
+  const [activeTab, setActiveTab] = useState<"details" | "sign" | "authorize">(
+    "details"
+  );
 
   // Estados para autorización de Trabajo en Alturas
   const [authorizationData, setAuthorizationData] = useState({
     physicalCondition: false,
     instructionsReceived: false,
     fitForHeightWork: false,
-    authorizerName: '',
-    authorizerIdentification: '',
-    authorizationDate: '',
-    authorizationTime: ''
+    authorizerName: "",
+    authorizerIdentification: "",
+    authorizationDate: "",
+    authorizationTime: "",
   });
 
   // Estados para autocompletado del autorizador
@@ -46,16 +53,17 @@ export default function FormDetailsModal({
 
   useEffect(() => {
     // Inicializar datos de autorización si existe
-    if (form.formType === 'HEIGHT_WORK' && form.heightWork) {
-      setAuthorizationData(prev => ({
+    if (form.formType === "HEIGHT_WORK" && form.heightWork) {
+      setAuthorizationData((prev) => ({
         ...prev,
         physicalCondition: form.heightWork?.physicalCondition || false,
         instructionsReceived: form.heightWork?.instructionsReceived || false,
         fitForHeightWork: form.heightWork?.fitForHeightWork || false,
-        authorizerName: form.heightWork?.authorizerName || '',
-        authorizerIdentification: form.heightWork?.authorizerIdentification || '',
-        authorizationDate: new Date().toISOString().split('T')[0],
-        authorizationTime: new Date().toTimeString().slice(0, 5)
+        authorizerName: form.heightWork?.authorizerName || "",
+        authorizerIdentification:
+          form.heightWork?.authorizerIdentification || "",
+        authorizationDate: new Date().toISOString().split("T")[0],
+        authorizationTime: new Date().toTimeString().slice(0, 5),
       }));
     }
 
@@ -69,7 +77,7 @@ export default function FormDetailsModal({
       const usuariosData = await users.getAllUsers();
       setUsuarios(usuariosData || []);
     } catch (error) {
-      console.error('Error cargando usuarios:', error);
+      console.error("Error cargando usuarios:", error);
     } finally {
       setIsLoadingUsers(false);
     }
@@ -82,20 +90,22 @@ export default function FormDetailsModal({
   };
 
   const handleSignatureClear = () => {
-    setSignatureData('');
+    setSignatureData("");
   };
 
   // Manejar cambios en el nombre del autorizador con autocompletado
   const handleAuthorizerNameChange = (value: string) => {
-    setAuthorizationData(prev => ({
+    setAuthorizationData((prev) => ({
       ...prev,
       authorizerName: value,
-      authorizerIdentification: ''
+      authorizerIdentification: "",
     }));
 
     if (value.length > 1) {
-      const filtered = usuarios.filter(usuario =>
-        `${usuario.nombre} ${usuario.apellido}`.toLowerCase().includes(value.toLowerCase())
+      const filtered = usuarios.filter((usuario) =>
+        `${usuario.nombre} ${usuario.apellido}`
+          .toLowerCase()
+          .includes(value.toLowerCase())
       );
       setSuggestions(filtered.slice(0, 5));
       setShowSuggestions(true);
@@ -107,41 +117,43 @@ export default function FormDetailsModal({
   // Seleccionar usuario del autocompletado
   const handleSelectAuthorizer = (usuario: Usuario) => {
     const nombreCompleto = `${usuario.nombre} ${usuario.apellido}`;
-    setAuthorizationData(prev => ({
+    setAuthorizationData((prev) => ({
       ...prev,
       authorizerName: nombreCompleto,
-      authorizerIdentification: usuario.cedula || ''
+      authorizerIdentification: usuario.cedula || "",
     }));
     setShowSuggestions(false);
   };
 
   // Manejar cambios en los campos de autorización
   const handleAuthorizationChange = (field: string, value: any) => {
-    setAuthorizationData(prev => ({
+    setAuthorizationData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   // Validar datos de autorización
   const isAuthorizationValid = () => {
-    return authorizationData.physicalCondition &&
+    return (
+      authorizationData.physicalCondition &&
       authorizationData.instructionsReceived &&
       authorizationData.fitForHeightWork &&
-      authorizationData.authorizerName.trim() !== '' &&
-      authorizationData.authorizerIdentification.trim() !== '' &&
-      signatureData !== '';
+      authorizationData.authorizerName.trim() !== "" &&
+      authorizationData.authorizerIdentification.trim() !== "" &&
+      signatureData !== ""
+    );
   };
 
   // Función para firmar formularios normales (no trabajo en alturas)
   const handleSignForm = async () => {
     if (!signatureData || !currentUser) {
-      alert('Debe firmar el formulario antes de enviarlo');
+      alert("Debe firmar el formulario antes de enviarlo");
       return;
     }
 
     if (!currentUser.usuarioId) {
-      alert('Error: Usuario no válido');
+      alert("Error: Usuario no válido");
       return;
     }
 
@@ -150,81 +162,86 @@ export default function FormDetailsModal({
     try {
       const signData = {
         signatureData: signatureData,
-        signerType: 'SST' as SignatureType,
+        signerType: "SST" as SignatureType,
         userId: currentUser.usuarioId,
-        userName: `${currentUser.nombre} ${currentUser.apellido}`
+        userName: `${currentUser.nombre} ${currentUser.apellido}`,
       };
 
       const response = await sgSstService.signForm(form.id, signData);
 
       if (response.success) {
-        alert('Formulario firmado exitosamente');
+        alert("Formulario firmado exitosamente");
         onFormSigned();
       }
     } catch (error: any) {
-      console.error('Error firmando formulario:', error);
-      alert(`Error al firmar: ${error.response?.data?.message || error.message}`);
+      console.error("Error firmando formulario:", error);
+      alert(
+        `Error al firmar: ${error.response?.data?.message || error.message}`
+      );
     } finally {
       setIsSigning(false);
     }
   };
 
-  // CORREGIDA: Función para autorizar Trabajo en Alturas
+  // Función para autorizar Trabajo en Alturas
   const handleAuthorizeHeightWork = async () => {
     if (!isAuthorizationValid()) {
-      alert('Por favor complete todos los campos de autorización y firme el formulario');
+      alert(
+        "Por favor complete todos los campos de autorización y firme el formulario"
+      );
       return;
     }
 
     if (!currentUser || !signatureData) {
-      alert('Error: Debe estar autenticado y firmar el formulario');
+      alert("Error: Debe estar autenticado y firmar el formulario");
       return;
     }
 
     setIsSigning(true);
 
     try {
-      // CORRECCIÓN: Estructura del payload basada en la interfaz y tabla
       const authorizationPayload = {
-        // Campos de autorización SST específicos para trabajo en alturas
         physicalCondition: authorizationData.physicalCondition,
         instructionsReceived: authorizationData.instructionsReceived,
         fitForHeightWork: authorizationData.fitForHeightWork,
         authorizerName: authorizationData.authorizerName,
         authorizerIdentification: authorizationData.authorizerIdentification,
-        // Datos de firma separados
         signatureData: signatureData,
-        signerType: 'SST' as SignatureType,
+        signerType: "SST" as SignatureType,
         userId: currentUser.usuarioId,
-        userName: `${currentUser.nombre} ${currentUser.apellido}`
+        userName: `${currentUser.nombre} ${currentUser.apellido}`,
       };
 
-      // Usar el endpoint específico para autorizar trabajo en alturas
-      const response = await sgSstService.authorizeHeightWork(form.id, authorizationPayload);
+      const response = await sgSstService.authorizeHeightWork(
+        form.id,
+        authorizationPayload
+      );
 
       if (response.success) {
-        alert('Trabajo en Alturas autorizado exitosamente');
+        alert("Trabajo en Alturas autorizado exitosamente");
         onFormSigned();
       }
     } catch (error: any) {
-      console.error('Error autorizando trabajo en alturas:', error);
-      console.error('Detalles del error:', error.response?.data);
-      alert(`Error al autorizar: ${error.response?.data?.message || error.message}`);
+      console.error("Error autorizando trabajo en alturas:", error);
+      console.error("Detalles del error:", error.response?.data);
+      alert(
+        `Error al autorizar: ${error.response?.data?.message || error.message}`
+      );
     } finally {
       setIsSigning(false);
     }
   };
 
   const formatDate = (dateString?: string): string => {
-    if (!dateString) return 'No disponible';
+    if (!dateString) return "No disponible";
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return date.toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       });
     } catch {
       return dateString;
@@ -232,38 +249,49 @@ export default function FormDetailsModal({
   };
 
   const formatTime = (timeString?: string): string => {
-    if (!timeString) return 'No especificado';
+    if (!timeString) return "No especificado";
     return timeString.substring(0, 5);
   };
 
   const getFormTypeLabel = (formType: string): string => {
     switch (formType) {
-      case 'ATS': return 'Análisis de Trabajo Seguro (ATS)';
-      case 'HEIGHT_WORK': return 'Trabajo en Alturas';
-      case 'PREOPERATIONAL': return 'Checklist Preoperacional';
-      default: return formType;
+      case "ATS":
+        return "Análisis de Trabajo Seguro (ATS)";
+      case "HEIGHT_WORK":
+        return "Trabajo en Alturas";
+      case "PREOPERATIONAL":
+        return "Checklist Preoperacional";
+      default:
+        return formType;
     }
   };
 
   const getStatusLabel = (status: string): string => {
     switch (status) {
-      case 'DRAFT': return 'Borrador';
-      case 'PENDING_SST': return 'Pendiente de Autorización SST';
-      case 'COMPLETED': return 'Autorizado';
-      default: return status;
+      case "DRAFT":
+        return "Borrador";
+      case "PENDING_SST":
+        return "Pendiente de Autorización SST";
+      case "COMPLETED":
+        return "Autorizado";
+      default:
+        return status;
     }
   };
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'DRAFT': return '#6B7280';
-      case 'PENDING_SST': return '#F59E0B';
-      case 'COMPLETED': return '#10b981';
-      default: return '#6B7280';
+      case "DRAFT":
+        return "#6B7280";
+      case "PENDING_SST":
+        return "#F59E0B";
+      case "COMPLETED":
+        return "#10b981";
+      default:
+        return "#6B7280";
     }
   };
 
-  // Función para renderizar los riesgos seleccionados (para ATS)
   const renderSelectedRisks = (risks: Record<string, string[]>) => {
     if (!risks || Object.keys(risks).length === 0) {
       return <p>No se seleccionaron riesgos</p>;
@@ -278,7 +306,9 @@ export default function FormDetailsModal({
             </h4>
             <ul className={styles.riskList}>
               {riskList.map((risk, index) => (
-                <li key={index} className={styles.riskItem}>{risk}</li>
+                <li key={index} className={styles.riskItem}>
+                  {risk}
+                </li>
               ))}
             </ul>
           </div>
@@ -287,7 +317,6 @@ export default function FormDetailsModal({
     );
   };
 
-  // Función para renderizar el EPP y herramientas seleccionados (para ATS)
   const renderSelectedPPEAndTools = (ppe: Record<string, boolean>) => {
     if (!ppe || Object.keys(ppe).length === 0) {
       return <p>No se seleccionaron equipos o herramientas</p>;
@@ -313,7 +342,6 @@ export default function FormDetailsModal({
     );
   };
 
-  // Renderizar detalles completos del ATS
   const renderAtsDetails = () => {
     const atsReport = form.atsReport;
     if (!atsReport) return null;
@@ -322,7 +350,9 @@ export default function FormDetailsModal({
       <>
         {/* SECCIÓN 1: INFORMACIÓN GENERAL DEL ATS */}
         <div className={styles.detailSection}>
-          <h3 className={styles.sectionTitle}>📋 Información General del ATS</h3>
+          <h3 className={styles.sectionTitle}>
+            📋 Información General del ATS
+          </h3>
           <div className={styles.detailGrid}>
             <div className={styles.detailItem}>
               <label>ID del Reporte:</label>
@@ -345,11 +375,11 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.detailItem}>
               <label>Cargo:</label>
-              <span>{atsReport.position || 'No especificado'}</span>
+              <span>{atsReport.position || "No especificado"}</span>
             </div>
             <div className={styles.detailItem}>
               <label>Área de Trabajo:</label>
-              <span>{atsReport.area || 'No especificado'}</span>
+              <span>{atsReport.area || "No especificado"}</span>
             </div>
           </div>
         </div>
@@ -360,7 +390,7 @@ export default function FormDetailsModal({
           <div className={styles.detailGrid}>
             <div className={styles.detailItem}>
               <label>Fecha del Trabajo:</label>
-              <span>{atsReport.date || 'No especificada'}</span>
+              <span>{atsReport.date || "No especificada"}</span>
             </div>
             <div className={styles.detailItem}>
               <label>Hora de Inicio:</label>
@@ -372,14 +402,14 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.detailItem}>
               <label>Ubicación:</label>
-              <span>{atsReport.location || 'No especificada'}</span>
+              <span>{atsReport.location || "No especificada"}</span>
             </div>
           </div>
 
           <div className={styles.formGroup}>
             <label>Trabajo a Realizar:</label>
             <div className={styles.workDescription}>
-              {atsReport.workToPerform || 'No especificado'}
+              {atsReport.workToPerform || "No especificado"}
             </div>
           </div>
         </div>
@@ -400,27 +430,28 @@ export default function FormDetailsModal({
         {atsReport.observations && (
           <div className={styles.detailSection}>
             <h3 className={styles.sectionTitle}>📝 Observaciones</h3>
-            <div className={styles.observations}>
-              {atsReport.observations}
-            </div>
+            <div className={styles.observations}>{atsReport.observations}</div>
           </div>
         )}
       </>
     );
   };
 
-  // Renderizar detalles de trabajo en alturas
   const renderHeightWorkDetails = () => {
     const heightWork = form.heightWork;
     if (!heightWork) return null;
 
     return (
       <div className={styles.detailSection}>
-        <h3 className={styles.sectionTitle}>🔧 Detalles del Trabajo en Alturas</h3>
+        <h3 className={styles.sectionTitle}>
+          🔧 Detalles del Trabajo en Alturas
+        </h3>
 
         {/* Información del trabajador */}
         <div className={styles.subsection}>
-          <h4 className={styles.subsectionTitle}>👤 Información del Trabajador</h4>
+          <h4 className={styles.subsectionTitle}>
+            👤 Información del Trabajador
+          </h4>
           <div className={styles.detailGrid}>
             <div className={styles.detailItem}>
               <label>Nombre Completo:</label>
@@ -428,11 +459,11 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.detailItem}>
               <label>Identificación:</label>
-              <span>{heightWork.identification || 'No especificado'}</span>
+              <span>{heightWork.identification || "No especificado"}</span>
             </div>
             <div className={styles.detailItem}>
               <label>Cargo:</label>
-              <span>{heightWork.position || 'No especificado'}</span>
+              <span>{heightWork.position || "No especificado"}</span>
             </div>
           </div>
         </div>
@@ -442,64 +473,71 @@ export default function FormDetailsModal({
           <h4 className={styles.subsectionTitle}>📝 Descripción del Trabajo</h4>
           <div className={styles.detailItem}>
             <label>Descripción:</label>
-            <div className={styles.textValue}>{heightWork.workDescription || 'No especificado'}</div>
+            <div className={styles.textValue}>
+              {heightWork.workDescription || "No especificado"}
+            </div>
           </div>
           <div className={styles.detailGrid}>
             <div className={styles.detailItem}>
               <label>Ubicación:</label>
-              <span>{heightWork.location || 'No especificado'}</span>
+              <span>{heightWork.location || "No especificado"}</span>
             </div>
             <div className={styles.detailItem}>
               <label>Tiempo Estimado:</label>
-              <span>{heightWork.estimatedTime || 'No especificado'}</span>
+              <span>{heightWork.estimatedTime || "No especificado"}</span>
             </div>
           </div>
         </div>
 
         {/* Elementos de protección */}
-        {heightWork.protectionElements && Object.keys(heightWork.protectionElements).length > 0 && (
-          <div className={styles.subsection}>
-            <h4 className={styles.subsectionTitle}>🛡️ Elementos de Protección</h4>
-            <div className={styles.protectionList}>
-              {Object.entries(heightWork.protectionElements)
-                .filter(([_, value]) => value === true)
-                .map(([element]) => (
-                  <div key={element} className={styles.protectionItem}>
-                    <span className={styles.protectionIcon}>✓</span>
-                    <span>{element}</span>
-                  </div>
-                ))
-              }
+        {heightWork.protectionElements &&
+          Object.keys(heightWork.protectionElements).length > 0 && (
+            <div className={styles.subsection}>
+              <h4 className={styles.subsectionTitle}>
+                🛡️ Elementos de Protección
+              </h4>
+              <div className={styles.protectionList}>
+                {Object.entries(heightWork.protectionElements)
+                  .filter(([_, value]) => value === true)
+                  .map(([element]) => (
+                    <div key={element} className={styles.protectionItem}>
+                      <span className={styles.protectionIcon}>✓</span>
+                      <span>{element}</span>
+                    </div>
+                  ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Estado de autorización */}
-        {form.status === 'COMPLETED' && (
+        {form.status === "COMPLETED" && (
           <div className={styles.subsection}>
             <h4 className={styles.subsectionTitle}>✅ Autorización SST</h4>
             <div className={styles.detailGrid}>
               <div className={styles.detailItem}>
                 <label>Autorizado por:</label>
-                <span>{heightWork.authorizerName || 'No especificado'}</span>
+                <span>{heightWork.authorizerName || "No especificado"}</span>
               </div>
               <div className={styles.detailItem}>
                 <label>Identificación del autorizador:</label>
-                <span>{heightWork.authorizerIdentification || 'No especificado'}</span>
+                <span>
+                  {heightWork.authorizerIdentification || "No especificado"}
+                </span>
               </div>
               <div className={styles.detailItem}>
                 <label>Condiciones físicas verificadas:</label>
-                <span>{heightWork.physicalCondition ? '✅ Sí' : '❌ No'}</span>
+                <span>{heightWork.physicalCondition ? "✅ Sí" : "❌ No"}</span>
               </div>
               <div className={styles.detailItem}>
                 <label>Instrucciones recibidas:</label>
-                <span>{heightWork.instructionsReceived ? '✅ Sí' : '❌ No'}</span>
+                <span>
+                  {heightWork.instructionsReceived ? "✅ Sí" : "❌ No"}
+                </span>
               </div>
               <div className={styles.detailItem}>
                 <label>Apto para trabajo en alturas:</label>
-                <span>{heightWork.fitForHeightWork ? '✅ Sí' : '❌ No'}</span>
+                <span>{heightWork.fitForHeightWork ? "✅ Sí" : "❌ No"}</span>
               </div>
-              {/* Mostramos la fecha de firma SST en lugar de authorizationDate */}
               {form.sstSignatureDate && (
                 <div className={styles.detailItem}>
                   <label>Fecha de autorización:</label>
@@ -513,17 +551,17 @@ export default function FormDetailsModal({
     );
   };
 
-  // Renderizar detalles de checklist preoperacional
   const renderPreoperationalDetails = () => {
     const preoperational = form.preoperationalChecks;
     const checks = preoperational || [];
 
     if (checks.length === 0) return null;
 
-    const goodChecks = checks.filter(check => check.value === 'GOOD').length;
-    const badChecks = checks.filter(check => check.value === 'BAD').length;
+    const goodChecks = checks.filter((check) => check.value === "GOOD").length;
+    const badChecks = checks.filter((check) => check.value === "BAD").length;
     const totalChecks = checks.length;
-    const percentageGood = totalChecks > 0 ? Math.round((goodChecks / totalChecks) * 100) : 0;
+    const percentageGood =
+      totalChecks > 0 ? Math.round((goodChecks / totalChecks) * 100) : 0;
 
     return (
       <>
@@ -555,12 +593,25 @@ export default function FormDetailsModal({
           {/* Lista de checks */}
           <div className={styles.checksList}>
             {checks.map((check, index) => (
-              <div key={index} className={`${styles.checkItem} ${check.value === 'GOOD' ? styles.goodCheck : styles.badCheck}`}>
+              <div
+                key={index}
+                className={`${styles.checkItem} ${
+                  check.value === "GOOD" ? styles.goodCheck : styles.badCheck
+                }`}
+              >
                 <div className={styles.checkHeader}>
                   <span className={styles.checkNumber}>{index + 1}.</span>
-                  <span className={styles.checkParameter}>{check.parameter}</span>
-                  <span className={`${styles.checkValue} ${check.value === 'GOOD' ? styles.goodValue : styles.badValue}`}>
-                    {check.value === 'GOOD' ? '✅ BUENO' : '❌ MALO'}
+                  <span className={styles.checkParameter}>
+                    {check.parameter}
+                  </span>
+                  <span
+                    className={`${styles.checkValue} ${
+                      check.value === "GOOD"
+                        ? styles.goodValue
+                        : styles.badValue
+                    }`}
+                  >
+                    {check.value === "GOOD" ? "✅ BUENO" : "❌ MALO"}
                   </span>
                 </div>
                 {check.observations && (
@@ -574,14 +625,19 @@ export default function FormDetailsModal({
 
           {/* Conclusión */}
           <div className={styles.conclusionSection}>
-            <h4 className={styles.conclusionTitle}>📋 Conclusión del Checklist</h4>
+            <h4 className={styles.conclusionTitle}>
+              📋 Conclusión del Checklist
+            </h4>
             <div className={styles.conclusionContent}>
               {badChecks === 0 ? (
                 <div className={styles.successConclusion}>
                   <span className={styles.conclusionIcon}>✅</span>
                   <div>
                     <strong>Equipo en óptimas condiciones</strong>
-                    <p>Todos los puntos del checklist fueron aprobados. El herramienta está apto para uso.</p>
+                    <p>
+                      Todos los puntos del checklist fueron aprobados. El
+                      herramienta está apto para uso.
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -589,7 +645,10 @@ export default function FormDetailsModal({
                   <span className={styles.conclusionIcon}>⚠️</span>
                   <div>
                     <strong>Equipo con observaciones</strong>
-                    <p>Se encontraron {badChecks} punto(s) que requieren atención. Verifique antes de usar el herramienta.</p>
+                    <p>
+                      Se encontraron {badChecks} punto(s) que requieren
+                      atención. Verifique antes de usar el herramienta.
+                    </p>
                   </div>
                 </div>
               )}
@@ -600,7 +659,6 @@ export default function FormDetailsModal({
     );
   };
 
-  // Renderizar detalles del formulario
   const renderFormDetails = () => {
     return (
       <div className={styles.detailsContent}>
@@ -614,7 +672,10 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.detailItem}>
               <label>Estado:</label>
-              <span className={styles.status} style={{ color: getStatusColor(form.status) }}>
+              <span
+                className={styles.status}
+                style={{ color: getStatusColor(form.status) }}
+              >
                 {getStatusLabel(form.status)}
               </span>
             </div>
@@ -625,7 +686,9 @@ export default function FormDetailsModal({
             <div className={styles.detailItem}>
               <label>Creado por:</label>
               <span>
-                {form.user ? `${form.user.nombre} ${form.user.apellido}` : `Usuario #${form.createdBy}`}
+                {form.user
+                  ? `${form.user.nombre} ${form.user.apellido}`
+                  : `Usuario #${form.createdBy}`}
               </span>
             </div>
             <div className={styles.detailItem}>
@@ -645,8 +708,12 @@ export default function FormDetailsModal({
           <div className={styles.signaturesList}>
             <div className={styles.signatureItem}>
               <strong>Técnico:</strong>
-              <span className={form.technicianSignatureDate ? styles.signed : styles.pending}>
-                {form.technicianSignatureDate ? '✅ Firmado' : '❌ Pendiente'}
+              <span
+                className={
+                  form.technicianSignatureDate ? styles.signed : styles.pending
+                }
+              >
+                {form.technicianSignatureDate ? "✅ Firmado" : "❌ Pendiente"}
               </span>
               {form.technicianSignatureDate && (
                 <small>{formatDate(form.technicianSignatureDate)}</small>
@@ -654,8 +721,12 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.signatureItem}>
               <strong>SG-SST:</strong>
-              <span className={form.sstSignatureDate ? styles.signed : styles.pending}>
-                {form.sstSignatureDate ? '✅ Firmado' : '❌ Pendiente'}
+              <span
+                className={
+                  form.sstSignatureDate ? styles.signed : styles.pending
+                }
+              >
+                {form.sstSignatureDate ? "✅ Firmado" : "❌ Pendiente"}
               </span>
               {form.sstSignatureDate && (
                 <small>{formatDate(form.sstSignatureDate)}</small>
@@ -664,21 +735,44 @@ export default function FormDetailsModal({
           </div>
         </div>
 
-        {/* DETALLES ESPECÍFICOS SEGÚN TIPO DE FORMULARIO */}
-        {form.formType === 'ATS' && renderAtsDetails()}
-        {form.formType === 'HEIGHT_WORK' && renderHeightWorkDetails()}
-        {form.formType === 'PREOPERATIONAL' && renderPreoperationalDetails()}
+        {/* BOTÓN DESCARGAR PDF */}
+        {form.status === "COMPLETED" && onDownloadPdf && (
+          <div className={styles.detailSection}>
+            <h3 className={styles.sectionTitle}>📂 PDF del Reporte</h3>
+            <p className={styles.downloadDescription}>
+              El formulario está completado. Puedes generar y descargar el PDF
+              con toda la información registrada.
+            </p>
+            <button
+              type="button"
+              className={styles.downloadButton}
+              onClick={() => onDownloadPdf(form.id)}
+              disabled={pdfLoading}
+            >
+              {pdfLoading ? "Generando PDF..." : "Descargar PDF"}
+            </button>
+          </div>
+        )}
+
+        {/* DETALLES ESPECÍFICOS */}
+        {form.formType === "ATS" && renderAtsDetails()}
+        {form.formType === "HEIGHT_WORK" && renderHeightWorkDetails()}
+        {form.formType === "PREOPERATIONAL" && renderPreoperationalDetails()}
 
         {/* REGISTRO DE FIRMAS */}
         {form.signatures && form.signatures.length > 0 && (
           <div className={styles.detailSection}>
-            <h3 className={styles.sectionTitle}>📋 Registro de Firmas Digitales</h3>
+            <h3 className={styles.sectionTitle}>
+              📋 Registro de Firmas Digitales
+            </h3>
             <div className={styles.signaturesDetail}>
               {form.signatures.map((signature, index) => (
                 <div key={index} className={styles.signatureDetail}>
                   <div className={styles.signatureInfo}>
                     <strong>{signature.userName}</strong>
-                    <span className={styles.signatureType}>({signature.signatureType})</span>
+                    <span className={styles.signatureType}>
+                      ({signature.signatureType})
+                    </span>
                     <small>{formatDate(signature.signedAt)}</small>
                   </div>
                   {signature.signatureData && (
@@ -699,7 +793,6 @@ export default function FormDetailsModal({
     );
   };
 
-  // Renderizar pestaña de autorización para Trabajo en Alturas
   const renderAuthorizationTab = () => {
     if (!canSignAsSST) {
       return (
@@ -709,20 +802,25 @@ export default function FormDetailsModal({
       );
     }
 
-    if (form.status === 'COMPLETED') {
+    if (form.status === "COMPLETED") {
       return (
         <div className={styles.alreadySigned}>
           <p>✅ Este trabajo en alturas ya ha sido autorizado.</p>
           <div className={styles.authorizationDetails}>
             <h4>Detalles de la autorización:</h4>
-            <p><strong>Autorizador:</strong> {form.heightWork?.authorizerName}</p>
-            <p><strong>Fecha de autorización:</strong> {formatDate(form.sstSignatureDate)}</p>
+            <p>
+              <strong>Autorizador:</strong> {form.heightWork?.authorizerName}
+            </p>
+            <p>
+              <strong>Fecha de autorización:</strong>{" "}
+              {formatDate(form.sstSignatureDate)}
+            </p>
           </div>
         </div>
       );
     }
 
-    if (form.status !== 'PENDING_SST') {
+    if (form.status !== "PENDING_SST") {
       return (
         <div className={styles.unauthorized}>
           <p>Este formulario no está pendiente de autorización.</p>
@@ -735,10 +833,12 @@ export default function FormDetailsModal({
         <div className={styles.authorizationInfo}>
           <h3>🚧 Autorización de Trabajo en Alturas</h3>
           <p>
-            Estás autorizando el trabajo en alturas del trabajador <strong>{form.heightWork?.workerName}</strong>.
+            Estás autorizando el trabajo en alturas del trabajador{" "}
+            <strong>{form.heightWork?.workerName}</strong>.
           </p>
           <p className={styles.warning}>
-            ⚠️ Al autorizar, confirmas que el trabajador cumple con todos los requisitos de seguridad.
+            ⚠️ Al autorizar, confirmas que el trabajador cumple con todos los
+            requisitos de seguridad.
           </p>
         </div>
 
@@ -751,11 +851,17 @@ export default function FormDetailsModal({
               <input
                 type="checkbox"
                 checked={authorizationData.physicalCondition}
-                onChange={(e) => handleAuthorizationChange('physicalCondition', e.target.checked)}
+                onChange={(e) =>
+                  handleAuthorizationChange(
+                    "physicalCondition",
+                    e.target.checked
+                  )
+                }
                 required
               />
               <span className={styles.verificationLabel}>
-                El trabajador posee condiciones físicas adecuadas para trabajar en alturas
+                El trabajador posee condiciones físicas adecuadas para trabajar
+                en alturas
               </span>
             </label>
 
@@ -763,11 +869,17 @@ export default function FormDetailsModal({
               <input
                 type="checkbox"
                 checked={authorizationData.instructionsReceived}
-                onChange={(e) => handleAuthorizationChange('instructionsReceived', e.target.checked)}
+                onChange={(e) =>
+                  handleAuthorizationChange(
+                    "instructionsReceived",
+                    e.target.checked
+                  )
+                }
                 required
               />
               <span className={styles.verificationLabel}>
-                El trabajador recibió instrucciones completas para trabajar en alturas
+                El trabajador recibió instrucciones completas para trabajar en
+                alturas
               </span>
             </label>
 
@@ -775,7 +887,12 @@ export default function FormDetailsModal({
               <input
                 type="checkbox"
                 checked={authorizationData.fitForHeightWork}
-                onChange={(e) => handleAuthorizationChange('fitForHeightWork', e.target.checked)}
+                onChange={(e) =>
+                  handleAuthorizationChange(
+                    "fitForHeightWork",
+                    e.target.checked
+                  )
+                }
                 required
               />
               <span className={styles.verificationLabel}>
@@ -791,7 +908,12 @@ export default function FormDetailsModal({
               <div className={styles.formGroup}>
                 <label className={styles.label}>
                   Nombre Completo *
-                  {!authorizationData.authorizerName && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                  {!authorizationData.authorizerName && (
+                    <span className={styles.requiredIndicator}>
+                      {" "}
+                      (Requerido)
+                    </span>
+                  )}
                 </label>
                 <div className={styles.autocompleteContainer}>
                   <input
@@ -799,7 +921,9 @@ export default function FormDetailsModal({
                     className={styles.input}
                     value={authorizationData.authorizerName}
                     onChange={(e) => handleAuthorizerNameChange(e.target.value)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onBlur={() =>
+                      setTimeout(() => setShowSuggestions(false), 200)
+                    }
                     onFocus={() => {
                       if (authorizationData.authorizerName.length > 1) {
                         setShowSuggestions(true);
@@ -823,9 +947,13 @@ export default function FormDetailsModal({
                             {usuario.nombre} {usuario.apellido}
                           </div>
                           <div className={styles.suggestionDetails}>
-                            <span className={styles.suggestionDetail}>Cédula: {usuario.cedula || 'No registrada'}</span>
+                            <span className={styles.suggestionDetail}>
+                              Cédula: {usuario.cedula || "No registrada"}
+                            </span>
                             {usuario.role?.nombreRol && (
-                              <span className={styles.suggestionDetail}>Cargo: {usuario.role.nombreRol}</span>
+                              <span className={styles.suggestionDetail}>
+                                Cargo: {usuario.role.nombreRol}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -838,13 +966,23 @@ export default function FormDetailsModal({
               <div className={styles.formGroup}>
                 <label className={styles.label}>
                   Identificación *
-                  {!authorizationData.authorizerIdentification && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                  {!authorizationData.authorizerIdentification && (
+                    <span className={styles.requiredIndicator}>
+                      {" "}
+                      (Requerido)
+                    </span>
+                  )}
                 </label>
                 <input
                   type="text"
                   className={styles.input}
                   value={authorizationData.authorizerIdentification}
-                  onChange={(e) => handleAuthorizationChange('authorizerIdentification', e.target.value)}
+                  onChange={(e) =>
+                    handleAuthorizationChange(
+                      "authorizerIdentification",
+                      e.target.value
+                    )
+                  }
                   required
                   placeholder="Se completa automáticamente"
                   readOnly={!!authorizationData.authorizerName}
@@ -857,7 +995,12 @@ export default function FormDetailsModal({
                   type="date"
                   className={styles.input}
                   value={authorizationData.authorizationDate}
-                  onChange={(e) => handleAuthorizationChange('authorizationDate', e.target.value)}
+                  onChange={(e) =>
+                    handleAuthorizationChange(
+                      "authorizationDate",
+                      e.target.value
+                    )
+                  }
                 />
               </div>
 
@@ -867,7 +1010,12 @@ export default function FormDetailsModal({
                   type="time"
                   className={styles.input}
                   value={authorizationData.authorizationTime}
-                  onChange={(e) => handleAuthorizationChange('authorizationTime', e.target.value)}
+                  onChange={(e) =>
+                    handleAuthorizationChange(
+                      "authorizationTime",
+                      e.target.value
+                    )
+                  }
                 />
               </div>
             </div>
@@ -899,7 +1047,7 @@ export default function FormDetailsModal({
           <button
             type="button"
             className={styles.cancelButton}
-            onClick={() => setActiveTab('details')}
+            onClick={() => setActiveTab("details")}
           >
             Cancelar
           </button>
@@ -909,14 +1057,13 @@ export default function FormDetailsModal({
             onClick={handleAuthorizeHeightWork}
             disabled={!isAuthorizationValid() || isSigning}
           >
-            {isSigning ? 'Autorizando...' : '✅ Autorizar Trabajo en Alturas'}
+            {isSigning ? "Autorizando..." : "✅ Autorizar Trabajo en Alturas"}
           </button>
         </div>
       </div>
     );
   };
 
-  // Función para firmar formularios normales (no trabajo en alturas)
   const renderStandardSignTab = () => {
     if (!canSignAsSST) {
       return (
@@ -926,7 +1073,7 @@ export default function FormDetailsModal({
       );
     }
 
-    if (form.status === 'COMPLETED') {
+    if (form.status === "COMPLETED") {
       return (
         <div className={styles.alreadySigned}>
           <p>✅ Este formulario ya ha sido aprobado.</p>
@@ -934,7 +1081,7 @@ export default function FormDetailsModal({
       );
     }
 
-    if (form.status !== 'PENDING_SST') {
+    if (form.status !== "PENDING_SST") {
       return (
         <div className={styles.unauthorized}>
           <p>Este formulario no está pendiente de firma SST.</p>
@@ -947,11 +1094,18 @@ export default function FormDetailsModal({
         <div className={styles.signInfo}>
           <h3>Firmar como SG-SST</h3>
           <p>
-            Estás a punto de firmar el formulario <strong>{getFormTypeLabel(form.formType)}</strong>
-            creado por <strong>{form.user ? `${form.user.nombre} ${form.user.apellido}` : `Usuario #${form.createdBy}`}</strong>.
+            Estás a punto de firmar el formulario{" "}
+            <strong>{getFormTypeLabel(form.formType)}</strong> creado por{" "}
+            <strong>
+              {form.user
+                ? `${form.user.nombre} ${form.user.apellido}`
+                : `Usuario #${form.createdBy}`}
+            </strong>
+            .
           </p>
           <p className={styles.warning}>
-            ⚠️ Al firmar, el formulario será marcado como <strong>Aprobado</strong> y no podrá ser editado.
+            ⚠️ Al firmar, el formulario será marcado como{" "}
+            <strong>Aprobado</strong> y no podrá ser editado.
           </p>
         </div>
 
@@ -977,7 +1131,7 @@ export default function FormDetailsModal({
           <button
             type="button"
             className={styles.cancelButton}
-            onClick={() => setActiveTab('details')}
+            onClick={() => setActiveTab("details")}
           >
             Cancelar
           </button>
@@ -987,7 +1141,7 @@ export default function FormDetailsModal({
             onClick={handleSignForm}
             disabled={!signatureData || isSigning}
           >
-            {isSigning ? 'Firmando...' : 'Aprobar y Firmar'}
+            {isSigning ? "Firmando..." : "Aprobar y Firmar"}
           </button>
         </div>
       </div>
@@ -995,12 +1149,9 @@ export default function FormDetailsModal({
   };
 
   const renderSignTab = () => {
-    if (form.formType === 'HEIGHT_WORK') {
-      // Para trabajo en alturas, mostrar pestaña de autorización especial
+    if (form.formType === "HEIGHT_WORK") {
       return renderAuthorizationTab();
     }
-
-    // Para otros formularios, mostrar firma normal
     return renderStandardSignTab();
   };
 
@@ -1018,33 +1169,39 @@ export default function FormDetailsModal({
 
         <div className={styles.tabs}>
           <button
-            className={`${styles.tab} ${activeTab === 'details' ? styles.activeTab : ''}`}
-            onClick={() => setActiveTab('details')}
+            className={`${styles.tab} ${
+              activeTab === "details" ? styles.activeTab : ""
+            }`}
+            onClick={() => setActiveTab("details")}
           >
             📋 Detalles Completos
           </button>
 
-          {form.status === 'PENDING_SST' && canSignAsSST && (
-            form.formType === 'HEIGHT_WORK' ? (
+          {form.status === "PENDING_SST" &&
+            canSignAsSST &&
+            (form.formType === "HEIGHT_WORK" ? (
               <button
-                className={`${styles.tab} ${activeTab === 'authorize' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('authorize')}
+                className={`${styles.tab} ${
+                  activeTab === "authorize" ? styles.activeTab : ""
+                }`}
+                onClick={() => setActiveTab("authorize")}
               >
                 🚧 Autorizar Trabajo en Alturas
               </button>
             ) : (
               <button
-                className={`${styles.tab} ${activeTab === 'sign' ? styles.activeTab : ''}`}
-                onClick={() => setActiveTab('sign')}
+                className={`${styles.tab} ${
+                  activeTab === "sign" ? styles.activeTab : ""
+                }`}
+                onClick={() => setActiveTab("sign")}
               >
                 ✍️ Firmar como SST
               </button>
-            )
-          )}
+            ))}
         </div>
 
         <div className={styles.content}>
-          {activeTab === 'details' ? renderFormDetails() : renderSignTab()}
+          {activeTab === "details" ? renderFormDetails() : renderSignTab()}
         </div>
       </div>
     </div>

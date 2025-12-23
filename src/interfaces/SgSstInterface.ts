@@ -1,4 +1,4 @@
-// En src/interface/SgSstInterface.ts
+// src/interfaces/SgSstInterface.ts
 export interface SgSstForm {
   id: number;
   formType: 'ATS' | 'HEIGHT_WORK' | 'PREOPERATIONAL';
@@ -10,27 +10,29 @@ export interface SgSstForm {
   userId: number;
   createdBy: number;
   updatedAt: string;
-  // Información del usuario
   user?: {
     usuarioId: number;
     nombre: string;
     apellido: string;
     email: string;
   };
-  // Datos específicos del formulario
   atsReport?: AtsReport;
   heightWork?: HeightWork;
   preoperationalChecks?: PreoperationalCheck[];
   signatures?: Signature[];
 }
 
+// ====== ATS ======
+
 export interface AtsFormData {
   workerName: string;
   workerIdentification?: string;
   position: string;
+
   clientId?: number;
   clientName?: string;
   clientNit?: string;
+
   area: string;
   subArea?: string;
   workToPerform: string;
@@ -41,11 +43,16 @@ export interface AtsFormData {
   observations: string;
   selectedRisks: Record<string, string[]>;
   requiredPpe: Record<string, boolean>;
+
   userId: number;
   createdBy: number;
+
   signatureData?: string;
   signerType?: 'TECHNICIAN' | 'SST';
   userName?: string;
+
+  // Orden de trabajo asociada
+  workOrderId: number;
 }
 
 export interface AtsReport {
@@ -66,7 +73,8 @@ export interface AtsReport {
   form?: SgSstForm;
 }
 
-// Tipos para Trabajo en Alturas
+// ====== Trabajo en Alturas ======
+
 export interface HeightWorkFormData {
   workerName: string;
   identification?: string;
@@ -80,11 +88,15 @@ export interface HeightWorkFormData {
   fitForHeightWork?: boolean;
   authorizerName?: string;
   authorizerIdentification?: string;
+
   userId: number;
   createdBy: number;
-  signatureData: string; 
-  signerType: 'TECHNICIAN' | 'SST'; 
-  userName: string; 
+
+  signatureData: string;
+  signerType: 'TECHNICIAN' | 'SST';
+  userName: string;
+
+  workOrderId: number;
 }
 
 export interface HeightWork {
@@ -106,7 +118,8 @@ export interface HeightWork {
   form?: SgSstForm;
 }
 
-// Tipos para Preoperacional
+// ====== Preoperacional ======
+
 export type CheckValue = 'GOOD' | 'BAD' | 'YES' | 'NO';
 
 export interface PreoperationalCheck {
@@ -121,11 +134,15 @@ export interface PreoperationalCheck {
 export interface PreoperationalFormData {
   toolName?: string;
   checks: Omit<PreoperationalCheck, 'id' | 'formId' | 'createdAt'>[];
+
   userId: number;
   createdBy: number;
+
   signatureData: string;
   signerType: 'TECHNICIAN' | 'SST';
   userName: string;
+
+  workOrderId: number;
 }
 
 export interface PreoperationalForm {
@@ -135,7 +152,8 @@ export interface PreoperationalForm {
   form: SgSstForm;
 }
 
-// Tipos para Firmas
+// ====== Firmas ======
+
 export type SignatureType = 'TECHNICIAN' | 'SST';
 
 export interface Signature {
@@ -155,7 +173,8 @@ export interface SignFormData {
   signatureData?: string;
 }
 
-// Tipos para PDFs generados
+// ====== PDFs generados ======
+
 export interface GeneratedPdf {
   id: number;
   formId: number;
@@ -165,7 +184,8 @@ export interface GeneratedPdf {
   generatedAt: string;
 }
 
-// Tipos para respuestas de API
+// ====== Respuestas de API ======
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
@@ -191,7 +211,8 @@ export interface FormDetailResponse {
   };
 }
 
-// Tipos para estadísticas del dashboard
+// ====== Estadísticas SG-SST ======
+
 export interface SgSstStats {
   total: number;
   draft: number;
@@ -204,26 +225,25 @@ export interface SgSstStats {
   };
 }
 
-// Enums para uso en componentes
+// ====== Enums frontend ======
+
 export const FormType = {
   ATS: 'ATS',
   HEIGHT_WORK: 'HEIGHT_WORK',
-  PREOPERATIONAL: 'PREOPERATIONAL'
-} as const
+  PREOPERATIONAL: 'PREOPERATIONAL',
+} as const;
 
 export const FormStatus = {
   DRAFT: 'DRAFT',
   PENDING_SST: 'PENDING_SST',
-  COMPLETED: 'COMPLETED'
-} as const
+  COMPLETED: 'COMPLETED',
+} as const;
 
 export const SignerType = {
   TECHNICIAN: 'TECHNICIAN',
-  SST: 'SST'
-} as const
+  SST: 'SST',
+} as const;
 
 export type FormType = typeof FormType[keyof typeof FormType];
-
 export type FormStatus = typeof FormStatus[keyof typeof FormStatus];
-
 export type SignerType = typeof SignerType[keyof typeof SignerType];
