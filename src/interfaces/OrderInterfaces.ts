@@ -10,6 +10,20 @@ export type OrderEstado =
 
 export type BillingEstado = 'No facturado' | 'Facturado';
 
+export interface SupplyDetail {
+  detalleInsumoId: number;
+  cantidadUsada: number;
+  costoUnitarioAlMomento: number;
+  nombreInsumo: string;
+}
+
+export interface ToolDetail {
+  detalleHerramientaId: number;
+  tiempoUso: string;
+  nombreHerramienta: string;
+  marca: string;
+}
+
 export interface Order {
   orden_id: number;
   servicio_id: number;
@@ -72,6 +86,10 @@ export interface Order {
     codigo?: string | null;
     categoria?: string | null;
   } | null;
+
+  // Detalles de insumos y herramientas asignados/registrados en la orden
+  supplyDetails?: SupplyDetail[];
+  toolDetails?: ToolDetail[];
 
   costo_total_insumos?: number;
   costo_total_estimado?: number;

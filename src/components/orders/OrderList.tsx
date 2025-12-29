@@ -1,66 +1,110 @@
 // src/components/orders/OrderList.tsx
 
-import { useOrders } from '../../hooks/useOrders';
-import type { Order } from '../../interfaces/OrderInterfaces';
-import { getStatusClass } from '../../utils/statusUtils';
-import styles from '../../styles/components/orders/OrderList.module.css';
+import { useEffect, useRef, useState } from "react";
+import { useOrders } from "../../hooks/useOrders";
+import type { Order } from "../../interfaces/OrderInterfaces";
+import { getStatusClass } from "../../utils/statusUtils";
+import styles from "../../styles/components/orders/OrderList.module.css";
+import Pagination from "../Pagination";
 
 interface Props {
-  userRole: 'cliente' | 'tecnico' | 'admin';
+  userRole: "cliente" | "tecnico" | "admin";
   onViewOrder: (order: Order) => void;
-  filter?: 'all' | 'pending' | 'assigned';
+  filter?: "all" | "pending" | "assigned" | "completed" | "cancelled";
+  initialOrderId?: number; // <- NUEVO
 }
 
 export default function OrderList({
   userRole,
   onViewOrder,
-  filter = 'all',
+  filter = "all",
+  initialOrderId,
 }: Props) {
   const { orders, loading, error } = useOrders(userRole, filter);
+  const ordersPerPage = 8; // Cambiado de servicesPerPage a ordersPerPage
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Calcular índices de paginación
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  
+  // Aplicar paginación a las órdenes
+  const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
+  
+  const totalPages = Math.ceil(orders.length / ordersPerPage);
+  const hasAutoSelectedRef = useRef(false);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Opcional: hacer scroll al inicio cuando cambia de página
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  // Resetear a página 1 cuando cambie el filtro
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // Auto‑seleccionar una orden si viene desde notificación (initialOrderId)
+  useEffect(() => {
+    if (!initialOrderId) return;
+    if (!orders || orders.length === 0) return;
+    if (hasAutoSelectedRef.current) return;
+
+    const found = orders.find((o) => o.orden_id === initialOrderId);
+    if (found) {
+      onViewOrder(found);
+      hasAutoSelectedRef.current = true;
+      
+      // Encontrar la página donde está esta orden para navegar automáticamente
+      const orderIndex = orders.findIndex(o => o.orden_id === initialOrderId);
+      if (orderIndex !== -1) {
+        const pageForOrder = Math.floor(orderIndex / ordersPerPage) + 1;
+        setCurrentPage(pageForOrder);
+      }
+    }
+  }, [initialOrderId, orders, onViewOrder, ordersPerPage]);
 
   const getCardStatusClass = (order: Order): string => {
-    // Diferenciamos sin asignar vs asignadas
-    if (order.estado === 'Asignada') {
+    if (order.estado === "Asignada") {
       return styles.orderCardPendingAssigned;
     }
 
-    if (order.estado === 'Pendiente') {
+    if (order.estado === "Pendiente") {
       return styles.orderCardPending;
     }
 
-    if (order.estado === 'En Proceso') {
+    if (order.estado === "En Proceso") {
       return styles.orderCardInProgress;
     }
 
-    if (order.estado === 'Completado') {
+    if (order.estado === "Completado") {
       return styles.orderCardCompleted;
     }
 
     if (
-      order.estado === 'Cancelada' ||
-      order.estado === 'Rechazada' ||
-      order.estado === 'Cancelado'
+      order.estado === "Cancelada" ||
+      order.estado === "Rechazada" ||
+      order.estado === "Cancelado"
     ) {
       return styles.orderCardCancelled;
     }
 
-    return '';
+    return "";
   };
 
   const getDisplayClientName = (order: Order): string => {
-    // Si hay empresa, mostrar el nombre de la empresa
     if (order.cliente_empresa) {
       return order.cliente_empresa.nombre;
     }
-    // Si no hay empresa, usar el nombre de la persona
-    return `${order.cliente.nombre} ${order.cliente.apellido || ''}`.trim();
+    return `${order.cliente.nombre} ${order.cliente.apellido || ""}`.trim();
   };
 
   const getDisplayPhone = (order: Order): string => {
     return (
       order.cliente_empresa?.telefono ||
       order.cliente.telefono ||
-      'No proporcionado'
+      "No proporcionado"
     );
   };
 
@@ -75,7 +119,7 @@ export default function OrderList({
   return (
     <div className={styles.container}>
       <div className={styles.ordersGrid}>
-        {orders.map((order) => (
+        {currentOrders.map((order) => (
           <div
             key={order.orden_id}
             className={`${styles.orderCard} ${getCardStatusClass(order)}`}
@@ -108,13 +152,12 @@ export default function OrderList({
 
             <div className={styles.dates}>
               <span>
-                Solicitado:{' '}
+                Solicitado:{" "}
                 {new Date(order.fecha_solicitud).toLocaleDateString()}
               </span>
               {order.fecha_inicio && (
                 <span>
-                  Inicio:{' '}
-                  {new Date(order.fecha_inicio).toLocaleDateString()}
+                  Inicio: {new Date(order.fecha_inicio).toLocaleDateString()}
                 </span>
               )}
             </div>
@@ -123,7 +166,7 @@ export default function OrderList({
               <div className={styles.statusRow}>
                 <span
                   className={`${styles.status} ${
-                    styles[getStatusClass(order.estado, 'status')]
+                    styles[getStatusClass(order.estado, "status")]
                   }`}
                 >
                   {order.estado}
@@ -131,8 +174,8 @@ export default function OrderList({
                 <span
                   className={
                     styles.billingBadge +
-                    ' ' +
-                    (order.estado_facturacion === 'Facturado'
+                    " " +
+                    (order.estado_facturacion === "Facturado"
                       ? styles.billingBilled
                       : styles.billingNotBilled)
                   }
@@ -149,6 +192,16 @@ export default function OrderList({
       {orders.length === 0 && (
         <div className={styles.emptyState}>
           <p>No se encontraron órdenes</p>
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className={styles.paginationContainer}>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </div>
       )}
     </div>

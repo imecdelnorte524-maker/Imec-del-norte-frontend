@@ -9,6 +9,7 @@ import type {
   Usuario,
 } from "../../interfaces/ClientInterfaces";
 import styles from "../../styles/components/clients/ClientModal.module.css";
+import { playErrorSound } from "../../utils/sounds";
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -39,7 +40,7 @@ export default function ClientModal({
   const [newAreaName, setNewAreaName] = useState("");
   const [newSubAreaName, setNewSubAreaName] = useState("");
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | "">("");
-  const [protectedAreaId, setProtectedAreaId] = useState<number | null>(null); // área principal en edición
+  const [protectedAreaId, setProtectedAreaId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState<ClientFormData>({
     nombre: "",
@@ -125,15 +126,14 @@ export default function ClientModal({
     } else {
       resetForm();
 
-      // Si es cliente, usar su propio usuario como contacto
+      // Si es cliente, usar su propio usuario como contacto (solo nombre)
       if (isCliente && user) {
         const fullName = `${user.nombre} ${user.apellido || ""}`.trim();
         setFormData((prev) => ({
           ...prev,
           idUsuarioContacto: user.usuarioId,
           contacto: fullName,
-          email: user.email,
-          telefono: user.telefono || "",
+          // NO autocompletar email del usuario personal
         }));
         setUserSearch(fullName);
       }
@@ -174,15 +174,12 @@ export default function ClientModal({
   const handleUserSelect = (
     userId: number,
     userName: string,
-    userEmail?: string,
-    userPhone?: string
   ) => {
     setFormData((prev) => ({
       ...prev,
       idUsuarioContacto: userId,
-      contacto: userName,
-      email: userEmail || prev.email,
-      telefono: userPhone || prev.telefono,
+      contacto: userName, // Solo autocompletar el nombre
+      // NO autocompletar email ni teléfono
     }));
 
     setUserSearch(userName);
@@ -194,6 +191,7 @@ export default function ClientModal({
     const name = newAreaName.trim();
     if (!name) {
       setError("El nombre del área es obligatorio");
+      playErrorSound();
       return;
     }
 
@@ -257,12 +255,14 @@ export default function ClientModal({
     const name = newSubAreaName.trim();
     if (selectedAreaIndex === "" || !name) {
       setError("Debe seleccionar un área y escribir el nombre de la subárea");
+      playErrorSound();
       return;
     }
 
     setFormData((prev) => {
+      // Asegurarnos de que es un número válido
       if (
-        selectedAreaIndex === 0 ||
+        typeof selectedAreaIndex !== "number" ||
         selectedAreaIndex < 0 ||
         selectedAreaIndex >= prev.areas.length
       ) {
@@ -272,7 +272,7 @@ export default function ClientModal({
       const area = prev.areas[selectedAreaIndex];
       const newSubArea = {
         nombreSubArea: name,
-        areaId: area.id, // puede ser undefined para nuevas áreas; se resuelve en el submit
+        areaId: area.id, // puede ser undefined; se corrige en el submit
       };
 
       const updatedArea = {
@@ -291,51 +291,62 @@ export default function ClientModal({
   };
 
   const validateStep1 = (): boolean => {
-    const requiredFields = [
+    // Campos obligatorios (incluye Teléfono)
+    const requiredFields: (keyof ClientFormData)[] = [
       "nombre",
       "nit",
       "direccion",
-      "contacto",
-      "email",
-      "telefono",
       "localizacion",
+      "telefono",
     ];
 
+    const fieldLabels: Partial<Record<keyof ClientFormData, string>> = {
+      nombre: "Nombre de la Empresa",
+      nit: "NIT",
+      direccion: "Dirección",
+      localizacion: "Ubicación",
+      telefono: "Teléfono",
+    };
+
     for (const field of requiredFields) {
-      const value = formData[field as keyof ClientFormData];
+      const value = formData[field];
       if (!value || (typeof value === "string" && value.trim() === "")) {
-        setError(`El campo ${field} es requerido`);
+        setError(
+          `El campo ${fieldLabels[field] ?? String(field)} es requerido`
+        );
+        playErrorSound();
         return false;
       }
     }
 
-    if (!formData.idUsuarioContacto) {
-      if (isCliente && user) {
-        // El backend usará al usuario autenticado como contacto
-        return true;
+    // Email: validar solo si viene algo
+    const emailTrimmed = formData.email.trim();
+    if (emailTrimmed) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailTrimmed)) {
+        setError("Ingrese un email válido");
+        playErrorSound();
+        return false;
       }
-      setError("Debe seleccionar un usuario contacto");
-      return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError("Ingrese un email válido");
-      return false;
-    }
-
+    // Teléfono: siempre validar, ya sabemos que no está vacío
+    const phoneTrimmed = formData.telefono.trim();
     const phoneRegex = /^[\d\s\-\+\(\)]{7,}$/;
-    if (!phoneRegex.test(formData.telefono.replace(/\s/g, ""))) {
+    if (!phoneRegex.test(phoneTrimmed.replace(/\s/g, ""))) {
       setError("Ingrese un teléfono válido (mínimo 7 dígitos)");
+      playErrorSound();
       return false;
     }
 
+    // Ya NO es obligatorio tener usuario contacto
     return true;
   };
 
   const validateAreas = (): boolean => {
     if (formData.areas.length === 0) {
       setError("Debe agregar al menos un área para el cliente.");
+      playErrorSound();
       setStep(2);
       return false;
     }
@@ -343,6 +354,7 @@ export default function ClientModal({
     for (const area of formData.areas) {
       if (!area.nombreArea || area.nombreArea.trim() === "") {
         setError("Todas las áreas deben tener un nombre.");
+        playErrorSound();
         setStep(2);
         return false;
       }
@@ -499,6 +511,7 @@ export default function ClientModal({
       resetForm();
     } catch (err: any) {
       setError(err.message || "Error al guardar el cliente");
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -586,7 +599,7 @@ export default function ClientModal({
                 {/* Contacto y Email */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>
-                    Persona de Contacto *
+                    Persona de Contacto 
                   </label>
                   <input
                     type="text"
@@ -600,15 +613,15 @@ export default function ClientModal({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Email *</label>
+                  <label className={styles.formLabel}>Email </label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="Se autocompletará si el usuario tiene email"
+                    placeholder="Email corporativo de la empresa"
                     className={styles.formInput}
-                    disabled={true}
+                    disabled={loading}
                   />
                 </div>
 
@@ -620,9 +633,9 @@ export default function ClientModal({
                     name="telefono"
                     value={formData.telefono}
                     onChange={handleInputChange}
-                    placeholder="Se autocompletará si el usuario tiene teléfono"
+                    placeholder="Teléfono de la empresa"
                     className={styles.formInput}
-                    disabled={true}
+                    disabled={loading}
                   />
                 </div>
 
@@ -659,9 +672,9 @@ export default function ClientModal({
                 {!isCliente && (
                   <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                     <label className={styles.formLabel}>
-                      Buscar y Seleccionar Usuario Contacto *
+                      Buscar y Seleccionar Usuario Contacto (opcional)
                       <span className={styles.fieldNote}>
-                        (Esto autocompletará los campos anteriores)
+                        (Solo autocompletará el nombre de la persona de contacto)
                       </span>
                     </label>
                     <div className={styles.autocompleteWrapper}>
@@ -687,9 +700,7 @@ export default function ClientModal({
                               onClick={() =>
                                 handleUserSelect(
                                   u.usuarioId,
-                                  `${u.nombre} ${u.apellido || ""}`,
-                                  u.email,
-                                  u.telefono
+                                  `${u.nombre} ${u.apellido || ""}`
                                 )
                               }
                             >
@@ -726,8 +737,7 @@ export default function ClientModal({
                         <div className={styles.selectedUserInfo}>
                           <strong>Usuario contacto seleccionado</strong>
                           <small>
-                            Los campos de contacto, email y teléfono se han
-                            autocompletado
+                            Solo el campo de nombre de contacto se ha autocompletado
                           </small>
                         </div>
                         <button
@@ -736,6 +746,7 @@ export default function ClientModal({
                             setFormData((prev) => ({
                               ...prev,
                               idUsuarioContacto: null,
+                              contacto: "", // También limpiar el nombre
                             }));
                             setUserSearch("");
                           }}
@@ -760,8 +771,7 @@ export default function ClientModal({
                           Se usará su usuario ({user.nombre}{" "}
                           {user.apellido || ""}) como contacto de la empresa.
                         </small>
-                        <small>{user.email}</small>
-                        {user.telefono && <small>{user.telefono}</small>}
+                        <small>Email y teléfono deben ser los de la empresa</small>
                       </div>
                     </div>
                   </div>
@@ -777,10 +787,10 @@ export default function ClientModal({
                           Simplificación de formulario
                         </p>
                         <p className={styles.noteText}>
-                          Al seleccionar un usuario contacto, los campos{" "}
-                          <strong>Persona de Contacto</strong>,
-                          <strong> Email</strong> y <strong>Teléfono</strong> se
-                          autocompletarán automáticamente.
+                          Al seleccionar un usuario contacto, solo el campo{" "}
+                          <strong>Persona de Contacto</strong> se autocompletará.
+                          Los campos <strong>Email</strong> y <strong>Teléfono </strong>  
+                           deben ser los de la empresa y se deben ingresar manualmente.
                         </p>
                       </div>
                     </div>

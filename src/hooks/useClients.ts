@@ -8,6 +8,7 @@ import type {
   CreateAreaDto,
   CreateSubAreaDto 
 } from '../interfaces/ClientInterfaces';
+import { playErrorSound } from '../utils/sounds';
 
 export const useClients = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -23,6 +24,7 @@ export const useClients = () => {
       setClients(data);
     } catch (err: any) {
       setError(err.message || 'Error al cargar clientes');
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -45,6 +47,7 @@ export const useClients = () => {
       return newClient;
     } catch (err: any) {
       setError(err.message || 'Error al crear cliente');
+      playErrorSound();
       throw err;
     }
   };
@@ -63,6 +66,7 @@ export const useClients = () => {
       return updatedClient;
     } catch (err: any) {
       setError(err.message || 'Error al actualizar cliente');
+      playErrorSound();
       throw err;
     }
   };
@@ -77,6 +81,7 @@ export const useClients = () => {
       setClients(prev => prev.filter(client => client.idCliente !== id));
     } catch (err: any) {
       setError(err.message || 'Error al eliminar cliente');
+      playErrorSound();
       throw err;
     }
   };
@@ -99,6 +104,7 @@ export const useClients = () => {
       return newArea;
     } catch (err: any) {
       setError(err.message || 'Error al crear área');
+      playErrorSound();
       throw err;
     }
   };
@@ -133,6 +139,7 @@ export const useClients = () => {
       return newSubArea;
     } catch (err: any) {
       setError(err.message || 'Error al crear subárea');
+      playErrorSound();
       throw err;
     }
   };

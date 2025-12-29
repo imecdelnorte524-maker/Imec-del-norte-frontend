@@ -1,0 +1,301 @@
+/* src/styles/components/clients/ClientAreasModal.module.css */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 16px;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 650px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+/* Header */
+.modalHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+  color: #fff;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.modalSubtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.8rem;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Body */
+.modalBody {
+  padding: 16px 20px;
+  overflow-y: auto;
+  background: #f9fafb;
+}
+
+/* Mensajes de error / carga */
+.errorBox {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+}
+
+.loadingText {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 8px;
+}
+
+/* Empty state */
+.emptyState {
+  text-align: center;
+  padding: 32px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px dashed #d1d5db;
+}
+
+.emptyIcon {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.emptyState p {
+  margin: 0 0 4px 0;
+  color: #4b5563;
+}
+
+.emptyState small {
+  color: #9ca3af;
+}
+
+/* Areas list */
+.areaList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.areaItem {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 12px 14px;
+}
+
+.areaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.areaInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.areaBullet {
+  color: #3b82f6;
+  font-size: 1.3rem;
+}
+
+.areaName {
+  font-weight: 600;
+  color: #111827;
+}
+
+.areaBadges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subareaCount {
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.equipmentCount {
+  background: #ecfdf5;
+  color: #166534;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Equipos en el área (sin subárea) */
+.equipmentList {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed #e5e7eb;
+}
+
+.equipmentListTitle {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.equipmentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.9rem;
+}
+
+.equipmentName {
+  color: #111827;
+}
+
+.equipmentCode {
+  font-size: 0.8rem;
+  color: #4b5563;
+  background: #e5e7eb;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* Subareas */
+.subareasList {
+  margin: 8px 0 0 0;
+  padding-left: 16px;
+  list-style: none;
+  border-left: 2px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.subareaItem {
+  padding-left: 8px;
+}
+
+.subareaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subareaName {
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.subareaEquipCount {
+  font-size: 0.75rem;
+  background: #fefce8;
+  color: #854d0e;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+/* Equipos de subárea */
+.subareaEquipmentList {
+  margin-top: 4px;
+  padding-left: 10px;
+  border-left: 1px dashed #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Nota cuando no hay equipos */
+.noEquipmentsNote {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #eff6ff;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  font-size: 0.8rem;
+  color: #1d4ed8;
+}
+
+/* Footer */
+.modalFooter {
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.closeFooterButton {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #111827;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.closeFooterButton:hover {
+  background: #020617;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    max-height: 90vh;
+  }
+}

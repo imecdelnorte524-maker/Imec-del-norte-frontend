@@ -321,8 +321,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .noResults {
@@ -581,28 +585,28 @@
   .metricsGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .filtersGrid {
     grid-template-columns: 1fr;
     gap: var(--spacing-md);
   }
-  
+
   .sectionHeader {
     flex-direction: column;
     gap: var(--spacing-sm);
     align-items: stretch;
   }
-  
+
   .resultsSummary {
     flex-direction: column;
     gap: var(--spacing-sm);
     align-items: stretch;
   }
-  
+
   .servicesGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .pageTitle {
     font-size: var(--font-size-xl);
   }
@@ -641,7 +645,7 @@
   .metricsGrid {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+
   .servicesGrid {
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }

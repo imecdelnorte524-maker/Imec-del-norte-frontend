@@ -1,3 +1,4 @@
+// src/pages/EquipmentListPage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -10,6 +11,7 @@ import {
 import type { Equipment } from "../interfaces/EquipmentInterfaces";
 import styles from "../styles/pages/EquipmentDetailPage.module.css"; // Reusamos header/errores
 import listStyles from "../styles/pages/EquipmentListPage.module.css";
+import { playErrorSound } from "../utils/sounds";
 
 interface ClientOption {
   idCliente: number;
@@ -41,7 +43,7 @@ export default function EquipmentListPage() {
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<number | 0>(
-    routeState.clientId ?? 0,
+    routeState.clientId ?? 0
   );
 
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -88,6 +90,7 @@ export default function EquipmentListPage() {
   useEffect(() => {
     if (!canView) {
       setError("No tiene permisos para ver el listado de equipos.");
+      playErrorSound();
       setLoadingClients(false);
       return;
     }
@@ -124,8 +127,9 @@ export default function EquipmentListPage() {
         console.error("Error cargando cliente para equipos:", err);
         setError(
           err.response?.data?.error ||
-            "Error al cargar la información del cliente.",
+            "Error al cargar la información del cliente."
         );
+        playErrorSound();
       } finally {
         setLoadingClients(false);
       }
@@ -151,9 +155,9 @@ export default function EquipmentListPage() {
       } catch (err: any) {
         console.error("Error cargando clientes para equipos:", err);
         setError(
-          err.response?.data?.error ||
-            "Error al cargar la lista de clientes.",
+          err.response?.data?.error || "Error al cargar la lista de clientes."
         );
+        playErrorSound();
       } finally {
         setLoadingClients(false);
       }
@@ -167,7 +171,14 @@ export default function EquipmentListPage() {
       // Modo general: Admin/Secretaria/Técnico pueden elegir la empresa
       loadClients();
     }
-  }, [canView, hasFixedClientFromRoute, routeState.clientId, routeState.clientName, routeState.clientNit, selectedClientId]);
+  }, [
+    canView,
+    hasFixedClientFromRoute,
+    routeState.clientId,
+    routeState.clientName,
+    routeState.clientNit,
+    selectedClientId,
+  ]);
 
   // Cargar equipos cuando cambia la empresa o la búsqueda
   useEffect(() => {
@@ -179,14 +190,14 @@ export default function EquipmentListPage() {
         setEquipmentError(null);
         const equipments = await getEquipmentByClientRequest(
           selectedClientId,
-          search || undefined,
+          search || undefined
         );
         setEquipmentList(equipments);
       } catch (err: any) {
         console.error("Error cargando equipos:", err);
         setEquipmentError(
           err.response?.data?.error ||
-            "Error al cargar los equipos de la empresa.",
+            "Error al cargar los equipos de la empresa."
         );
       } finally {
         setLoadingEquipment(false);
@@ -253,7 +264,7 @@ export default function EquipmentListPage() {
     } catch (err: any) {
       console.error("Error cargando áreas para crear equipo:", err);
       setCreateError(
-        err.response?.data?.error || "Error al cargar las áreas de la empresa.",
+        err.response?.data?.error || "Error al cargar las áreas de la empresa."
       );
     } finally {
       setCreateLoading(false);
@@ -285,7 +296,7 @@ export default function EquipmentListPage() {
         console.error("Error cargando subáreas:", err);
         setCreateError(
           err.response?.data?.error ||
-            "Error al cargar las subáreas del área seleccionada.",
+            "Error al cargar las subáreas del área seleccionada."
         );
       } finally {
         setCreateLoading(false);
@@ -298,7 +309,7 @@ export default function EquipmentListPage() {
   const handleCreateFormChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    >
   ) => {
     const { name, value } = e.target;
     setCreateForm((prev) => ({
@@ -337,12 +348,9 @@ export default function EquipmentListPage() {
         manufacturer: createForm.manufacturer || undefined,
         installationDate: createForm.installationDate || undefined,
         notes: createForm.notes || undefined,
-        areaId:
-          typeof selectedAreaId === "number" ? selectedAreaId : undefined,
+        areaId: typeof selectedAreaId === "number" ? selectedAreaId : undefined,
         subAreaId:
-          typeof selectedSubAreaId === "number"
-            ? selectedSubAreaId
-            : undefined,
+          typeof selectedSubAreaId === "number" ? selectedSubAreaId : undefined,
       };
 
       await createEquipmentRequest(payload);
@@ -350,7 +358,7 @@ export default function EquipmentListPage() {
       // Recargar lista de equipos
       const equipments = await getEquipmentByClientRequest(
         selectedClientId,
-        search || undefined,
+        search || undefined
       );
       setEquipmentList(equipments);
 
@@ -359,7 +367,7 @@ export default function EquipmentListPage() {
       console.error("Error creando equipo:", err);
       setCreateError(
         err.response?.data?.error ||
-          "Error al crear la hoja de vida del equipo.",
+          "Error al crear la hoja de vida del equipo."
       );
     } finally {
       setCreateLoading(false);
@@ -403,7 +411,9 @@ export default function EquipmentListPage() {
                     {clients[0]
                       ? `${clients[0].nombre} (${clients[0].nit})`
                       : routeState.clientName
-                      ? `${routeState.clientName} (${routeState.clientNit || ""})`
+                      ? `${routeState.clientName} (${
+                          routeState.clientNit || ""
+                        })`
                       : "Cliente seleccionado"}
                   </p>
                 ) : (
@@ -463,7 +473,9 @@ export default function EquipmentListPage() {
                       {eq.orderId && (
                         <div className={listStyles.row}>
                           <span className={listStyles.label}>Orden ID:</span>
-                          <span className={listStyles.value}>{`#${eq.orderId}`}</span>
+                          <span
+                            className={listStyles.value}
+                          >{`#${eq.orderId}`}</span>
                         </div>
                       )}
                       <div className={listStyles.row}>
@@ -653,14 +665,14 @@ export default function EquipmentListPage() {
                   </select>
                 </div>
 
-                {selectedAreaId && (
+                {selectedAreaId && subAreas.length > 0 && (
                   <div className={listStyles.formRow}>
                     <label>Subárea (opcional)</label>
                     <select
                       value={selectedSubAreaId || ""}
                       onChange={(e) =>
                         setSelectedSubAreaId(
-                          e.target.value ? parseInt(e.target.value, 10) : "",
+                          e.target.value ? parseInt(e.target.value, 10) : ""
                         )
                       }
                     >

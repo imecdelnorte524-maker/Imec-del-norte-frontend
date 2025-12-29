@@ -1,10 +1,11 @@
 // src/App.tsx
 
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -23,9 +24,12 @@ import Clients from "./pages/Clients";
 import EquipmentDetailPage from "./pages/EquipmentDetail";
 import EquipmentListPage from "./pages/EquipmentList";
 import UserProfilePage from "./pages/UserProfile";
+import RecoveryPage from "./pages/Recovey";
+import ResetPasswordPage from "./pages/ResetPassword";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -44,7 +48,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Si el usuario debe cambiar contraseña, lo forzamos a /profile
+  if (user?.mustChangePassword && location.pathname !== "/profile") {
+    return <Navigate to="/profile" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -188,7 +201,12 @@ function App() {
           }
         />
 
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        {/* Recuperación de contraseña (sin auth) */}
+        <Route path="/recovery" element={<RecoveryPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

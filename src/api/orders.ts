@@ -6,6 +6,8 @@ import type {
   CreateOrderData,
   UpdateOrderData,
   BillingEstado,
+  SupplyDetail,
+  ToolDetail,
 } from '../interfaces/OrderInterfaces';
 
 // Helpers de mapeo de estados backend ↔ frontend
@@ -56,6 +58,24 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
       ? apiOrder.equipos[0]
       : null;
 
+  const supplyDetails: SupplyDetail[] = Array.isArray(apiOrder.supplyDetails)
+    ? apiOrder.supplyDetails.map((d: any) => ({
+        detalleInsumoId: d.detalleInsumoId,
+        cantidadUsada: Number(d.cantidadUsada ?? 0),
+        costoUnitarioAlMomento: Number(d.costoUnitarioAlMomento ?? 0),
+        nombreInsumo: d.nombreInsumo ?? '',
+      }))
+    : [];
+
+  const toolDetails: ToolDetail[] = Array.isArray(apiOrder.toolDetails)
+    ? apiOrder.toolDetails.map((d: any) => ({
+        detalleHerramientaId: d.detalleHerramientaId,
+        tiempoUso: d.tiempoUso ?? '',
+        nombreHerramienta: d.nombreHerramienta ?? '',
+        marca: d.marca ?? '',
+      }))
+    : [];
+
   return {
     orden_id: apiOrder.ordenId,
     servicio_id: apiOrder.service?.servicioId ?? 0,
@@ -67,7 +87,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     estado: mapStatusFromApi(apiOrder.estado),
     comentarios: apiOrder.comentarios ?? null,
 
-    // 🔹 Facturación
+    // Facturación
     estado_facturacion: mapBillingFromApi(apiOrder.estadoFacturacion),
     factura_pdf_url: apiOrder.facturaPdfUrl ?? null,
 
@@ -119,6 +139,10 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
           categoria: firstEquipment.category ?? null,
         }
       : null,
+
+    // Detalles de insumos y herramientas
+    supplyDetails,
+    toolDetails,
 
     costo_total_insumos: apiOrder.costoTotalInsumos ?? 0,
     costo_total_estimado: apiOrder.costoTotalEstimado ?? 0,
@@ -280,4 +304,61 @@ export const uploadInvoiceRequest = async (
 
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
+};
+
+/**
+ * Agregar detalle de insumo a una orden
+ * POST /work-orders/:id/supplies
+ */
+export const addSupplyDetailRequest = async (
+  orderId: number,
+  payload: { insumoId: number; cantidadUsada: number; costoUnitarioAlMomento?: number },
+): Promise<SupplyDetail> => {
+  const response = await api.post(`/work-orders/${orderId}/supplies`, payload);
+  const d = response.data?.data;
+
+  const detail: SupplyDetail = {
+    detalleInsumoId: d.detalleInsumoId,
+    cantidadUsada: Number(d.cantidadUsada ?? payload.cantidadUsada ?? 0),
+    costoUnitarioAlMomento: Number(
+      d.costoUnitarioAlMomento ?? payload.costoUnitarioAlMomento ?? 0,
+    ),
+    nombreInsumo: d.supply?.nombre ?? d.nombreInsumo ?? '',
+  };
+
+  return detail;
+};
+
+/**
+ * Agregar detalle de herramienta a una orden
+ * POST /work-orders/:id/tools
+ */
+export const addToolDetailRequest = async (
+  orderId: number,
+  payload: { herramientaId: number; tiempoUso?: string; comentariosUso?: string },
+): Promise<ToolDetail> => {
+  const response = await api.post(`/work-orders/${orderId}/tools`, payload);
+  const d = response.data?.data;
+
+  const detail: ToolDetail = {
+    detalleHerramientaId: d.detalleHerramientaId,
+    tiempoUso: d.tiempoUso ?? payload.tiempoUso ?? '',
+    nombreHerramienta: d.tool?.nombre ?? d.nombreHerramienta ?? '',
+    marca: d.tool?.marca ?? d.marca ?? '',
+  };
+
+  return detail;
+};
+
+/**
+ * Eliminar una herramienta asignada (devolver a bodega)
+ * DELETE /work-orders/:id/tools/:detalleHerramientaId
+ */
+export const removeToolDetailRequest = async (
+  orderId: number,
+  detalleHerramientaId: number,
+): Promise<void> => {
+  await api.delete(
+    `/work-orders/${orderId}/tools/${detalleHerramientaId}`,
+  );
 };

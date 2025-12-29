@@ -1,9 +1,13 @@
 // src/components/ServicesCard.tsx
 
-import React from 'react';
-import type { Service } from '../interfaces/ServicesInterface';
-import { getStatusClass, getPriorityIcon, formatDateTime } from '../utils/statusUtils';
-import styles from '../styles/components/ServicesCard.module.css';
+import React from "react";
+import type { Service } from "../interfaces/ServicesInterface";
+import {
+  getStatusClass,
+  getPriorityIcon,
+  formatDateTime,
+} from "../utils/statusUtils";
+import styles from "../styles/components/ServicesCard.module.css";
 
 interface ServicesCardProps {
   service: Service;
@@ -16,19 +20,16 @@ const ServicesCard: React.FC<ServicesCardProps> = ({ service, onClick }) => {
   };
 
   const getTecnicoDisplayName = () => {
-    if (!service.tecnico) return 'Sin asignar';
-    return `${service.tecnico.nombre} ${service.tecnico.apellido || ''}`.trim();
+    if (!service.tecnico) return "Sin asignar";
+    return `${service.tecnico.nombre} ${service.tecnico.apellido || ""}`.trim();
   };
 
   const getClienteDisplayName = () => {
-    return `${service.cliente.nombre} ${service.cliente.apellido || ''}`.trim();
+    return `${service.cliente.nombre} ${service.cliente.apellido || ""}`.trim();
   };
 
   return (
-    <div 
-      className={styles.card}
-      onClick={() => onClick && onClick(service)}
-    >
+    <div className={styles.card} onClick={() => onClick && onClick(service)}>
       <div className={styles.cardHeader}>
         <div className={styles.serviceTitle}>
           {service.servicio.nombre_servicio}
@@ -45,19 +46,19 @@ const ServicesCard: React.FC<ServicesCardProps> = ({ service, onClick }) => {
           <span className={styles.label}>Cliente</span>
           <span className={styles.value}>{getClienteDisplayName()}</span>
         </div>
-        
+
         <div className={styles.infoRow}>
           <span className={styles.label}>Técnico</span>
           <span className={styles.value}>{getTecnicoDisplayName()}</span>
         </div>
-        
+
         <div className={styles.infoRow}>
           <span className={styles.label}>Equipo</span>
           <span className={styles.value}>
-            {service.equipo_asignado || 'Por asignar'}
+            {service.equipo_asignado || "Por asignar"}
           </span>
         </div>
-        
+
         <div className={styles.infoRow}>
           <span className={styles.label}>Fecha Programada</span>
           <span className={styles.value}>
@@ -74,11 +75,15 @@ const ServicesCard: React.FC<ServicesCardProps> = ({ service, onClick }) => {
       </div>
 
       <div className={styles.cardFooter}>
-        <div className={`${styles.status} ${styles[getStatusClass('estado', service.estado)]}`}>
+        <div
+          className={`${styles.status} ${
+            styles[getStatusClass("estado", service.estado)]
+          }`}
+        >
           {service.estado}
         </div>
         <div className={styles.serviceNumber}>
-          #{service.orden_id.toString().padStart(4, '0')}
+          #{service.orden_id.toString().padStart(4, "0")}
         </div>
       </div>
     </div>

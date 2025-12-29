@@ -1,14 +1,18 @@
+// src/components/layout/DashboardLayout.tsx
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "../../styles/components/layouts/DashboardLayout.module.css";
 import useClickOutside from "../../hooks/useClickOutside";
+import {
+  useNotifications,
+  type Notification,
+} from "../../hooks/useNotifications";
+import { users } from "../../api/users"; // ⬅️ para cargar la foto
 
-// Importar tipos de iconos
 import type { SVGProps } from "react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 
-// Importar iconos
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -22,21 +26,12 @@ import {
   ChartBarSquareIcon,
   PowerIcon,
   ChevronDownIcon,
-  // BuildingOfficeIcon,
   ShieldCheckIcon,
   UserCircleIcon,
   UserGroupIcon,
-  // ChartPieIcon,
-  // ShoppingCartIcon,
-  // CheckCircleIcon,
   DocumentTextIcon,
-  // WrenchScrewdriverIcon,
-  // ClipboardDocumentCheckIcon,
+  WrenchIcon,
 } from "@heroicons/react/24/outline";
-
-/* =======================
-   TIPOS
-======================= */
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -61,12 +56,6 @@ interface UserDropdownProps {
   onProfile: () => void;
 }
 
-/* =======================
-   CONFIGURACIÓN CENTRALIZADA DE ROLES Y MÓDULOS
-   CON TIPOS SEGUROS
-======================= */
-
-// Definir tipos para las claves
 type ModuleKey =
   | "dashboard"
   | "sg-sst"
@@ -83,7 +72,8 @@ type ModuleKey =
   | "clients"
   | "purchases"
   | "inspections"
-  | "settings";
+  | "settings"
+  | "equipments";
 
 type RoleKey =
   | "ADMINISTRADOR"
@@ -94,7 +84,6 @@ type RoleKey =
   | "CLIENTE"
   | "MARKETING";
 
-// Tipo para iconos Heroicons
 type HeroIcon = ForwardRefExoticComponent<
   Omit<SVGProps<SVGSVGElement>, "ref"> & {
     title?: string;
@@ -109,12 +98,10 @@ interface ModuleConfig {
   moduleType: "principal" | "operativo" | "administrativo" | "cliente";
 }
 
-// Configuración con tipos seguros
 const MODULE_CONFIG = {
-  // Definición de todos los módulos disponibles
   modules: {
     dashboard: {
-      name: "Dashboard",
+      name: "Página Principal",
       href: "/dashboard",
       icon: HomeIcon,
       moduleType: "principal" as const,
@@ -131,18 +118,6 @@ const MODULE_CONFIG = {
       icon: ClipboardDocumentListIcon,
       moduleType: "operativo" as const,
     },
-    // 'my-tasks': {
-    //   name: 'Mis Tareas',
-    //   href: '/my-tasks',
-    //   icon: WrenchScrewdriverIcon,
-    //   moduleType: 'operativo' as const,
-    // },
-    // 'my-orders': {
-    //   name: 'Mis Órdenes',
-    //   href: '/my-orders',
-    //   icon: CheckCircleIcon,
-    //   moduleType: 'cliente' as const,
-    // },
     requirements: {
       name: "Requerimientos",
       href: "/requirements",
@@ -155,24 +130,12 @@ const MODULE_CONFIG = {
       icon: CurrencyDollarIcon,
       moduleType: "administrativo" as const,
     },
-    // areas: {
-    //   name: "Áreas",
-    //   href: "/areas",
-    //   icon: BuildingOfficeIcon,
-    //   moduleType: "administrativo" as const,
-    // },
     reports: {
       name: "Reportes",
       href: "/reports",
       icon: ChartBarSquareIcon,
       moduleType: "administrativo" as const,
     },
-    // 'statistics': {
-    //   name: 'Estadísticas',
-    //   href: '/statistics',
-    //   icon: ChartPieIcon,
-    //   moduleType: 'administrativo' as const,
-    // },
     inventory: {
       name: "Inventario",
       href: "/inventory",
@@ -191,27 +154,20 @@ const MODULE_CONFIG = {
       icon: UserGroupIcon,
       moduleType: "administrativo" as const,
     },
-    // 'purchases': {
-    //   name: 'Compras',
-    //   href: '/purchases',
-    //   icon: ShoppingCartIcon,
-    //   moduleType: 'administrativo' as const,
-    // },
-    // 'inspections': {
-    //   name: 'Inspecciones',
-    //   href: '/inspections',
-    //   icon: ClipboardDocumentCheckIcon,
-    //   moduleType: 'administrativo' as const,
-    // },
     settings: {
       name: "Configuración",
       href: "/settings",
       icon: Cog6ToothIcon,
       moduleType: "administrativo" as const,
     },
+    equipments: {
+      name: "Equipos",
+      href: "/equipment",
+      icon: WrenchIcon,
+      moduleType: "operativo" as const,
+    },
   } as Record<ModuleKey, ModuleConfig>,
 
-  // Configuración de acceso por rol
   roleAccess: {
     ADMINISTRADOR: ["all"] as ModuleKey[] | ["all"],
     "SG-SST": [
@@ -230,17 +186,17 @@ const MODULE_CONFIG = {
       "reports",
       "inventory",
     ] as ModuleKey[],
-    TECNICO: ["dashboard", "orders", "my-tasks", "reports", "sg-sst"] as ModuleKey[],
-    CLIENTE: [
+    TECNICO: [
       "dashboard",
-      "my-orders",
-      "requirements",
+      "orders",
+      "my-tasks",
       "reports",
+      "sg-sst",
     ] as ModuleKey[],
+    CLIENTE: ["dashboard", "orders", "requirements", "reports"] as ModuleKey[],
     MARKETING: ["all"] as ModuleKey[] | ["all"],
   } as Record<RoleKey, ModuleKey[] | ["all"]>,
 
-  // Traducción de nombres de roles para mostrar
   roleNames: {
     ADMINISTRADOR: "Administrador",
     "SG-SST": "SG-SST",
@@ -252,9 +208,6 @@ const MODULE_CONFIG = {
   } as Record<RoleKey, string>,
 };
 
-/* =======================
-   COMPONENTE DROPDOWN
-======================= */
 function UserDropdown({
   isCollapsed = false,
   onLogout,
@@ -297,13 +250,18 @@ function UserDropdown({
   );
 }
 
-/* =======================
-   COMPONENTE PRINCIPAL
-======================= */
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const httpBaseUrl =
+    (import.meta as any).env?.VITE_API_URL || "http://localhost:3000/api";
+  const wsBaseUrl =
+    (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:3000";
+
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotifications({ token, httpBaseUrl, wsBaseUrl });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -311,10 +269,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [filteredNavigation, setFilteredNavigation] = useState<
     NavigationItem[]
   >([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  /* =======================
-     USE CLICK OUTSIDE
-  ======================= */
+  // NUEVO: foto de perfil para el layout
+  const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
+
   const sidebarUserMenuRef = useClickOutside(() => {
     setShowUserMenu(false);
   }, [`.${styles.dropdownItem}`]);
@@ -323,19 +282,56 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setShowUserMenu(false);
   }, [`.${styles.dropdownItem}`]);
 
-  /* =======================
-     FILTRAR MÓDULOS POR ROL - CON TIPOS SEGUROS
-  ======================= */
+  const notificationsMenuRef = useClickOutside(() => {
+    setShowNotifications(false);
+  }, []);
+
+  const getUserRole = useCallback((): string => {
+    if (!user) return "TECNICO";
+
+    if (user.role && typeof user.role === "object" && user.role.nombreRol) {
+      return user.role.nombreRol;
+    }
+
+    if (typeof user.role === "string") {
+      return user.role;
+    }
+
+    return user.role?.nombreRol || "TECNICO";
+  }, [user]);
+
+  // Cargar foto de perfil para el layout
+  useEffect(() => {
+    const loadPhoto = async () => {
+      if (!user) {
+        setUserPhotoUrl(null);
+        return;
+      }
+
+      try {
+        const data = await users.getUserPhoto(user.usuarioId);
+        if (data && data.url) {
+          setUserPhotoUrl(data.url);
+        } else {
+          setUserPhotoUrl(null);
+        }
+      } catch (err) {
+        console.error("Error cargando foto de usuario en layout:", err);
+        setUserPhotoUrl(null);
+      }
+    };
+
+    loadPhoto();
+  }, [user]);
+
   useEffect(() => {
     if (!user || !user.role) {
       setFilteredNavigation([]);
       return;
     }
 
-    // Obtener rol del usuario con validación de tipo
     const userRoleRaw = getUserRole().toUpperCase();
 
-    // Verificar si el rol es válido
     const isValidRole = (role: string): role is RoleKey => {
       return role in MODULE_CONFIG.roleAccess;
     };
@@ -344,21 +340,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ? userRoleRaw
       : ("TECNICO" as RoleKey);
 
-    // Obtener módulos permitidos para este rol
     const allowedModules = MODULE_CONFIG.roleAccess[userRole] || [];
 
-    // Determinar qué módulos mostrar
     let modulesToShow: ModuleKey[] = [];
 
     if (allowedModules[0] === "all") {
-      // Superadministrador - todos los módulos
       modulesToShow = Object.keys(MODULE_CONFIG.modules) as ModuleKey[];
     } else {
-      // Otros roles - módulos específicos
       modulesToShow = allowedModules as ModuleKey[];
     }
 
-    // Crear array de navegación filtrada
     const navigationItems: NavigationItem[] = [];
 
     modulesToShow.forEach((moduleKey) => {
@@ -374,7 +365,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       }
     });
 
-    // Ordenar módulos por tipo
     const orderedNavigation = navigationItems.sort((a, b) => {
       const order = {
         principal: 1,
@@ -389,22 +379,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     });
 
     setFilteredNavigation(orderedNavigation);
-  }, [user, location.pathname]);
+  }, [user, location.pathname, getUserRole]);
 
-  /* =======================
-     HANDLERS
-  ======================= */
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
-
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
-
   const toggleSidebarCollapsed = useCallback(
     () => setSidebarCollapsed((prev) => !prev),
     []
   );
-
   const toggleUserMenu = useCallback(
     () => setShowUserMenu((prev) => !prev),
+    []
+  );
+  const toggleNotifications = useCallback(
+    () => setShowNotifications((prev) => !prev),
     []
   );
 
@@ -419,7 +407,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleLogout = useCallback(() => {
     logout();
     setShowUserMenu(false);
-  }, [logout]);
+    navigate("/", { replace: true });
+  }, [logout, navigate]);
 
   const handleGoProfile = useCallback(() => {
     navigate("/profile");
@@ -427,9 +416,44 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     closeSidebar();
   }, [navigate, closeSidebar]);
 
-  /* =======================
-     HELPERS USUARIO - CON TIPOS SEGUROS
-  ======================= */
+  const getNotificationTargetPath = useCallback(
+    (notif: Notification): string | null => {
+      switch (notif.tipo) {
+        case "WORK_ORDER_CREATED":
+        case "WORK_ORDER_ASSIGNED": {
+          const id =
+            notif.data?.workOrderId ?? notif.data?.ordenId ?? notif.data?.id;
+          if (id) {
+            return `/orders?ordenId=${id}`;
+          }
+          return "/orders";
+        }
+        case "STOCK_BELOW_MIN": {
+          return "/inventory";
+        }
+        default:
+          return null;
+      }
+    },
+    []
+  );
+
+  const handleNotificationClick = useCallback(
+    (notif: Notification) => {
+      if (!notif.leida) {
+        markAsRead(notif.notificacionId);
+      }
+
+      const target = getNotificationTargetPath(notif);
+      if (target) {
+        navigate(target);
+      }
+
+      setShowNotifications(false);
+    },
+    [markAsRead, getNotificationTargetPath, navigate]
+  );
+
   const getUserInitials = useCallback(() => {
     if (!user) return "U";
     return `${user.nombre?.charAt(0) || ""}${
@@ -446,24 +470,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }, [user]);
 
-  const getUserRole = useCallback(() => {
-    if (!user) return "TECNICO";
-
-    if (user.role && typeof user.role === "object" && user.role.nombreRol) {
-      return user.role.nombreRol;
-    }
-
-    if (typeof user.role === "string") {
-      return user.role;
-    }
-
-    return user.role?.nombreRol || "TECNICO";
-  }, [user]);
-
   const getDisplayRoleName = useCallback(() => {
     const roleKey = getUserRole().toUpperCase();
 
-    // Validar y obtener nombre del rol
     if (roleKey in MODULE_CONFIG.roleNames) {
       return MODULE_CONFIG.roleNames[roleKey as RoleKey];
     }
@@ -472,14 +481,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [getUserRole]);
 
   const getCurrentPageTitle = useCallback(() => {
-    // Buscar en los módulos configurados
     for (const module of Object.values(MODULE_CONFIG.modules)) {
       if (location.pathname === module.href) {
         return module.name;
       }
     }
 
-    // Títulos especiales para rutas no en módulos
     const pageTitles: Record<string, string> = {
       "/profile": "Mi Perfil",
       "/roles": "Gestión de Roles",
@@ -490,7 +497,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return pageTitles[location.pathname] || "Dashboard";
   }, [location.pathname]);
 
-  // Agrupar módulos por tipo para mejor organización visual
   const groupedNavigation = useMemo(() => {
     const groups: Record<string, NavigationItem[]> = {};
 
@@ -516,9 +522,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return titles[groupType] || groupType;
   };
 
-  /* =======================
-     JSX
-  ======================= */
   return (
     <div className={styles.container}>
       {sidebarOpen && <div className={styles.overlay} onClick={closeSidebar} />}
@@ -531,16 +534,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className={styles.sidebarHeader}>
           <div className={styles.logoContainer}>
-            {/* {sidebarCollapsed ? (
-            ) : (
-              <>
-              <img
-              src="/Assets/images/LOGO_IMEC.png"
-              alt="IMEC del Norte"
-              className={styles.logo}
-              />
-              </>
-              )} */}
             <img
               src="/Assets/images/LOGO_IMEC.png"
               alt="IMEC del Norte"
@@ -569,9 +562,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {!sidebarCollapsed && items.length > 0 && (
                 <h3 className={styles.sectionTitle}>
                   {getGroupTitle(groupType)}
-                  {!sidebarCollapsed && (
-                    <span className={styles.moduleCount}>{items.length}</span>
-                  )}
                 </h3>
               )}
 
@@ -588,15 +578,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   {!sidebarCollapsed && (
                     <span className={styles.navText}>{item.name}</span>
                   )}
-                  {/* <div className={styles.tooltip}>
-                    {item.name}
-                  </div> */}
                 </button>
               ))}
             </div>
           ))}
 
-          {/* Mostrar mensaje si no hay módulos */}
           {filteredNavigation.length === 0 && user && (
             <div className={styles.noModulesMessage}>
               <p>No tienes módulos asignados.</p>
@@ -608,7 +594,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* ===== USER FOOTER (DESKTOP) ===== */}
         <div className={styles.sidebarFooter} ref={sidebarUserMenuRef}>
           <div className={styles.userProfile} onClick={toggleUserMenu}>
-            <div className={styles.userAvatar}>{getUserInitials()}</div>
+            <div className={styles.userAvatar}>
+              {userPhotoUrl ? (
+                <img
+                  src={userPhotoUrl}
+                  alt="Foto de perfil"
+                  className={styles.userAvatarImage}
+                />
+              ) : (
+                getUserInitials()
+              )}
+            </div>
 
             {!sidebarCollapsed && (
               <div className={styles.userInfo}>
@@ -658,25 +654,92 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <h1 className={styles.pageTitle}>
               {getCurrentPageTitle()}
-              {user && (
-                <span className={styles.pageSubtitle}>
-                  | {getDisplayRoleName()}
-                </span>
-              )}
             </h1>
           </div>
 
-          {/* ===== HEADER USER (MOBILE) ===== */}
+          {/* ===== HEADER RIGHT (NOTIFICACIONES + USUARIO) ===== */}
           <div className={styles.headerRight} ref={mobileUserMenuRef}>
-            <button className={styles.iconButton}>
-              <BellIcon className={styles.navIcon} />
-            </button>
+            {/* NOTIFICACIONES */}
+            <div
+              className={styles.notificationsWrapper}
+              ref={notificationsMenuRef}
+            >
+              <button
+                className={styles.iconButton}
+                onClick={toggleNotifications}
+              >
+                <BellIcon className={styles.navIcon} />
+                {unreadCount > 0 && (
+                  <span className={styles.notificationBadge}>
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
 
+              {showNotifications && (
+                <div className={styles.notificationsDropdown}>
+                  <div className={styles.notificationsHeader}>
+                    <span>Notificaciones</span>
+                    {notifications.length > 0 && (
+                      <button
+                        type="button"
+                        className={styles.markAllReadButton}
+                        onClick={markAllAsRead}
+                      >
+                        Marcar todas como leídas
+                      </button>
+                    )}
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div className={styles.noNotifications}>
+                      No hay notificaciones
+                    </div>
+                  ) : (
+                    <ul className={styles.notificationsList}>
+                      {notifications.map((n) => (
+                        <li
+                          key={n.notificacionId}
+                          className={
+                            n.leida
+                              ? styles.notificationItemRead
+                              : styles.notificationItemUnread
+                          }
+                          onClick={() => handleNotificationClick(n)}
+                        >
+                          <div className={styles.notificationTitle}>
+                            {n.titulo}
+                          </div>
+                          <div className={styles.notificationMessage}>
+                            {n.mensaje}
+                          </div>
+                          <div className={styles.notificationDate}>
+                            {new Date(n.fechaCreacion).toLocaleString()}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* USUARIO (AVATAR) */}
             <button
               className={styles.userAvatarButton}
               onClick={toggleUserMenu}
             >
-              <div className={styles.userAvatar}>{getUserInitials()}</div>
+              <div className={styles.userAvatar}>
+                {userPhotoUrl ? (
+                  <img
+                    src={userPhotoUrl}
+                    alt="Foto de perfil"
+                    className={styles.userAvatarImage}
+                  />
+                ) : (
+                  getUserInitials()
+                )}
+              </div>
             </button>
 
             {showUserMenu && (

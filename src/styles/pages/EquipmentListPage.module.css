@@ -282,6 +282,7 @@
 
   .filterGroup {
     min-width: 100%;
+    flex: 1 1 50px;
   }
 
   .grid {

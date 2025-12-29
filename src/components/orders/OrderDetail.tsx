@@ -9,11 +9,23 @@ import {
   assignTechnicianRequest,
   uploadInvoiceRequest,
   unassignTechnicianRequest,
+  getOrderByIdRequest,
+  addSupplyDetailRequest,
+  addToolDetailRequest,
+  removeToolDetailRequest,
 } from "../../api/orders";
 import { users } from "../../api/users";
-import type { Order, UpdateOrderData } from "../../interfaces/OrderInterfaces";
+import { inventory } from "../../api/inventory";
+import type {
+  Order,
+  UpdateOrderData,
+  SupplyDetail,
+  ToolDetail,
+} from "../../interfaces/OrderInterfaces";
 import type { Usuario } from "../../interfaces/UserInterfaces";
 import styles from "../../styles/components/orders/OrderDetail.module.css";
+import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import { playErrorSound } from "../../utils/sounds";
 
 interface Props {
   order: Order;
@@ -43,6 +55,25 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
+
+  // Detalles de insumos y herramientas asignados (desde backend)
+  const [supplyDetails, setSupplyDetails] = useState<SupplyDetail[]>(
+    order.supplyDetails ?? []
+  );
+  const [toolDetails, setToolDetails] = useState<ToolDetail[]>(
+    order.toolDetails ?? []
+  );
+
+  // Modal asignar herramientas/insumos
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState<Inventory[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [selectedInventoryId, setSelectedInventoryId] = useState<number | "">(
+    ""
+  );
+  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const isClient = userRole === 'cliente';
 
   // Estados válidos del frontend
   const validStatuses = {
@@ -76,6 +107,22 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     loadTechnicians();
   }, [userRole]);
 
+  // Sincronizar detalles cuando cambie la orden recibida por props
+  useEffect(() => {
+    setSupplyDetails(order.supplyDetails ?? []);
+    setToolDetails(order.toolDetails ?? []);
+  }, [order]);
+
+  const reloadOrderDetails = async () => {
+    try {
+      const updated = await getOrderByIdRequest(order.orden_id);
+      setSupplyDetails(updated.supplyDetails ?? []);
+      setToolDetails(updated.toolDetails ?? []);
+    } catch (err) {
+      console.error("Error recargando detalles de la orden:", err);
+    }
+  };
+
   const handleStatusUpdate = async (newStatus: Order["estado"]) => {
     setLoading(true);
     try {
@@ -95,6 +142,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           err.response?.data?.message ||
           "Error al actualizar la orden"
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -114,6 +162,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           err.response?.data?.message ||
           "Error al asignar técnico"
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -132,6 +181,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           err.response?.data?.message ||
           "Error al quitar el técnico de la orden"
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -151,6 +201,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           err.response?.data?.message ||
           "Error al rechazar la orden"
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -170,6 +221,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           err.response?.data?.message ||
           "Error al cancelar la orden"
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -198,6 +250,121 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       );
     } finally {
       setInvoiceLoading(false);
+    }
+  };
+
+  const handleOpenInventoryModal = async () => {
+    setInventoryError(null);
+    setSelectedInventoryId("");
+    setSelectedQuantity(1);
+    setShowInventoryModal(true);
+
+    try {
+      setInventoryLoading(true);
+      const data = await inventory.getAllInventory();
+      setInventoryItems(data);
+    } catch (err: any) {
+      console.error("Error cargando inventario:", err);
+      setInventoryError(
+        err.response?.data?.message || "Error al cargar el inventario"
+      );
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
+  const handleAssignInventoryItem = async () => {
+    if (!selectedInventoryId) {
+      setInventoryError("Debe seleccionar un ítem de inventario");
+      return;
+    }
+
+    const selected = inventoryItems.find(
+      (i) => i.inventarioId === selectedInventoryId
+    );
+
+    if (!selected) {
+      setInventoryError("Ítem de inventario no encontrado");
+      return;
+    }
+
+    setInventoryError(null);
+    setLoading(true);
+
+    try {
+      if (selected.tipo === "insumo") {
+        if (!selected.supply) {
+          setInventoryError("Datos incompletos del insumo seleccionado");
+          return;
+        }
+
+        if (!selectedQuantity || selectedQuantity <= 0) {
+          setInventoryError("La cantidad debe ser mayor que cero");
+          return;
+        }
+
+        if (selectedQuantity > selected.cantidadActual) {
+          setInventoryError(
+            `No hay stock suficiente. Stock actual: ${selected.cantidadActual}`
+          );
+          return;
+        }
+
+        await addSupplyDetailRequest(order.orden_id, {
+          insumoId: selected.supply.insumoId,
+          cantidadUsada: selectedQuantity,
+        });
+      } else {
+        // herramienta
+        if (!selected.tool) {
+          setInventoryError("Datos incompletos de la herramienta seleccionada");
+          return;
+        }
+
+        await addToolDetailRequest(order.orden_id, {
+          herramientaId: selected.tool.herramientaId,
+        });
+      }
+
+      await reloadOrderDetails();
+      setShowInventoryModal(false);
+      setSelectedInventoryId("");
+      setSelectedQuantity(1);
+    } catch (err: any) {
+      console.error("Error asignando inventario a la orden:", err);
+      setInventoryError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Error al asignar el ítem a la orden"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReturnTool = async (detalleHerramientaId: number) => {
+    if (
+      !window.confirm(
+        "¿Confirma que la herramienta fue devuelta a bodega para esta orden?"
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await removeToolDetailRequest(order.orden_id, detalleHerramientaId);
+      await reloadOrderDetails();
+    } catch (err: any) {
+      console.error("Error devolviendo herramienta:", err);
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Error al devolver la herramienta"
+      );
+      playErrorSound();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -249,6 +416,14 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
+  const canAssignInventory =
+    (userRole === "admin" ||
+      userRole === "secretaria" ||
+      userRole === "tecnico") &&
+    !isReadOnly &&
+    order.estado !== validStatuses.CANCELADA &&
+    order.estado !== validStatuses.RECHAZADA;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -290,6 +465,18 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       <div className={styles.detailsGrid}>
         <div className={styles.section}>
           <h3>Información del Cliente</h3>
+          {order.cliente_empresa && (
+            <>
+              <div className={styles.detailItem}>
+                <strong>Empresa:</strong>
+                <span>{order.cliente_empresa.nombre}</span>
+              </div>
+              <div className={styles.detailItem}>
+                <strong>NIT:</strong>
+                <span>{order.cliente_empresa.nit}</span>
+              </div>
+            </>
+          )}
           <div className={styles.detailItem}>
             <strong>Cliente (persona):</strong>
             <span>
@@ -308,18 +495,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                 "No proporcionado"}
             </span>
           </div>
-          {order.cliente_empresa && (
-            <>
-              <div className={styles.detailItem}>
-                <strong>Empresa:</strong>
-                <span>{order.cliente_empresa.nombre}</span>
-              </div>
-              <div className={styles.detailItem}>
-                <strong>NIT:</strong>
-                <span>{order.cliente_empresa.nit}</span>
-              </div>
-            </>
-          )}
         </div>
 
         <div className={styles.section}>
@@ -409,12 +584,96 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                 <span>{order.equipo.categoria}</span>
               </div>
             )}
-            <Link
+            { !isClient && (<Link
               to={`/equipment/${order.equipo.equipo_id}`}
               className={styles.viewEquipmentButton}
             >
               Ver hoja de vida completa
-            </Link>
+            </Link>)}
+          </div>
+        )}
+
+        {/* Herramientas e insumos asignados */}
+        {(toolDetails.length > 0 || supplyDetails.length > 0) && (
+          <div className={styles.section}>
+            <h3>Herramientas e Insumos Asignados</h3>
+
+            {toolDetails.length > 0 && (
+              <div className={styles.subSection}>
+                <h4>Herramientas</h4>
+                <div className={styles.itemsTableWrapper}>
+                  <table className={styles.itemsTable}>
+                    <thead>
+                      <tr>
+                        <th>Herramienta</th>
+                        <th>Marca</th>
+                        <th>Tiempo de uso</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {toolDetails.map((detail) => (
+                        <tr key={detail.detalleHerramientaId}>
+                          <td>{detail.nombreHerramienta}</td>
+                          <td>{detail.marca || "-"}</td>
+                          <td>{detail.tiempoUso || "-"}</td>
+                          <td>
+                            {!isReadOnly &&
+                              order.estado === validStatuses.EN_PROCESO &&
+                              (userRole === "tecnico" ||
+                                userRole === "admin" ||
+                                userRole === "secretaria") && (
+                                <button
+                                  type="button"
+                                  className={styles.smallSecondaryButton}
+                                  onClick={() =>
+                                    handleReturnTool(
+                                      detail.detalleHerramientaId
+                                    )
+                                  }
+                                  disabled={loading}
+                                >
+                                  Devolver herramienta
+                                </button>
+                              )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {supplyDetails.length > 0 && (
+              <div className={styles.subSection}>
+                <h4>Insumos</h4>
+                <div className={styles.itemsTableWrapper}>
+                  <table className={styles.itemsTable}>
+                    <thead>
+                      <tr>
+                        <th>Insumo</th>
+                        <th>Cantidad usada</th>
+                        <th>Costo unitario</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supplyDetails.map((detail) => (
+                        <tr key={detail.detalleInsumoId}>
+                          <td>{detail.nombreInsumo}</td>
+                          <td>{detail.cantidadUsada}</td>
+                          <td>
+                            {detail.costoUnitarioAlMomento != null
+                              ? `$ ${detail.costoUnitarioAlMomento.toLocaleString()}`
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -468,7 +727,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       {/* Acciones según el rol */}
       <div className={styles.actions}>
         {/* Ver equipos de la empresa (cualquiera que vea la orden, incluso facturada) */}
-        {order.cliente_empresa && (
+        {order.cliente_empresa && !isClient && (
           <button
             type="button"
             className={styles.secondaryButton}
@@ -484,6 +743,18 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             }
           >
             Ver equipos de la empresa
+          </button>
+        )}
+
+        {/* Asignar herramientas/insumos */}
+        {canAssignInventory && (
+          <button
+            type="button"
+            className={styles.secondaryButton}
+            onClick={handleOpenInventoryModal}
+            disabled={loading}
+          >
+            Asignar herramientas/insumos
           </button>
         )}
 
@@ -707,6 +978,120 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para asignar herramientas / insumos */}
+      {showInventoryModal && !isReadOnly && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeaderRow}>
+              <h3>Asignar herramienta / insumo</h3>
+              <button
+                type="button"
+                className={styles.modalCloseButton}
+                onClick={() => setShowInventoryModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {inventoryError && (
+              <div className={styles.error}>{inventoryError}</div>
+            )}
+
+            {inventoryLoading ? (
+              <p>Cargando inventario...</p>
+            ) : (
+              <>
+                <div className={styles.formRow}>
+                  <label>Ítem de inventario *</label>
+                  <select
+                    className={styles.technicianSelect}
+                    value={selectedInventoryId}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedInventoryId(
+                        value ? parseInt(value, 10) : ""
+                      );
+                      setSelectedQuantity(1);
+                    }}
+                  >
+                    <option value="">Seleccionar ítem...</option>
+                    {inventoryItems.map((item) => (
+                      <option
+                        key={item.inventarioId}
+                        value={item.inventarioId}
+                      >
+                        {item.tipo === "herramienta" ? "Herramienta" : "Insumo"}{" "}
+                        - {item.nombreItem}
+                        {item.tipo === "insumo" && item.supply
+                          ? ` (Stock: ${item.cantidadActual} ${item.supply.unidadMedida})`
+                          : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {(() => {
+                  const selected =
+                    typeof selectedInventoryId === "number"
+                      ? inventoryItems.find(
+                          (i) => i.inventarioId === selectedInventoryId
+                        )
+                      : undefined;
+                  if (!selected || selected.tipo !== "insumo" || !selected.supply)
+                    return null;
+
+                  return (
+                    <div className={styles.formRow}>
+                      <label>
+                        Cantidad a usar ({selected.supply.unidadMedida})
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={selected.cantidadActual}
+                        value={selectedQuantity}
+                        onChange={(e) =>
+                          setSelectedQuantity(
+                            Number(e.target.value) > 0
+                              ? Number(e.target.value)
+                              : 1
+                          )
+                        }
+                      />
+                      <small>
+                        Stock actual: {selected.cantidadActual}{" "}
+                        {selected.supply.unidadMedida}
+                      </small>
+                    </div>
+                  );
+                })()}
+
+                <div className={styles.formActions}>
+                  <button
+                    type="button"
+                    onClick={() => setShowInventoryModal(false)}
+                    disabled={loading}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAssignInventoryItem}
+                    disabled={
+                      loading ||
+                      !selectedInventoryId ||
+                      inventoryItems.length === 0
+                    }
+                  >
+                    {loading ? "Asignando..." : "Asignar a la orden"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

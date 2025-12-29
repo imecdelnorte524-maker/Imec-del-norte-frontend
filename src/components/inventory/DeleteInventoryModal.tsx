@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { inventory } from '../../api/inventory';
-import { catalog } from '../../api/catalog';
-import type { Inventory } from '../../interfaces/InventoryInterfaces';
-import styles from '../../styles/components/inventory/DeleteInventoryModal.module.css';
+import { useState } from "react";
+import { inventory } from "../../api/inventory";
+import { catalog } from "../../api/catalog";
+import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import styles from "../../styles/components/inventory/DeleteInventoryModal.module.css";
+import { playErrorSound } from "../../utils/sounds";
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -22,7 +23,8 @@ export default function DeleteConfirmationModal({
 
   const handleDelete = async () => {
     if (!item || !item.inventarioId) {
-      setError('No hay item seleccionado para eliminar');
+      setError("No hay item seleccionado para eliminar");
+      playErrorSound();
       return;
     }
 
@@ -32,51 +34,36 @@ export default function DeleteConfirmationModal({
 
       if (item.herramientaId && item.tool) {
         try {
-          console.log(
-            `🗑️ Eliminando herramienta ${item.herramientaId} antes del inventario...`,
-          );
           await catalog.deleteHerramienta(item.herramientaId);
-          console.log('✅ Herramienta eliminada exitosamente');
         } catch (toolError: any) {
           console.warn(
-            '⚠️ Error al eliminar herramienta, continuando con eliminación de inventario:',
-            toolError,
+            "⚠️ Error al eliminar herramienta, continuando con eliminación de inventario:",
+            toolError
           );
         }
       }
 
       if (item.insumoId && item.supply) {
         try {
-          console.log(
-            `🗑️ Eliminando insumo ${item.insumoId} antes del inventario...`,
-          );
           await catalog.deleteInsumo(item.insumoId);
-          console.log('✅ Insumo eliminado exitosamente');
         } catch (supplyError: any) {
           console.warn(
-            '⚠️ Error al eliminar insumo, continuando con eliminación de inventario:',
-            supplyError,
+            "⚠️ Error al eliminar insumo, continuando con eliminación de inventario:",
+            supplyError
           );
         }
       }
 
-      console.log(
-        `🗑️ Eliminando registro de inventario ${item.inventarioId}...`,
-      );
-      const result = await inventory.deleteInventoryAndItem(
-        item.inventarioId,
-      );
-
-      console.log('✅ Eliminación completa exitosa:', result);
-
+      await inventory.deleteInventoryAndItem(item.inventarioId);
+      
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('❌ Error al eliminar:', err);
+      console.error("❌ Error al eliminar:", err);
       setError(
-        err.message ||
-          'Error al eliminar el item. Por favor, intente de nuevo.',
+        err.message || "Error al eliminar el item. Por favor, intente de nuevo."
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -101,23 +88,18 @@ export default function DeleteConfirmationModal({
           </button>
         </div>
 
-        {error && (
-          <div className={styles.errorMessage}>{error}</div>
-        )}
+        {error && <div className={styles.errorMessage}>{error}</div>}
 
         <div className={styles.modalBody}>
           <p>
-            ¿Estás seguro de que deseas eliminar{' '}
-            <strong>completamente</strong> este registro? Esta
-            acción eliminará:
+            ¿Estás seguro de que deseas eliminar <strong>completamente</strong>{" "}
+            este registro? Esta acción eliminará:
           </p>
 
           <div className={styles.itemInfo}>
             <p>
-              <strong>Tipo:</strong>{' '}
-              {item.tipo === 'herramienta'
-                ? '🛠️ Herramienta'
-                : '📦 Insumo'}
+              <strong>Tipo:</strong>{" "}
+              {item.tipo === "herramienta" ? "🛠️ Herramienta" : "📦 Insumo"}
             </p>
             <p>
               <strong>Nombre:</strong> {item.nombreItem}
@@ -126,19 +108,16 @@ export default function DeleteConfirmationModal({
               <strong>Cantidad:</strong> {item.cantidadActual}
             </p>
             <p>
-              <strong>Ubicación:</strong>{' '}
-              {item.ubicacion || 'No especificada'}
+              <strong>Ubicación:</strong> {item.ubicacion || "No especificada"}
             </p>
             <p>
-              <strong>ID Inventario:</strong>{' '}
-              {item.inventarioId}
+              <strong>ID Inventario:</strong> {item.inventarioId}
             </p>
 
             {willDeleteTool && item.tool && (
               <>
                 <p>
-                  <strong>Herramienta ID:</strong>{' '}
-                  {item.herramientaId}
+                  <strong>Herramienta ID:</strong> {item.herramientaId}
                 </p>
                 <p>
                   <strong>Estado:</strong> {item.tool.estado}
@@ -162,54 +141,40 @@ export default function DeleteConfirmationModal({
                   <strong>Insumo ID:</strong> {item.insumoId}
                 </p>
                 <p>
-                  <strong>Categoría:</strong>{' '}
-                  {item.supply.categoria}
+                  <strong>Categoría:</strong> {item.supply.categoria}
                 </p>
                 <p>
-                  <strong>Unidad:</strong>{' '}
-                  {item.supply.unidadMedida}
+                  <strong>Unidad:</strong> {item.supply.unidadMedida}
                 </p>
                 <p>
-                  <strong>Stock mínimo:</strong>{' '}
-                  {item.supply.stockMin}
+                  <strong>Stock mínimo:</strong> {item.supply.stockMin}
                 </p>
                 <p>
-                  <strong>Estado:</strong>{' '}
-                  {item.supply.estado}
+                  <strong>Estado:</strong> {item.supply.estado}
                 </p>
               </>
             )}
           </div>
 
           <div className={styles.warning}>
-            ⚠️ Esta acción es <strong>irreversible</strong> y
-            eliminará:
+            ⚠️ Esta acción es <strong>irreversible</strong> y eliminará:
             <ul
               style={{
-                margin: '8px 0 0 20px',
+                margin: "8px 0 0 20px",
                 padding: 0,
-                fontSize: '0.9rem',
+                fontSize: "0.9rem",
               }}
             >
-              <li>
-                El registro de inventario (ID:{' '}
-                {item.inventarioId})
-              </li>
+              <li>El registro de inventario (ID: {item.inventarioId})</li>
               {willDeleteTool && (
                 <li>
-                  La herramienta y todos sus datos (ID:{' '}
-                  {item.herramientaId})
+                  La herramienta y todos sus datos (ID: {item.herramientaId})
                 </li>
               )}
               {willDeleteSupply && (
-                <li>
-                  El insumo y todos sus datos (ID:{' '}
-                  {item.insumoId})
-                </li>
+                <li>El insumo y todos sus datos (ID: {item.insumoId})</li>
               )}
-              <li>
-                Todos los datos relacionados permanentemente
-              </li>
+              <li>Todos los datos relacionados permanentemente</li>
             </ul>
           </div>
         </div>
@@ -231,12 +196,12 @@ export default function DeleteConfirmationModal({
           >
             {loading ? (
               <>
-                <span style={{ marginRight: '8px' }}>⏳</span>
+                <span style={{ marginRight: "8px" }}>⏳</span>
                 Eliminando...
               </>
             ) : (
               <>
-                <span style={{ marginRight: '8px' }}>🗑️</span>
+                <span style={{ marginRight: "8px" }}>🗑️</span>
                 Sí, Eliminar Todo
               </>
             )}

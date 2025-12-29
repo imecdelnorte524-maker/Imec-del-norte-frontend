@@ -372,6 +372,66 @@
   background: var(--gray-300);
 }
 
+/* LISTADO DE HERRAMIENTAS / INSUMOS ASIGNADOS */
+.subSection {
+  margin-top: var(--spacing-md);
+}
+
+.subSection h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-md);
+  color: var(--gray-700);
+}
+
+.itemsTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.itemsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.itemsTable th,
+.itemsTable td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--gray-200);
+  text-align: left;
+}
+
+.itemsTable th {
+  background: var(--gray-50);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.itemsTable tr:last-child td {
+  border-bottom: none;
+}
+
+/* Botón pequeño dentro de tablas */
+.smallSecondaryButton {
+  background: var(--gray-200);
+  color: var(--gray-700);
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.smallSecondaryButton:hover:not(:disabled) {
+  background: var(--gray-300);
+}
+
+.smallSecondaryButton:disabled {
+  background: var(--gray-400);
+  cursor: not-allowed;
+}
+
 /* MODALES GENERALES */
 .modal {
   position: fixed;
@@ -426,9 +486,12 @@
 }
 
 /* CAMPOS DENTRO DE MODAL */
+/* AQUÍ SOLO AGREGO input[type="number"] y select para que se vean igual, sin tocar nada más */
 .technicianSelect,
 .rejectTextarea,
-.modalContent input[type="file"] {
+.modalContent input[type="file"],
+.modalContent input[type="number"],
+.modalContent select {
   width: 100%;
   padding: var(--spacing-md);
   border: 1px solid var(--gray-300);
@@ -440,7 +503,9 @@
 
 .technicianSelect:focus,
 .rejectTextarea:focus,
-.modalContent input[type="file"]:focus {
+.modalContent input[type="file"]:focus,
+.modalContent input[type="number"]:focus,
+.modalContent select:focus {
   outline: none;
   border-color: var(--primary-500);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -568,6 +633,12 @@
   .billingBadge {
     font-size: var(--font-size-xs);
     padding: var(--spacing-xs) var(--spacing-md);
+  }
+
+  /* Opcional: texto un poco más pequeño en la tabla en móvil */
+  .itemsTable th,
+  .itemsTable td {
+    font-size: var(--font-size-xs);
   }
 }
 

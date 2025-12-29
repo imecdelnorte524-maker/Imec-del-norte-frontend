@@ -9,9 +9,14 @@ import styles from '../../styles/components/orders/TechnicianOrdersView.module.c
 interface Props {
   activeView: 'list' | 'create' | 'detail';
   setActiveView: (view: 'list' | 'create' | 'detail') => void;
+  initialOrderId?: number; // <- NUEVO
 }
 
-export default function TechnicianOrdersView({ activeView, setActiveView }: Props) {
+export default function TechnicianOrdersView({
+  activeView,
+  setActiveView,
+  initialOrderId,
+}: Props) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const handleViewOrder = (order: Order) => {
@@ -26,7 +31,7 @@ export default function TechnicianOrdersView({ activeView, setActiveView }: Prop
 
   if (activeView === 'detail' && selectedOrder) {
     return (
-      <OrderDetail 
+      <OrderDetail
         order={selectedOrder}
         onBack={handleBackToList}
         userRole="tecnico"
@@ -39,10 +44,11 @@ export default function TechnicianOrdersView({ activeView, setActiveView }: Prop
       <div className={styles.header}>
         <h1>Mis Órdenes Asignadas</h1>
       </div>
-      
-      <OrderList 
+
+      <OrderList
         userRole="tecnico"
         onViewOrder={handleViewOrder}
+        initialOrderId={initialOrderId}
       />
     </div>
   );

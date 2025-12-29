@@ -168,6 +168,24 @@
   box-sizing: border-box;
 }
 
+/* NUEVO: estilos para los selects del formulario (área / subárea / categoría, etc.) */
+.formRow select {
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  font-size: var(--font-size-sm);
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--white);
+  color: var(--gray-700);
+}
+
+.formRow select:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+  color: var(--gray-500);
+}
+
 .formRow textarea {
   resize: vertical;
 }

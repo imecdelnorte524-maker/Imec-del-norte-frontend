@@ -13,7 +13,19 @@ import type {
   EquipmentPhoto,
 } from "../interfaces/EquipmentInterfaces";
 import { useAuth } from "../hooks/useAuth";
+import api from "../api/axios";
 import styles from "../styles/pages/EquipmentDetailPage.module.css";
+import { playErrorSound } from "../utils/sounds";
+
+interface SimpleArea {
+  idArea: number;
+  nombreArea: string;
+}
+
+interface SimpleSubArea {
+  idSubArea: number;
+  nombreSubArea: string;
+}
 
 export default function EquipmentDetailPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>();
@@ -41,6 +53,14 @@ export default function EquipmentDetailPage() {
     notes: "",
   });
 
+  // Áreas / Subáreas para edición
+  const [areas, setAreas] = useState<SimpleArea[]>([]);
+  const [subAreas, setSubAreas] = useState<SimpleSubArea[]>([]);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | "">("");
+  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | "">("");
+  const [locationsError, setLocationsError] = useState<string | null>(null);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+
   // Estado para fotos / carrusel
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -58,11 +78,59 @@ export default function EquipmentDetailPage() {
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
 
+  const loadAreasAndSubareasForEquipment = async (equip: Equipment) => {
+    try {
+      setLoadingLocations(true);
+      setLocationsError(null);
+
+      // Cargar áreas del cliente del equipo
+      const resAreas = await api.get("/areas", {
+        params: { clienteId: equip.clientId },
+      });
+      const dataAreas = resAreas.data?.data || [];
+      const mappedAreas: SimpleArea[] = dataAreas.map((a: any) => ({
+        idArea: a.idArea,
+        nombreArea: a.nombreArea,
+      }));
+      setAreas(mappedAreas);
+
+      const areaId = equip.areaId ?? null;
+      const subAreaId = equip.subAreaId ?? null;
+
+      setSelectedAreaId(areaId ?? "");
+      setSelectedSubAreaId(subAreaId ?? "");
+
+      // Si el equipo ya tiene área, cargar sus subáreas
+      if (areaId) {
+        const resSub = await api.get("/sub-areas", {
+          params: { areaId },
+        });
+        const dataSub = resSub.data?.data || [];
+        const mappedSub: SimpleSubArea[] = dataSub.map((s: any) => ({
+          idSubArea: s.idSubArea,
+          nombreSubArea: s.nombreSubArea,
+        }));
+        setSubAreas(mappedSub);
+      } else {
+        setSubAreas([]);
+      }
+    } catch (err: any) {
+      console.error("Error cargando áreas/subáreas:", err);
+      setLocationsError(
+        err.response?.data?.error ||
+          "Error al cargar las áreas y subáreas del cliente."
+      );
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
   // Cargar equipo
   useEffect(() => {
     const loadEquipment = async () => {
       if (!equipmentId) {
         setError("ID de equipo inválido");
+        playErrorSound();
         setLoading(false);
         return;
       }
@@ -70,6 +138,7 @@ export default function EquipmentDetailPage() {
       const idNum = parseInt(equipmentId, 10);
       if (isNaN(idNum)) {
         setError("ID de equipo inválido");
+        playErrorSound();
         setLoading(false);
         return;
       }
@@ -94,6 +163,9 @@ export default function EquipmentDetailPage() {
           notes: data.notes || "",
         });
         setCurrentPhotoIndex(0);
+
+        // Cargar áreas y subáreas según el cliente y área del equipo
+        await loadAreasAndSubareasForEquipment(data);
       } catch (err: any) {
         console.error("Error obteniendo equipo:", err);
         setError(
@@ -101,6 +173,7 @@ export default function EquipmentDetailPage() {
             err.response?.data?.message ||
             "Error al obtener la hoja de vida del equipo"
         );
+        playErrorSound();
       } finally {
         setLoading(false);
       }
@@ -117,6 +190,46 @@ export default function EquipmentDetailPage() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleEditAreaChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    const areaId = value ? parseInt(value, 10) : "";
+    setSelectedAreaId(areaId);
+    setSelectedSubAreaId("");
+    setSubAreas([]);
+
+    if (!areaId) return;
+
+    try {
+      setLoadingLocations(true);
+      setLocationsError(null);
+      const res = await api.get("/sub-areas", {
+        params: { areaId },
+      });
+      const data = res.data?.data || [];
+      const mappedSub: SimpleSubArea[] = data.map((s: any) => ({
+        idSubArea: s.idSubArea,
+        nombreSubArea: s.nombreSubArea,
+      }));
+      setSubAreas(mappedSub);
+    } catch (err: any) {
+      console.error("Error cargando subáreas:", err);
+      setLocationsError(
+        err.response?.data?.error ||
+          "Error al cargar las subáreas del área seleccionada."
+      );
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
+  const handleEditSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const subId = value ? parseInt(value, 10) : "";
+    setSelectedSubAreaId(subId);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -140,6 +253,10 @@ export default function EquipmentDetailPage() {
         manufacturer: editForm.manufacturer || undefined,
         installationDate: editForm.installationDate || undefined,
         notes: editForm.notes || undefined,
+        // Área y subárea (opcionales)
+        areaId: typeof selectedAreaId === "number" ? selectedAreaId : null,
+        subAreaId:
+          typeof selectedSubAreaId === "number" ? selectedSubAreaId : null,
       };
 
       const updated = await updateEquipmentRequest(
@@ -155,6 +272,7 @@ export default function EquipmentDetailPage() {
           err.response?.data?.message ||
           "Error al actualizar la hoja de vida del equipo"
       );
+      playErrorSound();
     } finally {
       setSaving(false);
     }
@@ -201,7 +319,7 @@ export default function EquipmentDetailPage() {
     try {
       const newPhoto = await addEquipmentPhotoRequest(
         equipment.equipmentId,
-        photoFile // CORREGIDO: Solo pasar el archivo
+        photoFile
       );
 
       // Actualizar estado localmente sin recargar todo el equipo
@@ -239,7 +357,6 @@ export default function EquipmentDetailPage() {
     setPhotoError(null);
 
     try {
-      // CORREGIDO: Solo pasar photoId, no equipmentId
       await deleteEquipmentPhotoRequest(photoId);
 
       // Actualizar estado localmente sin recargar todo el equipo
@@ -487,6 +604,45 @@ export default function EquipmentDetailPage() {
                     />
                   </div>
 
+                  {/* Área y Subárea en edición */}
+                  <div className={styles.formRow}>
+                    <label>Área (opcional)</label>
+                    <select
+                      value={selectedAreaId || ""}
+                      onChange={handleEditAreaChange}
+                      disabled={loadingLocations}
+                    >
+                      <option value="">Sin área</option>
+                      {areas.map((a) => (
+                        <option key={a.idArea} value={a.idArea}>
+                          {a.nombreArea}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedAreaId && subAreas.length > 0 && (
+                    <div className={styles.formRow}>
+                      <label>Subárea (opcional)</label>
+                      <select
+                        value={selectedSubAreaId || ""}
+                        onChange={handleEditSubAreaChange}
+                        disabled={loadingLocations}
+                      >
+                        <option value="">Sin subárea</option>
+                        {subAreas.map((s) => (
+                          <option key={s.idSubArea} value={s.idSubArea}>
+                            {s.nombreSubArea}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {locationsError && (
+                    <div className={styles.error}>{locationsError}</div>
+                  )}
+
                   <div className={styles.formRow}>
                     <label>Fecha de instalación</label>
                     <input
@@ -517,7 +673,7 @@ export default function EquipmentDetailPage() {
               )}
             </div>
 
-            {/* Ubicación */}
+            {/* Ubicación (solo lectura cuando no está editando) */}
             <div className={styles.section}>
               <h3>Ubicación</h3>
               <div className={styles.detailItem}>

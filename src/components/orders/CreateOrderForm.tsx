@@ -9,6 +9,7 @@ import styles from "../../styles/components/orders/CreateOrderForm.module.css";
 import type { Client } from "../../interfaces/ClientInterfaces";
 import ClientModal from "../clients/ClientModal";
 import { useClients } from "../../hooks/useClients";
+import { playErrorSound } from "../../utils/sounds";
 
 interface Props {
   onSuccess: () => void;
@@ -172,6 +173,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
             setError(
               "No tiene una empresa registrada. Debe crear una empresa antes de solicitar una orden de servicio."
             );
+            playErrorSound();
           }
         }
       } catch (err: any) {
@@ -186,6 +188,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
             ? backendMessage.join(", ")
             : backendMessage
         );
+        playErrorSound();
       } finally {
         setLoadingData(false);
       }
@@ -250,6 +253,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
 
     if (formData.servicio_id === 0) {
       setError("Por favor seleccione un servicio");
+      playErrorSound();
       return;
     }
 
@@ -262,6 +266,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
       (!formData.cliente_empresa_id || formData.cliente_empresa_id === 0)
     ) {
       setError("Por favor seleccione la empresa");
+      playErrorSound();
       return;
     }
 
@@ -270,10 +275,12 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
         setError(
           "Esta orden requiere asociar un equipo, pero la empresa no tiene equipos registrados. Registre primero la hoja de vida del equipo."
         );
+        playErrorSound();
         return;
       }
       if (!selectedEquipmentId) {
         setError("Debe seleccionar el equipo para el mantenimiento.");
+        playErrorSound();
         return;
       }
     }
@@ -282,6 +289,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
       setError(
         "No tiene una empresa registrada. Debe crear una empresa antes de solicitar una orden de servicio."
       );
+      playErrorSound();
       return;
     }
 
@@ -312,6 +320,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
           ? backendMessage.join(", ")
           : backendMessage
       );
+      playErrorSound();
     } finally {
       setLoading(false);
     }

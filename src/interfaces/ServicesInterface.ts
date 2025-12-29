@@ -9,12 +9,12 @@ export interface ServiceFromAPI {
   fecha_inicio: string | null;
   fecha_finalizacion: string | null;
   estado:
-    | 'Pendiente'
-    | 'En Proceso'
-    | 'Completado'
-    | 'Cancelado'
-    | 'Cancelada'
-    | 'Rechazada';
+    | "Pendiente"
+    | "En Proceso"
+    | "Completado"
+    | "Cancelado"
+    | "Cancelada"
+    | "Rechazada";
   comentarios: string | null;
   servicio: {
     servicio_id: number;
@@ -36,7 +36,7 @@ export interface ServiceFromAPI {
     apellido: string | null;
     email: string;
   } | null;
-  prioridad?: 'Alta' | 'Media' | 'Baja';
+  prioridad?: "Alta" | "Media" | "Baja";
   equipo_asignado?: string;
 }
 
@@ -99,13 +99,13 @@ export interface Service {
   fecha_inicio?: Date;
   fecha_finalizacion?: Date;
   estado:
-    | 'Pendiente'
-    | 'En Proceso'
-    | 'Completado'
-    | 'Cancelado'
-    | 'Cancelada'
-    | 'Rechazada';
+    | "Pendiente"
+    | "En Proceso"
+    | "Completado"
+    | "Cancelado"
+    | "Cancelada"
+    | "Rechazada";
   comentarios?: string;
-  prioridad?: 'Alta' | 'Media' | 'Baja';
+  prioridad?: "Alta" | "Media" | "Baja";
   equipo_asignado?: string;
 }

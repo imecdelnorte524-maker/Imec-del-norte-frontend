@@ -6,6 +6,7 @@ import {
   SupplyStatus,
 } from '../../shared/enums/inventory.enum';
 import styles from '../../styles/components/inventory/EditInventoryModal.module.css';
+import { playErrorSound } from '../../utils/sounds';
 
 interface EditInventoryModalProps {
   isOpen: boolean;
@@ -43,26 +44,32 @@ export default function EditInventoryModal({
   }, [item]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!item) return;
+  e.preventDefault();
+  if (!item) return;
 
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const updateData: any = {
-        cantidadActual: formData.cantidadActual,
-        ubicacion: formData.ubicacion || null,
-      };
+    const updateData: any = {
+      cantidadActual: formData.cantidadActual,
+      ubicacion: formData.ubicacion || null,
+      estado: formData.estado,  // Agregado
+    };
 
-      await inventory.updateInventory(item.inventarioId, updateData);
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar el item');
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.log('Datos a enviar:', updateData);  // ← Agrega esto
+    console.log('Estado seleccionado:', formData.estado);  // ← Agrega esto
+
+    await inventory.updateInventory(item.inventarioId, updateData);
+    onSuccess();
+  } catch (err: any) {
+    console.error('Error detallado:', err.response?.data);  // ← Agrega esto
+    setError(err.message || 'Error al actualizar el item');
+    playErrorSound();
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleUpdateStock = async () => {
     if (!item || !item.insumoId) return;
@@ -76,6 +83,7 @@ export default function EditInventoryModal({
       onSuccess();
     } catch (err: any) {
       setError(err.message || 'Error al actualizar stock');
+      playErrorSound();
     } finally {
       setLoading(false);
     }

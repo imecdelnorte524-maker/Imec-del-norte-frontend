@@ -1,13 +1,13 @@
-import { useRef, useState } from 'react';
-import { useCatalogActions } from '../../hooks/useInventory';
-import styles from '../../styles/components/inventory/AddInventoryModal.module.css';
+import { useRef, useState } from "react";
+import { useCatalogActions } from "../../hooks/useInventory";
+import styles from "../../styles/components/inventory/AddInventoryModal.module.css";
 import {
   ToolStatus,
   ToolType,
   SupplyCategory,
   SupplyStatus,
   UnitOfMeasure,
-} from '../../shared/enums';
+} from "../../shared/enums";
 
 interface AddInventoryModalProps {
   isOpen: boolean;
@@ -15,14 +15,14 @@ interface AddInventoryModalProps {
   onSuccess: () => void;
 }
 
-type ModalTab = 'herramientas' | 'insumos';
+type ModalTab = "herramientas" | "insumos";
 
 export default function AddInventoryModal({
   isOpen,
   onClose,
   onSuccess,
 }: AddInventoryModalProps) {
-  const [activeTab, setActiveTab] = useState<ModalTab>('herramientas');
+  const [activeTab, setActiveTab] = useState<ModalTab>("herramientas");
   const {
     createHerramienta,
     createInsumo,
@@ -31,9 +31,9 @@ export default function AddInventoryModal({
   } = useCatalogActions();
 
   const [herramientaFile, setHerramientaFile] = useState<File | null>(null);
-  const [herramientaPreview, setHerramientaPreview] = useState<string>('');
+  const [herramientaPreview, setHerramientaPreview] = useState<string>("");
   const [insumoFile, setInsumoFile] = useState<File | null>(null);
-  const [insumoPreview, setInsumoPreview] = useState<string>('');
+  const [insumoPreview, setInsumoPreview] = useState<string>("");
 
   const herramientaFileRef = useRef<HTMLInputElement>(null);
   const insumoFileRef = useRef<HTMLInputElement>(null);
@@ -43,24 +43,24 @@ export default function AddInventoryModal({
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: 'herramienta' | 'insumo',
+    type: "herramienta" | "insumo"
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.match('image.*')) {
-      alert('Por favor selecciona una imagen (JPG, PNG, GIF, WebP)');
+    if (!file.type.match("image.*")) {
+      alert("Por favor selecciona una imagen (JPG, PNG, GIF, WebP)");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('La imagen no debe superar los 5MB');
+      alert("La imagen no debe superar los 5MB");
       return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      if (type === 'herramienta') {
+      if (type === "herramienta") {
         setHerramientaFile(file);
         setHerramientaPreview(reader.result as string);
       } else {
@@ -72,27 +72,27 @@ export default function AddInventoryModal({
   };
 
   const [nuevaHerramienta, setNuevaHerramienta] = useState({
-    nombre: '',
-    marca: '',
-    serial: '',
-    modelo: '',
-    caracteristicasTecnicas: '',
-    observacion: '',
-    tipo: 'Herramienta' as ToolType,
-    estado: 'Disponible' as ToolStatus,
+    nombre: "",
+    marca: "",
+    serial: "",
+    modelo: "",
+    caracteristicasTecnicas: "",
+    observacion: "",
+    tipo: "Herramienta" as ToolType,
+    estado: "Disponible" as ToolStatus,
     valorUnitario: 0,
-    ubicacion: '',
+    ubicacion: "",
   });
 
   const [nuevoInsumo, setNuevoInsumo] = useState({
-    nombre: '',
-    categoria: 'General' as SupplyCategory,
-    unidadMedida: 'Unidad' as UnitOfMeasure,
+    nombre: "",
+    categoria: "General" as SupplyCategory,
+    unidadMedida: "Unidad" as UnitOfMeasure,
     stockMin: 0,
     valorUnitario: 0,
-    estado: 'Disponible' as SupplyStatus,
+    estado: "Disponible" as SupplyStatus,
     cantidadInicial: 0,
-    ubicacion: '',
+    ubicacion: "",
   });
 
   const handleSubmitHerramienta = async (e: React.FormEvent) => {
@@ -104,36 +104,25 @@ export default function AddInventoryModal({
       !nuevaHerramienta.estado
     ) {
       alert(
-        'Por favor complete los campos obligatorios: Nombre, Tipo y Estado',
+        "Por favor complete los campos obligatorios: Nombre, Tipo y Estado"
       );
       return;
     }
 
     try {
-      console.log('🚀 Creando herramienta...');
-
       const herramientaCreada = await createHerramienta(
         nuevaHerramienta,
-        herramientaFile || undefined,
+        herramientaFile || undefined
       );
 
       if (!herramientaCreada) {
-        throw new Error('No se pudo crear la herramienta');
+        throw new Error("No se pudo crear la herramienta");
       }
-
-      console.log(
-        '✅ Herramienta creada con inventario automático:',
-        herramientaCreada,
-      );
-
-      alert(
-        '✅ Herramienta creada exitosamente. El inventario se generó automáticamente.',
-      );
       onSuccess();
       handleClose();
     } catch (err: any) {
-      console.error('❌ Error creando herramienta:', err);
-      alert(`Error: ${err.message || 'No se pudo crear la herramienta'}`);
+      console.error("❌ Error creando herramienta:", err);
+      alert(`Error: ${err.message || "No se pudo crear la herramienta"}`);
     }
   };
 
@@ -145,15 +134,10 @@ export default function AddInventoryModal({
       !nuevoInsumo.unidadMedida ||
       nuevoInsumo.cantidadInicial === undefined
     ) {
-      alert(
-        'Por favor complete los campos obligatorios: Nombre, Unidad de Medida y Cantidad Inicial',
-      );
       return;
     }
 
     try {
-      console.log('🚀 Creando insumo...');
-
       const insumoData = {
         nombre: nuevoInsumo.nombre,
         categoria: nuevoInsumo.categoria,
@@ -165,53 +149,39 @@ export default function AddInventoryModal({
         cantidadInicial: nuevoInsumo.cantidadInicial,
       };
 
-      console.log('📤 Datos a enviar para crear insumo:', insumoData);
-
       const cleanData: any = { ...insumoData };
-      if ('inventarioId' in cleanData) {
+      if ("inventarioId" in cleanData) {
         delete cleanData.inventarioId;
       }
-      if ('stock' in cleanData) {
+      if ("stock" in cleanData) {
         delete cleanData.stock;
       }
-
-      console.log('🧹 Datos limpios a enviar:', cleanData);
-
       const insumoCreado = await createInsumo(
         cleanData,
-        insumoFile || undefined,
+        insumoFile || undefined
       );
 
       if (!insumoCreado) {
-        throw new Error('No se pudo crear el insumo');
+        throw new Error("No se pudo crear el insumo");
       }
-
-      console.log(
-        '✅ Insumo creado con inventario automático:',
-        insumoCreado,
-      );
-
-      alert(
-        '✅ Insumo creado exitosamente. El inventario se generó automáticamente.',
-      );
       onSuccess();
       handleClose();
     } catch (err: any) {
-      console.error('❌ Error creando insumo:', err);
+      console.error("❌ Error creando insumo:", err);
 
-      const errorMessage = err.message || 'No se pudo crear el insumo';
+      const errorMessage = err.message || "No se pudo crear el insumo";
 
-      if (errorMessage.includes('inventarioId')) {
+      if (errorMessage.includes("inventarioId")) {
         alert(
-          `⚠️ Error: El backend está recibiendo un campo 'inventarioId'.\n\nEsto es un problema en el servicio. Revisa catalog.ts y useInventory.ts.`,
+          `⚠️ Error: El backend está recibiendo un campo 'inventarioId'.\n\nEsto es un problema en el servicio. Revisa catalog.ts y useInventory.ts.`
         );
       } else if (
-        errorMessage.includes('valor unitario') ||
-        errorMessage.includes('stock') ||
-        errorMessage.includes('número')
+        errorMessage.includes("valor unitario") ||
+        errorMessage.includes("stock") ||
+        errorMessage.includes("número")
       ) {
         alert(
-          `⚠️ Error de validación: ${errorMessage}\n\nAsegúrese de ingresar valores numéricos positivos.`,
+          `⚠️ Error de validación: ${errorMessage}\n\nAsegúrese de ingresar valores numéricos positivos.`
         );
       } else {
         alert(`Error: ${errorMessage}`);
@@ -221,31 +191,31 @@ export default function AddInventoryModal({
 
   const resetForm = () => {
     setNuevaHerramienta({
-      nombre: '',
-      marca: '',
-      serial: '',
-      modelo: '',
-      caracteristicasTecnicas: '',
-      observacion: '',
-      tipo: 'Herramienta',
-      estado: 'Disponible',
+      nombre: "",
+      marca: "",
+      serial: "",
+      modelo: "",
+      caracteristicasTecnicas: "",
+      observacion: "",
+      tipo: "Herramienta",
+      estado: "Disponible",
       valorUnitario: 0,
-      ubicacion: '',
+      ubicacion: "",
     });
     setNuevoInsumo({
-      nombre: '',
-      categoria: 'General',
-      unidadMedida: 'Unidad',
+      nombre: "",
+      categoria: "General",
+      unidadMedida: "Unidad",
       stockMin: 0,
       valorUnitario: 0,
-      estado: 'Disponible',
+      estado: "Disponible",
       cantidadInicial: 0,
-      ubicacion: '',
+      ubicacion: "",
     });
     setHerramientaFile(null);
-    setHerramientaPreview('');
+    setHerramientaPreview("");
     setInsumoFile(null);
-    setInsumoPreview('');
+    setInsumoPreview("");
   };
 
   const handleClose = () => {
@@ -268,17 +238,17 @@ export default function AddInventoryModal({
         <div className={styles.tabs}>
           <button
             className={`${styles.tab} ${
-              activeTab === 'herramientas' ? styles.active : ''
+              activeTab === "herramientas" ? styles.active : ""
             }`}
-            onClick={() => setActiveTab('herramientas')}
+            onClick={() => setActiveTab("herramientas")}
           >
             🛠️ Nueva Herramienta
           </button>
           <button
             className={`${styles.tab} ${
-              activeTab === 'insumos' ? styles.active : ''
+              activeTab === "insumos" ? styles.active : ""
             }`}
-            onClick={() => setActiveTab('insumos')}
+            onClick={() => setActiveTab("insumos")}
           >
             📦 Nuevo Insumo
           </button>
@@ -290,11 +260,8 @@ export default function AddInventoryModal({
           <div className={styles.loading}>Cargando...</div>
         ) : (
           <div className={styles.modalBody}>
-            {activeTab === 'herramientas' && (
-              <form
-                onSubmit={handleSubmitHerramienta}
-                className={styles.form}
-              >
+            {activeTab === "herramientas" && (
+              <form onSubmit={handleSubmitHerramienta} className={styles.form}>
                 <div className={styles.formGroup}>
                   <label htmlFor="nombreHerramienta">
                     Nombre de la Herramienta *
@@ -393,9 +360,7 @@ export default function AddInventoryModal({
                     </select>
                   </div>
                   <div className={styles.formGroup}>
-                    <label htmlFor="estadoHerramienta">
-                      Estado *
-                    </label>
+                    <label htmlFor="estadoHerramienta">Estado *</label>
                     <select
                       id="estadoHerramienta"
                       value={nuevaHerramienta.estado}
@@ -430,8 +395,7 @@ export default function AddInventoryModal({
                       onChange={(e) =>
                         setNuevaHerramienta({
                           ...nuevaHerramienta,
-                          valorUnitario:
-                            parseFloat(e.target.value) || 0,
+                          valorUnitario: parseFloat(e.target.value) || 0,
                         })
                       }
                       placeholder="0"
@@ -442,8 +406,7 @@ export default function AddInventoryModal({
                     />
                   </div>
                   <small className={styles.helpText}>
-                    Ingrese un valor positivo (ej: 1500000 para 1.5
-                    millones)
+                    Ingrese un valor positivo (ej: 1500000 para 1.5 millones)
                   </small>
                 </div>
 
@@ -478,17 +441,13 @@ export default function AddInventoryModal({
                       type="file"
                       id="fotoHerramienta"
                       ref={herramientaFileRef}
-                      onChange={(e) =>
-                        handleFileSelect(e, 'herramienta')
-                      }
+                      onChange={(e) => handleFileSelect(e, "herramienta")}
                       accept="image/*"
                       className={styles.fileInput}
                     />
                     <button
                       type="button"
-                      onClick={() =>
-                        herramientaFileRef.current?.click()
-                      }
+                      onClick={() => herramientaFileRef.current?.click()}
                       className={styles.fileButton}
                     >
                       📷 Seleccionar Foto
@@ -500,9 +459,9 @@ export default function AddInventoryModal({
                           type="button"
                           onClick={() => {
                             setHerramientaFile(null);
-                            setHerramientaPreview('');
+                            setHerramientaPreview("");
                             if (herramientaFileRef.current)
-                              herramientaFileRef.current.value = '';
+                              herramientaFileRef.current.value = "";
                           }}
                           className={styles.removeFile}
                         >
@@ -534,21 +493,16 @@ export default function AddInventoryModal({
                     className={styles.btnPrimary}
                     disabled={loading}
                   >
-                    {loading ? 'Creando...' : 'Crear Herramienta'}
+                    {loading ? "Creando..." : "Crear Herramienta"}
                   </button>
                 </div>
               </form>
             )}
 
-            {activeTab === 'insumos' && (
-              <form
-                onSubmit={handleSubmitInsumo}
-                className={styles.form}
-              >
+            {activeTab === "insumos" && (
+              <form onSubmit={handleSubmitInsumo} className={styles.form}>
                 <div className={styles.formGroup}>
-                  <label htmlFor="nombreInsumo">
-                    Nombre del Insumo *
-                  </label>
+                  <label htmlFor="nombreInsumo">Nombre del Insumo *</label>
                   <input
                     type="text"
                     id="nombreInsumo"
@@ -588,9 +542,7 @@ export default function AddInventoryModal({
                     </select>
                   </div>
                   <div className={styles.formGroup}>
-                    <label htmlFor="unidadMedida">
-                      Unidad de Medida *
-                    </label>
+                    <label htmlFor="unidadMedida">Unidad de Medida *</label>
                     <select
                       id="unidadMedida"
                       value={nuevoInsumo.unidadMedida}
@@ -614,9 +566,7 @@ export default function AddInventoryModal({
 
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
-                    <label htmlFor="cantidadInicial">
-                      Cantidad Inicial *
-                    </label>
+                    <label htmlFor="cantidadInicial">Cantidad Inicial *</label>
                     <input
                       type="number"
                       id="cantidadInicial"
@@ -624,8 +574,7 @@ export default function AddInventoryModal({
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          cantidadInicial:
-                            parseFloat(e.target.value) || 0,
+                          cantidadInicial: parseFloat(e.target.value) || 0,
                         })
                       }
                       placeholder="Ej: 10, 5.5..."
@@ -639,9 +588,7 @@ export default function AddInventoryModal({
                     </small>
                   </div>
                   <div className={styles.formGroup}>
-                    <label htmlFor="stockMin">
-                      Stock Mínimo de Alerta
-                    </label>
+                    <label htmlFor="stockMin">Stock Mínimo de Alerta</label>
                     <input
                       type="number"
                       id="stockMin"
@@ -649,8 +596,7 @@ export default function AddInventoryModal({
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          stockMin:
-                            parseFloat(e.target.value) || 0,
+                          stockMin: parseFloat(e.target.value) || 0,
                         })
                       }
                       placeholder="0"
@@ -658,16 +604,13 @@ export default function AddInventoryModal({
                       className={styles.input}
                     />
                     <small className={styles.helpText}>
-                      Se alertará cuando el stock llegue a este
-                      nivel
+                      Se alertará cuando el stock llegue a este nivel
                     </small>
                   </div>
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="valorInsumo">
-                    Valor Unitario (COP) *
-                  </label>
+                  <label htmlFor="valorInsumo">Valor Unitario (COP) *</label>
                   <div className={styles.currencyInput}>
                     <span className={styles.currencySymbol}>$</span>
                     <input
@@ -677,8 +620,7 @@ export default function AddInventoryModal({
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          valorUnitario:
-                            parseFloat(e.target.value) || 0,
+                          valorUnitario: parseFloat(e.target.value) || 0,
                         })
                       }
                       placeholder="0"
@@ -689,8 +631,7 @@ export default function AddInventoryModal({
                     />
                   </div>
                   <small className={styles.helpText}>
-                    Ingrese un valor positivo (ej: 15000 para 15
-                    mil)
+                    Ingrese un valor positivo (ej: 15000 para 15 mil)
                   </small>
                 </div>
 
@@ -714,23 +655,19 @@ export default function AddInventoryModal({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="fotoInsumo">
-                    Foto del Insumo (Opcional)
-                  </label>
+                  <label htmlFor="fotoInsumo">Foto del Insumo (Opcional)</label>
                   <div className={styles.fileUpload}>
                     <input
                       type="file"
                       id="fotoInsumo"
                       ref={insumoFileRef}
-                      onChange={(e) => handleFileSelect(e, 'insumo')}
+                      onChange={(e) => handleFileSelect(e, "insumo")}
                       accept="image/*"
                       className={styles.fileInput}
                     />
                     <button
                       type="button"
-                      onClick={() =>
-                        insumoFileRef.current?.click()
-                      }
+                      onClick={() => insumoFileRef.current?.click()}
                       className={styles.fileButton}
                     >
                       📷 Seleccionar Foto
@@ -742,9 +679,9 @@ export default function AddInventoryModal({
                           type="button"
                           onClick={() => {
                             setInsumoFile(null);
-                            setInsumoPreview('');
+                            setInsumoPreview("");
                             if (insumoFileRef.current)
-                              insumoFileRef.current.value = '';
+                              insumoFileRef.current.value = "";
                           }}
                           className={styles.removeFile}
                         >
@@ -776,7 +713,7 @@ export default function AddInventoryModal({
                     className={styles.btnPrimary}
                     disabled={loading}
                   >
-                    {loading ? 'Creando...' : 'Crear Insumo'}
+                    {loading ? "Creando..." : "Crear Insumo"}
                   </button>
                 </div>
               </form>

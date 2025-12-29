@@ -341,10 +341,7 @@ export default function HeightWorkForm({
         userName: formData.workerName,
       };
 
-      const result = await sgSstService.createHeightWorkWithSignature(
-        submitData as any
-      );
-      console.log("✅ Trabajo en Alturas creado:", result);
+      await sgSstService.createHeightWorkWithSignature(submitData as any);
 
       setSuccessMessage(
         "¡Trabajo en Alturas guardado exitosamente! Redirigiendo al listado..."

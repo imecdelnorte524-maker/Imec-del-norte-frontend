@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { users as usersAPI } from '../api/users';
 import type { Usuario, CreateUsuarioDto, UpdateUsuarioDto, Rol } from '../interfaces/UserInterfaces';
+import { playErrorSound } from '../utils/sounds';
 
 export const useUsers = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -17,6 +18,7 @@ export const useUsers = () => {
       setUsuarios(data);
     } catch (err: any) {
       setError(err.message || 'Error al cargar usuarios');
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -31,6 +33,7 @@ export const useUsers = () => {
     } catch (err: any) {
       console.error('Error cargando roles:', err);
       setError('Error al cargar los roles');
+      playErrorSound();
       setRoles([]);
     }
   };
@@ -43,6 +46,7 @@ export const useUsers = () => {
         await Promise.all([loadUsers(), loadRoles()]);
       } catch (err: any) {
         setError(err.message || 'Error al inicializar datos');
+        playErrorSound();
       } finally {
         setLoading(false);
       }
@@ -63,6 +67,7 @@ export const useUsers = () => {
       return newUser;
     } catch (err: any) {
       setError(err.message || 'Error al crear usuario');
+      playErrorSound();
       throw err;
     }
   };
@@ -79,6 +84,7 @@ export const useUsers = () => {
       return updatedUser;
     } catch (err: any) {
       setError(err.message || 'Error al actualizar usuario');
+      playErrorSound();
       throw err;
     }
   };
@@ -101,6 +107,7 @@ export const useUsers = () => {
       return updatedUser;
     } catch (err: any) {
       setError(err.message || 'Error al cambiar estado del usuario');
+      playErrorSound();
       throw err;
     }
   };

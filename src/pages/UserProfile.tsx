@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../hooks/useAuth';
 import { users } from '../api/users';
@@ -11,7 +11,7 @@ interface UserPhoto {
 }
 
 export default function UserProfilePage() {
-  const { user } = useAuth();
+  const { user, changePassword, loading, error: authError } = useAuth();
 
   const [photo, setPhoto] = useState<UserPhoto | null>(null);
   const [loadingPhoto, setLoadingPhoto] = useState(false);
@@ -20,6 +20,24 @@ export default function UserProfilePage() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Estado para cambio de contraseña
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  // Validaciones de la nueva contraseña
+  const passwordRules = {
+    length: newPassword.length >= 8,
+    lower: /[a-z]/.test(newPassword),
+    upper: /[A-Z]/.test(newPassword),
+    number: /\d/.test(newPassword),
+    special: /[^A-Za-z0-9]/.test(newPassword),
+  };
+
+  const allPasswordRulesOk = Object.values(passwordRules).every(Boolean);
 
   // Cargar foto actual (si existe)
   useEffect(() => {
@@ -110,6 +128,43 @@ export default function UserProfilePage() {
     }
   };
 
+  const handlePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordError('Todos los campos son obligatorios.');
+      return;
+    }
+
+    if (!allPasswordRulesOk) {
+      setPasswordError(
+        'La nueva contraseña no cumple con los requisitos de seguridad.',
+      );
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('Las contraseñas nuevas no coinciden.');
+      return;
+    }
+
+    try {
+      const msg = await changePassword(currentPassword, newPassword);
+      setPasswordSuccess(msg || 'Contraseña actualizada exitosamente.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch {
+      if (authError) {
+        setPasswordError(authError);
+      } else {
+        setPasswordError('Error al cambiar la contraseña.');
+      }
+    }
+  };
+
   if (!user) {
     return (
       <DashboardLayout>
@@ -130,9 +185,22 @@ export default function UserProfilePage() {
   return (
     <DashboardLayout>
       <div className={styles.page}>
+        {/* AVISO cuando el usuario debe cambiar la contraseña */}
+        {user.mustChangePassword && (
+          <div className={styles.passwordAlert}>
+            <p className={styles.passwordAlertTitle}>
+              Es necesario que cambies tu contraseña.
+            </p>
+            <p className={styles.passwordAlertText}>
+              Por seguridad, antes de acceder a todas las secciones del sistema debes
+              actualizar tu contraseña en el formulario de abajo.
+            </p>
+          </div>
+        )}
+
         <header className={styles.header}>
           <h1>Mi Perfil</h1>
-          <p>Consulta tu información y actualiza tu foto de perfil.</p>
+          <p>Consulta tu información, actualiza tu foto de perfil y cambia tu contraseña.</p>
         </header>
 
         <div className={styles.layout}>
@@ -220,7 +288,7 @@ export default function UserProfilePage() {
             </div>
           </section>
 
-          {/* Columna derecha: detalles */}
+          {/* Columna derecha: detalles + cambio de contraseña */}
           <section className={styles.rightColumn}>
             <div className={styles.detailCard}>
               <h3>Datos personales</h3>
@@ -260,6 +328,122 @@ export default function UserProfilePage() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            <div className={styles.detailCard}>
+              <h3>Cambiar contraseña</h3>
+              <form
+                onSubmit={handlePasswordSubmit}
+                className={styles.passwordForm}
+              >
+                <div className={styles.passwordField}>
+                  <label htmlFor="currentPassword" className={styles.passwordLabel}>
+                    Contraseña actual
+                  </label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    className={styles.passwordInput}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className={styles.passwordField}>
+                  <label htmlFor="newPassword" className={styles.passwordLabel}>
+                    Nueva contraseña
+                  </label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    className={styles.passwordInput}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                    disabled={loading}
+                  />
+                  <div className={styles.passwordRules}>
+                    <p className={styles.passwordRulesTitle}>
+                      La nueva contraseña debe tener:
+                    </p>
+                    <ul className={styles.rulesList}>
+                      <li
+                        className={
+                          passwordRules.length ? styles.ruleOk : styles.rule
+                        }
+                      >
+                        Al menos 8 caracteres
+                      </li>
+                      <li
+                        className={
+                          passwordRules.upper ? styles.ruleOk : styles.rule
+                        }
+                      >
+                        Al menos 1 letra mayúscula
+                      </li>
+                      <li
+                        className={
+                          passwordRules.lower ? styles.ruleOk : styles.rule
+                        }
+                      >
+                        Al menos 1 letra minúscula
+                      </li>
+                      <li
+                        className={
+                          passwordRules.number ? styles.ruleOk : styles.rule
+                        }
+                      >
+                        Al menos 1 número
+                      </li>
+                      <li
+                        className={
+                          passwordRules.special ? styles.ruleOk : styles.rule
+                        }
+                      >
+                        Al menos 1 carácter especial
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className={styles.passwordField}>
+                  <label
+                    htmlFor="confirmNewPassword"
+                    className={styles.passwordLabel}
+                  >
+                    Confirmar nueva contraseña
+                  </label>
+                  <input
+                    id="confirmNewPassword"
+                    type="password"
+                    className={styles.passwordInput}
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                {passwordError && (
+                  <div className={styles.error}>{passwordError}</div>
+                )}
+                {passwordSuccess && (
+                  <div className={styles.success}>{passwordSuccess}</div>
+                )}
+
+                <button
+                  type="submit"
+                  className={styles.saveButton}
+                  disabled={loading}
+                >
+                  {loading ? 'Guardando...' : 'Actualizar contraseña'}
+                </button>
+              </form>
             </div>
           </section>
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Rol, CreateRolDto, UpdateRolDto } from '../../interfaces/UserInterfaces';
 import styles from '../../styles/components/roles/RoleModal.module.css';
+import { playErrorSound } from '../../utils/sounds';
 
 interface RoleModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export default function RoleModal({
     
     if (!formData.nombreRol.trim()) {
       setError('El nombre del rol es requerido');
+      playErrorSound();
       return;
     }
 
@@ -65,6 +67,7 @@ export default function RoleModal({
       onClose();
     } catch (err: any) {
       setError(err.message);
+      playErrorSound();
     } finally {
       setLoading(false);
     }

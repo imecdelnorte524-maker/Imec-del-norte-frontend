@@ -14,6 +14,7 @@ import { getMyAssignedOrdersRequest } from "../../api/orders";
 import SignaturePad from "./SignaturePad";
 import { useChecklistForm } from "../../hooks/useToolChecklists";
 import styles from "../../styles/components/sg-sst/PreoperationalForm.module.css";
+import { playErrorSound } from "../../utils/sounds";
 
 interface Tool {
   herramienta_id: number;
@@ -174,6 +175,7 @@ export default function PreoperationalForm({
     } catch (error: any) {
       console.error("Error cargando herramientas:", error);
       setError(error.message || "Error al cargar la lista de herramientas");
+      playErrorSound();
       setTools([]);
     } finally {
       setLoadingTools(false);
@@ -301,12 +303,7 @@ export default function PreoperationalForm({
         userName,
       };
 
-      console.log("📤 Enviando Checklist Preoperacional:", submitDto);
-
-      const result = await sgSstService.createPreoperationalWithSignature(
-        submitDto as any
-      );
-      console.log("✅ Checklist Preoperacional creado:", result);
+      await sgSstService.createPreoperationalWithSignature(submitDto as any);
 
       setSuccessMessage(
         "¡Checklist preoperacional guardado exitosamente! Redirigiendo al listado de reportes..."
@@ -330,7 +327,7 @@ export default function PreoperationalForm({
 
       const errorMessage = error.response?.data?.message || error.message;
       setError(`Error al guardar el checklist: ${errorMessage}`);
-      alert(`Error: ${errorMessage}`);
+      playErrorSound();
     } finally {
       setIsSubmitting(false);
     }

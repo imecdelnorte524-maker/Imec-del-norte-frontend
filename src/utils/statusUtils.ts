@@ -10,9 +10,6 @@ export const getStatusClass = (
     case 'completada':
       return `${classPrefix}Completed`;
 
-    case 'en proceso':
-      return `${classPrefix}InProgress`;
-
     case 'pendiente':
       return `${classPrefix}Pending`;
 

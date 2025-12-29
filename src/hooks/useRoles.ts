@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { users } from '../api/users';
 import type { Rol, CreateRolDto, UpdateRolDto } from '../interfaces/UserInterfaces';
+import { playErrorSound } from '../utils/sounds';
 
 export const useRoles = () => {
   const [roles, setRoles] = useState<Rol[]>([]);
@@ -16,6 +17,7 @@ export const useRoles = () => {
       setRoles(rolesData);
     } catch (err: any) {
       setError(err.message);
+      playErrorSound();
       console.error('Error cargando roles:', err);
     } finally {
       setLoading(false);
@@ -31,6 +33,7 @@ export const useRoles = () => {
       return newRole;
     } catch (err: any) {
       setError(err.message);
+      playErrorSound();
       throw err;
     }
   };
@@ -44,6 +47,7 @@ export const useRoles = () => {
       return updatedRole;
     } catch (err: any) {
       setError(err.message);
+      playErrorSound();
       throw err;
     }
   };
@@ -56,6 +60,7 @@ export const useRoles = () => {
       await loadRoles();
     } catch (err: any) {
       setError(err.message);
+      playErrorSound();
       throw err;
     }
   };

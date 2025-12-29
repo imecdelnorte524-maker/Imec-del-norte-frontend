@@ -32,6 +32,29 @@
   gap: 1rem;
 }
 
+/* Banner de aviso para cambio de contraseña */
+.passwordAlert {
+  background: #fef3c7;
+  border: 1px solid #facc15;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.passwordAlertTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.passwordAlertText {
+  font-size: 0.85rem;
+  color: #b45309;
+}
+
 /* Tarjeta principal de perfil */
 .profileCard {
   background: #ffffff;
@@ -218,6 +241,101 @@
   color: #111827;
 }
 
+/* Formulario de cambio de contraseña */
+.passwordForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.passwordField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.passwordLabel {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.passwordInput {
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.passwordInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+}
+
+.passwordRules {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.passwordRulesTitle {
+  margin-bottom: 0.15rem;
+  font-weight: 500;
+}
+
+.rulesList {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.rule,
+.ruleOk {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.rule::before,
+.ruleOk::before {
+  content: "•";
+  font-size: 0.7rem;
+}
+
+.ruleOk {
+  color: #15803d;
+}
+
+.ruleOk::before {
+  content: "✓";
+  font-size: 0.75rem;
+}
+
+.saveButton {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* Mensajes y errores */
 .error {
   margin-top: 0.5rem;
@@ -226,6 +344,16 @@
   color: #b91c1c;
   border-radius: 0.5rem;
   font-size: 0.85rem;
+}
+
+.success {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: #e6ffed;
+  color: #166534;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  border: 1px solid #bbf7d0;
 }
 
 .centerMessage {

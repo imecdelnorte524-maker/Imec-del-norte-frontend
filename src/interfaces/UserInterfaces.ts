@@ -28,6 +28,7 @@ export interface Usuario {
   fechaCreacion: string;
   resetToken?: string;
   resetTokenExpiry?: string;
+  mustChangePassword?: boolean;
   role: Rol;
 }
 

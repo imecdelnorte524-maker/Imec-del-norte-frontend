@@ -1,15 +1,15 @@
-import DashboardLayout from '../components/layout/DashboardLayout';
-import ServicesCard from '../components/ServicesCard';
-import type { Service } from '../interfaces/ServicesInterface';
-import Pagination from '../components/Pagination';
-import { useAuth } from '../hooks/useAuth';
+import DashboardLayout from "../components/layout/DashboardLayout";
+import ServicesCard from "../components/ServicesCard";
+import type { Service } from "../interfaces/ServicesInterface";
+import Pagination from "../components/Pagination";
+import { useAuth } from "../hooks/useAuth";
 import {
   getServicesRequest,
   getMyServicesRequest,
   getServicesMetricsRequest,
-} from '../api/services';
-import type { ServiceFromAPI } from '../interfaces/ServicesInterface';
-import styles from '../styles/pages/DashboardPage.module.css';
+} from "../api/services";
+import type { ServiceFromAPI } from "../interfaces/ServicesInterface";
+import styles from "../styles/pages/DashboardPage.module.css";
 
 import {
   MagnifyingGlassIcon,
@@ -25,14 +25,15 @@ import {
   BanknotesIcon,
   DocumentCheckIcon,
   UsersIcon,
-} from '@heroicons/react/24/outline';
-import { useEffect, useState } from 'react';
+} from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
 
 // ==== SG-SST ====
-import sgSstService from '../api/sg-sst';
-import type { SgSstForm } from '../interfaces/SgSstInterface';
+import sgSstService from "../api/sg-sst";
+import type { SgSstForm } from "../interfaces/SgSstInterface";
+import { playErrorSound } from "../utils/sounds";
 
-// Función para mapear servicio de API a interface del componente
+// Función para mapear orden de API a interface del componente
 const mapServiceFromAPI = (service: ServiceFromAPI): Service => ({
   orden_id: service.orden_id,
   servicio: {
@@ -53,20 +54,22 @@ const mapServiceFromAPI = (service: ServiceFromAPI): Service => ({
       }
     : undefined,
   fecha_solicitud: new Date(service.fecha_solicitud),
-  fecha_inicio: service.fecha_inicio ? new Date(service.fecha_inicio) : undefined,
+  fecha_inicio: service.fecha_inicio
+    ? new Date(service.fecha_inicio)
+    : undefined,
   fecha_finalizacion: service.fecha_finalizacion
     ? new Date(service.fecha_finalizacion)
     : undefined,
   estado: service.estado,
-  prioridad: service.prioridad || 'Media',
-  equipo_asignado: service.equipo_asignado || 'Por asignar',
+  prioridad: service.prioridad || "Media",
+  equipo_asignado: service.equipo_asignado || "Por asignar",
   comentarios: service.comentarios || undefined,
 });
 
-// Función para ordenar servicios según el criterio especificado
+// Función para ordenar Ordenes según el criterio especificado
 const sortServices = (services: Service[]): Service[] => {
   const orderPriority: Record<string, number> = {
-    'En Proceso': 1,
+    "En Proceso": 1,
     Pendiente: 2,
     Cancelado: 3,
     Completado: 4,
@@ -90,32 +93,32 @@ const sortServices = (services: Service[]): Service[] => {
 };
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
     maximumFractionDigits: 0,
   }).format(value || 0);
 };
 
 // ==== Utilidades SG-SST ====
 const formatSgSstDateTime = (value: string): string => {
-  if (!value) return '-';
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('es-CO', {
-    dateStyle: 'short',
-    timeStyle: 'short',
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("es-CO", {
+    dateStyle: "short",
+    timeStyle: "short",
   });
 };
 
-const getFormTypeLabel = (type: SgSstForm['formType']): string => {
+const getFormTypeLabel = (type: SgSstForm["formType"]): string => {
   switch (type) {
-    case 'ATS':
-      return 'ATS';
-    case 'HEIGHT_WORK':
-      return 'Trabajo en Alturas';
-    case 'PREOPERATIONAL':
-      return 'Preoperacional';
+    case "ATS":
+      return "ATS";
+    case "HEIGHT_WORK":
+      return "Trabajo en Alturas";
+    case "PREOPERATIONAL":
+      return "Preoperacional";
     default:
       return type;
   }
@@ -125,19 +128,20 @@ export default function Dashboard() {
   const { user, isAdmin, isAuthenticated, loading: authLoading } = useAuth();
 
   // Rol SGSST (ajustar el string "SGSST" si en tu backend se llama distinto)
-  const isSgSst = user?.role?.nombreRol === 'SGSST';
+  const isSgSst = user?.role?.nombreRol === "SGSST";
+  const isClient = user?.role?.nombreRol === "Cliente";
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const servicesPerPage = 9;
+  const servicesPerPage = 8;
 
   // Métricas extendidas
   const [metrics, setMetrics] = useState({
@@ -174,7 +178,7 @@ export default function Dashboard() {
   const [sgSstLoading, setSgSstLoading] = useState(false);
   const [sgSstError, setSgSstError] = useState<string | null>(null);
 
-  // Cargar datos del dashboard de servicios (solo si NO es SGSST)
+  // Cargar datos del dashboard de Ordenes (solo si NO es SGSST)
   useEffect(() => {
     if (!isAuthenticated || authLoading || isSgSst) return;
 
@@ -188,7 +192,7 @@ export default function Dashboard() {
 
         let servicesData: ServiceFromAPI[];
 
-        // Cargar servicios según el rol
+        // Cargar Ordenes según el rol
         if (isAdmin) {
           const response = await getServicesRequest({
             search: searchTerm || undefined,
@@ -222,8 +226,7 @@ export default function Dashboard() {
           totalRevenue: metricsData.ingresos_totales,
           completedThisMonth: metricsData.completadas_este_mes,
           statusCounts: {
-            unassigned:
-              metricsData.status_counts?.solicitada_sin_asignar ?? 0,
+            unassigned: metricsData.status_counts?.solicitada_sin_asignar ?? 0,
             assigned: metricsData.status_counts?.solicitada_asignada ?? 0,
             inProgress: metricsData.status_counts?.en_proceso ?? 0,
             completed: metricsData.status_counts?.completado ?? 0,
@@ -232,7 +235,7 @@ export default function Dashboard() {
           technicians: metricsData.technicians || [],
         });
 
-        // Mapear y ordenar servicios
+        // Mapear y ordenar Ordenes
         const mappedServices = servicesData.map(mapServiceFromAPI);
         const sortedServices = sortServices(mappedServices);
 
@@ -240,12 +243,13 @@ export default function Dashboard() {
 
         // Extraer estados únicos para el filtro
         const uniqueStatuses = Array.from(
-          new Set(servicesData.map((service) => service.estado)),
+          new Set(servicesData.map((service) => service.estado))
         );
         setStatusOptions(uniqueStatuses);
       } catch (error) {
-        console.error('Error cargando datos del dashboard:', error);
-        setError('Error al cargar los datos. Por favor, intenta nuevamente.');
+        console.error("Error cargando datos del dashboard:", error);
+        setError("Error al cargar los datos. Por favor, intenta nuevamente.");
+        playErrorSound();
       } finally {
         setLoading(false);
       }
@@ -272,19 +276,19 @@ export default function Dashboard() {
       setSgSstError(null);
       try {
         // Formularios con estado PENDING_SST
-        const response = await sgSstService.getFormsByStatus('PENDING_SST');
+        const response = await sgSstService.getFormsByStatus("PENDING_SST");
         const forms = response.data || [];
 
         // Solo los que NO tienen firma SG-SST
         const unsignedBySst = forms.filter(
-          (form: SgSstForm) => !form.sstSignatureDate,
+          (form: SgSstForm) => !form.sstSignatureDate
         );
 
         setSgSstForms(unsignedBySst);
       } catch (err) {
-        console.error('Error cargando formularios SG-SST:', err);
+        console.error("Error cargando formularios SG-SST:", err);
         setSgSstError(
-          'Error al cargar los reportes SG-SST pendientes de firma.',
+          "Error al cargar los reportes SG-SST pendientes de firma."
         );
       } finally {
         setSgSstLoading(false);
@@ -294,17 +298,17 @@ export default function Dashboard() {
     loadSgSstForms();
   }, [isAuthenticated, authLoading, isSgSst]);
 
-  // Filtro de servicios (solo tiene efecto cuando no es SGSST)
+  // Filtro de Ordenes (solo tiene efecto cuando no es SGSST)
   useEffect(() => {
     const filtered = services.filter((service) => {
       const clienteNombre = `${service.cliente.nombre} ${
-        service.cliente.apellido || ''
+        service.cliente.apellido || ""
       }`.toLowerCase();
       const tecnicoNombre = service.tecnico
         ? `${service.tecnico.nombre} ${
-            service.tecnico.apellido || ''
+            service.tecnico.apellido || ""
           }`.toLowerCase()
-        : '';
+        : "";
 
       const matchesSearch =
         clienteNombre.includes(searchTerm.toLowerCase()) ||
@@ -315,11 +319,10 @@ export default function Dashboard() {
         service.orden_id.toString().includes(searchTerm);
 
       const matchesStatus =
-        selectedStatus === '' || service.estado === selectedStatus;
+        selectedStatus === "" || service.estado === selectedStatus;
 
       const serviceDate = service.fecha_inicio || service.fecha_solicitud;
-      const matchesStartDate =
-        !startDate || serviceDate >= new Date(startDate);
+      const matchesStartDate = !startDate || serviceDate >= new Date(startDate);
       const matchesEndDate = !endDate || serviceDate <= new Date(endDate);
 
       return (
@@ -336,14 +339,14 @@ export default function Dashboard() {
   const indexOfFirstService = indexOfLastService - servicesPerPage;
   const currentServices = filteredServices.slice(
     indexOfFirstService,
-    indexOfLastService,
+    indexOfLastService
   );
 
   const clearFilters = () => {
-    setSearchTerm('');
-    setStartDate('');
-    setEndDate('');
-    setSelectedStatus('');
+    setSearchTerm("");
+    setStartDate("");
+    setEndDate("");
+    setSelectedStatus("");
     setCurrentPage(1);
   };
 
@@ -359,39 +362,38 @@ export default function Dashboard() {
 
   const statusBarData = [
     {
-      key: 'unassigned',
-      label: 'Sin asignar',
+      key: "unassigned",
+      label: "Sin asignar",
       value: metrics.statusCounts.unassigned,
       className: styles.barUnassigned,
     },
     {
-      key: 'assigned',
-      label: 'Asignadas',
+      key: "assigned",
+      label: "Asignadas",
       value: metrics.statusCounts.assigned,
       className: styles.barAssigned,
     },
     {
-      key: 'inProgress',
-      label: 'En Proceso',
+      key: "inProgress",
+      label: "En Proceso",
       value: metrics.statusCounts.inProgress,
       className: styles.barInProgress,
     },
     {
-      key: 'completed',
-      label: 'Completadas',
+      key: "completed",
+      label: "Completadas",
       value: metrics.statusCounts.completed,
       className: styles.barCompleted,
     },
     {
-      key: 'canceled',
-      label: 'Canceladas',
+      key: "canceled",
+      label: "Canceladas",
       value: metrics.statusCounts.canceled,
       className: styles.barCanceled,
     },
   ];
 
-  const maxStatusValue =
-    Math.max(...statusBarData.map((d) => d.value), 0) || 1;
+  const maxStatusValue = Math.max(...statusBarData.map((d) => d.value), 0) || 1;
 
   // Mostrar loading mientras verifica autenticación
   if (authLoading) {
@@ -448,11 +450,13 @@ export default function Dashboard() {
             </h1>
             <p className={styles.pageSubtitle}>
               {isAdmin
-                ? 'Resumen general y gestión de servicios técnicos'
+                ? "Resumen general y gestión de Ordenes técnicos"
                 : isSgSst
-                ? 'Reportes SG-SST pendientes de firma'
-                : `Mis servicios asignados - ${user?.nombre} ${
-                    user?.apellido || ''
+                ? "Reportes SG-SST pendientes de firma"
+                : isClient
+                ? `Mis Ordenes - ${user?.nombre} ${user?.apellido || ""}` 
+                : `Mis Ordenes asignados - ${user?.nombre} ${
+                    user?.apellido || ""
                   }`}
             </p>
           </div>
@@ -466,6 +470,11 @@ export default function Dashboard() {
               <>
                 <ShieldCheckIcon className={styles.userIcon} />
                 <span className={styles.sgsstRole}>SG-SST</span>
+              </>
+            ) : isClient ? (
+              <>
+                <UserIcon className={styles.userIcon} />
+                <span className={styles.userRole}>Cliente</span>
               </>
             ) : (
               <>
@@ -521,9 +530,9 @@ export default function Dashboard() {
                           <td>
                             {form.user
                               ? `${form.user.nombre} ${
-                                  form.user.apellido || ''
+                                  form.user.apellido || ""
                                 }`
-                              : 'N/D'}
+                              : "N/D"}
                           </td>
                           <td>{formatSgSstDateTime(form.createdAt)}</td>
                           <td>
@@ -541,15 +550,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ==== TODO lo de servicios SOLO si NO es SGSST ==== */}
+        {/* ==== TODO lo de Ordenes SOLO si NO es SGSST ==== */}
         {!isSgSst && (
           <>
-            {/* Métricas de servicios */}
+            {/* Métricas de Ordenes */}
             <div className={styles.metricsGrid}>
               <div className={styles.metricCard}>
                 <div className={styles.metricHeader}>
                   <div className={styles.metricTitle}>
-                    {isAdmin ? 'Total Servicios' : 'Mis Servicios'}
+                    {isAdmin ? "Total Ordenes" : "Mis Ordenes"}
                   </div>
                   <ClipboardDocumentListIcon className={styles.metricIcon} />
                 </div>
@@ -557,7 +566,7 @@ export default function Dashboard() {
                   {isAdmin ? metrics.totalServices : metrics.myServices}
                 </div>
                 <div className={styles.metricDescription}>
-                  {isAdmin ? 'Servicios activos' : 'Asignados a mí'}
+                  {isAdmin ? "Ordenes activos" : isClient ? "Mis Ordenes activas" : "Asignados a mí"}
                 </div>
               </div>
 
@@ -572,26 +581,26 @@ export default function Dashboard() {
                 <div className={styles.metricDescription}>Por completar</div>
               </div>
 
-              <div className={styles.metricCard}>
-                <div className={styles.metricHeader}>
-                  <div className={styles.metricTitle}>Sin Asignar</div>
-                  <ExclamationTriangleIcon className={styles.metricIcon} />
+              {isAdmin && (
+                <div className={styles.metricCard}>
+                  <div className={styles.metricHeader}>
+                    <div className={styles.metricTitle}>Sin Asignar</div>
+                    <ExclamationTriangleIcon className={styles.metricIcon} />
+                  </div>
+                  <div className={styles.metricValue}>
+                    {metrics.unassignedServices}
+                  </div>
+                  <div className={styles.metricDescription}>
+                    Solicitadas sin asignar
+                  </div>
                 </div>
-                <div className={styles.metricValue}>
-                  {metrics.unassignedServices}
-                </div>
-                <div className={styles.metricDescription}>
-                  Solicitadas sin asignar
-                </div>
-              </div>
+              )}
 
               {isAdmin && (
                 <div className={styles.metricCard}>
                   <div className={styles.metricHeader}>
                     <div className={styles.metricTitle}>Asignadas</div>
-                    <ClipboardDocumentListIcon
-                      className={styles.metricIcon}
-                    />
+                    <ClipboardDocumentListIcon className={styles.metricIcon} />
                   </div>
                   <div className={styles.metricValue}>
                     {metrics.assignedPendingServices}
@@ -602,20 +611,22 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <div className={styles.metricCard}>
-                <div className={styles.metricHeader}>
-                  <div className={styles.metricTitle}>Finalizados</div>
-                  <CheckCircleIcon className={styles.metricIcon} />
+              {isAdmin && (
+                <div className={styles.metricCard}>
+                  <div className={styles.metricHeader}>
+                    <div className={styles.metricTitle}>Finalizados</div>
+                    <CheckCircleIcon className={styles.metricIcon} />
+                  </div>
+                  <div className={styles.metricValue}>
+                    {metrics.completedServices}
+                  </div>
+                  <div className={styles.metricDescription}>
+                    {getCompletionPercentage()}%{" "}
+                    {isAdmin ? "del total" : "completados"} ·{" "}
+                    {metrics.completedThisMonth} este mes
+                  </div>
                 </div>
-                <div className={styles.metricValue}>
-                  {metrics.completedServices}
-                </div>
-                <div className={styles.metricDescription}>
-                  {getCompletionPercentage()}%{' '}
-                  {isAdmin ? 'del total' : 'completados'} ·{' '}
-                  {metrics.completedThisMonth} este mes
-                </div>
-              </div>
+              )}
 
               {/* Métricas de facturación / ingresos solo para Admin */}
               {isAdmin && (
@@ -635,9 +646,7 @@ export default function Dashboard() {
 
                   <div className={styles.metricCard}>
                     <div className={styles.metricHeader}>
-                      <div className={styles.metricTitle}>
-                        Ingresos Totales
-                      </div>
+                      <div className={styles.metricTitle}>Ingresos Totales</div>
                       <BanknotesIcon className={styles.metricIcon} />
                     </div>
                     <div className={styles.metricValue}>
@@ -664,7 +673,7 @@ export default function Dashboard() {
                   <div className={styles.barChart}>
                     {statusBarData.map((item) => {
                       const widthPercent = Math.round(
-                        (item.value / maxStatusValue) * 100,
+                        (item.value / maxStatusValue) * 100
                       );
                       return (
                         <div className={styles.barChartRow} key={item.key}>
@@ -690,7 +699,7 @@ export default function Dashboard() {
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitle}>
                     <UsersIcon className={styles.sectionIcon} />
-                    Servicios por técnico
+                    Ordenes por técnico
                   </div>
                 </div>
                 <div className={styles.sectionContent}>
@@ -699,7 +708,7 @@ export default function Dashboard() {
                       {metrics.technicians.map((tech) => (
                         <div key={tech.tecnico_id} className={styles.techItem}>
                           <div className={styles.techName}>
-                            {tech.nombre} {tech.apellido || ''}
+                            {tech.nombre} {tech.apellido || ""}
                           </div>
                           <div className={styles.techStats}>
                             <span>
@@ -726,7 +735,7 @@ export default function Dashboard() {
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
                   <FunnelIcon className={styles.sectionIcon} />
-                  Filtros de Servicios
+                  Filtros de Ordenes
                 </div>
                 <button
                   className={styles.clearFiltersButton}
@@ -745,7 +754,7 @@ export default function Dashboard() {
                     </label>
                     <input
                       type="text"
-                      placeholder="Cliente, servicio, técnico o ID..."
+                      placeholder="Cliente, orden, técnico o ID..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className={styles.searchInput}
@@ -803,7 +812,7 @@ export default function Dashboard() {
             {/* Resumen resultados */}
             <div className={styles.resultsSummary}>
               <div className={styles.resultsCount}>
-                {filteredServices.length} servicios encontrados
+                {filteredServices.length} Ordenes encontrados
                 {totalPages > 1 && ` - Página ${currentPage} de ${totalPages}`}
               </div>
               <div className={styles.activeFilters}>
@@ -819,18 +828,18 @@ export default function Dashboard() {
                 )}
                 {(startDate || endDate) && (
                   <span className={styles.filterTag}>
-                    Rango: {startDate || 'Inicio'} - {endDate || 'Fin'}
+                    Rango: {startDate || "Inicio"} - {endDate || "Fin"}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Lista de servicios */}
+            {/* Lista de Ordenes */}
             <div className={styles.section}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
                   <ClipboardDocumentListIcon className={styles.sectionIcon} />
-                  {isAdmin ? 'Servicios Recientes' : 'Mis Servicios'}
+                  {isAdmin ? "Ordenes Recientes" : "Mis Ordenes"}
                   <span className={styles.orderInfo}></span>
                 </div>
               </div>
@@ -839,7 +848,7 @@ export default function Dashboard() {
                 {loading ? (
                   <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
-                    <p>Cargando servicios...</p>
+                    <p>Cargando Ordenes...</p>
                   </div>
                 ) : (
                   <>
@@ -854,7 +863,7 @@ export default function Dashboard() {
                       ) : (
                         <div className={styles.noResults}>
                           <div className={styles.noResultsIcon}>📭</div>
-                          <h3>No se encontraron servicios</h3>
+                          <h3>No se encontraron Ordenes</h3>
                           <p>Intenta ajustar los filtros de búsqueda</p>
                           <button
                             className={styles.clearFiltersButton}

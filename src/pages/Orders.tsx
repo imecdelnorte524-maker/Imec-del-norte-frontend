@@ -1,15 +1,24 @@
-import { useState } from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import { useAuth } from '../hooks/useAuth';
-import styles from '../styles/pages/OrdersPage.module.css';
+// src/pages/OrdersPage.tsx
 
-import ClientOrdersView from '../components/orders/ClientOrdersView';
-import TechnicianOrdersView from '../components/orders/TechnicianOrdersView';
-import AdminOrdersView from '../components/orders/AdminOrdersView';
+import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import DashboardLayout from "../components/layout/DashboardLayout";
+import { useAuth } from "../hooks/useAuth";
+import styles from "../styles/pages/OrdersPage.module.css";
+
+import ClientOrdersView from "../components/orders/ClientOrdersView";
+import TechnicianOrdersView from "../components/orders/TechnicianOrdersView";
+import AdminOrdersView from "../components/orders/AdminOrdersView";
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState<'list' | 'create' | 'detail'>('list');
+  const [activeView, setActiveView] = useState<"list" | "create" | "detail">(
+    "list"
+  );
+
+  const [searchParams] = useSearchParams();
+  const ordenIdParam = searchParams.get("ordenId");
+  const initialOrderId = ordenIdParam ? Number(ordenIdParam) : undefined;
 
   if (authLoading) {
     return (
@@ -22,13 +31,13 @@ export default function OrdersPage() {
     );
   }
 
-  const roleName = user?.role?.nombreRol || '';
+  const roleName = user?.role?.nombreRol || "";
   const upperRole = roleName.toUpperCase();
 
-  const isAdmin = upperRole === 'ADMINISTRADOR';
-  const isSecretaria = upperRole === 'SECRETARIA';
-  const isTecnico = upperRole === 'TÉCNICO' || upperRole === 'TECNICO';
-  const isCliente = upperRole === 'CLIENTE';
+  const isAdmin = upperRole === "ADMINISTRADOR";
+  const isSecretaria = upperRole === "SECRETARIA";
+  const isTecnico = upperRole === "TÉCNICO" || upperRole === "TECNICO";
+  const isCliente = upperRole === "CLIENTE";
 
   const renderView = () => {
     if (isAdmin) {
@@ -37,6 +46,7 @@ export default function OrdersPage() {
           activeView={activeView}
           setActiveView={setActiveView}
           userRole="admin"
+          initialOrderId={initialOrderId}
         />
       );
     }
@@ -47,6 +57,7 @@ export default function OrdersPage() {
           activeView={activeView}
           setActiveView={setActiveView}
           userRole="secretaria"
+          initialOrderId={initialOrderId}
         />
       );
     }
@@ -56,6 +67,7 @@ export default function OrdersPage() {
         <TechnicianOrdersView
           activeView={activeView}
           setActiveView={setActiveView}
+          initialOrderId={initialOrderId}
         />
       );
     }
@@ -65,6 +77,7 @@ export default function OrdersPage() {
         <ClientOrdersView
           activeView={activeView}
           setActiveView={setActiveView}
+          initialOrderId={initialOrderId}
         />
       );
     }
@@ -73,6 +86,7 @@ export default function OrdersPage() {
       <ClientOrdersView
         activeView={activeView}
         setActiveView={setActiveView}
+        initialOrderId={initialOrderId}
       />
     );
   };

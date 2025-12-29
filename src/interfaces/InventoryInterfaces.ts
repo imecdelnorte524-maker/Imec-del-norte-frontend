@@ -1,11 +1,11 @@
-import { 
-  ToolStatus, 
-  SupplyStatus, 
-  ToolType, 
-  SupplyCategory, 
+import {
+  ToolStatus,
+  SupplyStatus,
+  ToolType,
+  SupplyCategory,
   UnitOfMeasure,
-  InventoryItemType 
-} from '../shared/enums/inventory.enum';
+  InventoryItemType,
+} from "../shared/enums/inventory.enum";
 
 export interface Herramienta {
   herramientaId: number;
@@ -30,12 +30,10 @@ export interface Insumo {
   nombre: string;
   categoria: SupplyCategory;
   unidadMedida: UnitOfMeasure;
-  // ❌ ELIMINADO: stock (ahora está en Inventory)
   estado: SupplyStatus;
   fechaRegistro?: string;
   stockMin: number;
   valorUnitario: number | null;
-  // NUEVO: Campos del inventario asociado
   inventarioId?: number;
   cantidadActual?: number;
   ubicacion?: string;
@@ -55,11 +53,9 @@ export interface Inventory {
     nombre: string;
     categoria: SupplyCategory;
     unidadMedida: UnitOfMeasure;
-    // ❌ ELIMINADO: stock (usar cantidadActual del Inventory)
     estado: SupplyStatus;
     stockMin: number;
     valorUnitario: number;
-
   };
   tool?: {
     herramientaId: number;
@@ -69,8 +65,7 @@ export interface Inventory {
     modelo?: string;
     estado: ToolStatus;
     valorUnitario: number;
-
   };
 }
 
-export type TipoFiltro = 'todos' | 'herramientas' | 'insumos';
+export type TipoFiltro = "todos" | "herramientas" | "insumos";

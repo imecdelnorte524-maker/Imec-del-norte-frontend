@@ -1,20 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { inventory } from "../api/inventory";
 import type { Inventory, TipoFiltro } from "../interfaces/InventoryInterfaces";
-import AddInventoryModal from '../components/inventory/AddInventoyModal';
-import EditInventoryModal from '../components/inventory/EditInventoryModal';
-import DeleteConfirmationModal from '../components/inventory/DeleteInventoryModal';
-import ViewInventoryModal from '../components/inventory/ViewInventoryModal';
+import AddInventoryModal from "../components/inventory/AddInventoyModal";
+import EditInventoryModal from "../components/inventory/EditInventoryModal";
+import DeleteConfirmationModal from "../components/inventory/DeleteInventoryModal";
+import ViewInventoryModal from "../components/inventory/ViewInventoryModal";
 
-import styles from '../styles/pages/InventoryPage.module.css';
+import styles from "../styles/pages/InventoryPage.module.css";
+import { playErrorSound } from "../utils/sounds";
 
 export default function Inventory() {
   const [inventario, setInventario] = useState<Inventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState<TipoFiltro>('todos');
-  const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState<TipoFiltro>("todos");
+  const [busqueda, setBusqueda] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -33,10 +34,7 @@ export default function Inventory() {
   const cargarInventario = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Cargando inventario...');
-
       const data = await inventory.getAllInventory();
-      console.log('✅ Inventario cargado en frontend:', data);
 
       data.forEach((item: { tipo: any }, i: number) => {
         if (!item.tipo) {
@@ -47,8 +45,9 @@ export default function Inventory() {
       setInventario(data);
       setError(null);
     } catch (err: any) {
-      console.error('❌ Error en cargarInventario:', err);
-      setError('Error al cargar el inventario: ' + err.message);
+      console.error("❌ Error en cargarInventario:", err);
+      setError("Error al cargar el inventario: " + err.message);
+      playErrorSound();
     } finally {
       setLoading(false);
     }
@@ -72,14 +71,14 @@ export default function Inventory() {
     setSelectedItem(null);
   };
 
-  const itemsFiltrados = inventario.filter(item => {
+  const itemsFiltrados = inventario.filter((item) => {
     const coincideTipo =
-      filtro === 'todos' ||
-      (filtro === 'herramientas' && item.herramientaId) ||
-      (filtro === 'insumos' && item.insumoId);
+      filtro === "todos" ||
+      (filtro === "herramientas" && item.herramientaId) ||
+      (filtro === "insumos" && item.insumoId);
 
     const coincideBusqueda =
-      busqueda === '' ||
+      busqueda === "" ||
       item.supply?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.tool?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.ubicacion?.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -90,14 +89,13 @@ export default function Inventory() {
 
   const totalItems = inventario.length;
   const totalHerramientas = inventario.filter(
-    item => item.tool?.herramientaId,
+    (item) => item.tool?.herramientaId
   ).length;
   const totalInsumos = inventario.filter(
-    item => item.supply?.insumoId,
+    (item) => item.supply?.insumoId
   ).length;
   const stockBajo = inventario.filter(
-    item =>
-      item.supply && item.cantidadActual <= (item.supply.stockMin || 0),
+    (item) => item.supply && item.cantidadActual <= (item.supply.stockMin || 0)
   ).length;
 
   if (loading) {
@@ -183,12 +181,11 @@ export default function Inventory() {
                       <th>Cantidad</th>
                       <th>Ubicación</th>
                       <th>Estado</th>
-                      <th>Última Actualización</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {itemsFiltrados.map(item => (
+                    {itemsFiltrados.map((item) => (
                       <tr key={item.inventarioId}>
                         <td>
                           <span
@@ -198,16 +195,16 @@ export default function Inventory() {
                                 : styles.insumo
                             }`}
                           >
-                            {item.tipo === 'herramienta'
-                              ? '🛠️ Herramienta'
-                              : '📦 Insumo'}
+                            {item.tipo === "herramienta"
+                              ? "🛠️ Herramienta"
+                              : "📦 Insumo"}
                           </span>
                         </td>
                         <td>
                           {item.nombreItem}
                           {item.supply && (
                             <small className={styles.unit}>
-                              {' '}
+                              {" "}
                               ({item.supply.unidadMedida})
                             </small>
                           )}
@@ -216,30 +213,22 @@ export default function Inventory() {
                           <span
                             className={`${styles.quantity} ${
                               item.supply &&
-                              item.cantidadActual <=
-                                (item.supply.stockMin || 0)
+                              item.cantidadActual <= (item.supply.stockMin || 0)
                                 ? styles.lowStock
-                                : ''
+                                : ""
                             }`}
                           >
                             {item.cantidadActual}
                             {item.supply && ` / ${item.supply.stockMin}`}
                           </span>
                         </td>
-                        <td>{item.ubicacion || 'Sin ubicación'}</td>
+                        <td>{item.ubicacion || "Sin ubicación"}</td>
                         <td>
-                          <span
-                            className={`${styles.status} ${styles.active}`}
-                          >
+                          <span className={`${styles.status} ${styles.active}`}>
                             {item.tool?.estado ||
                               item.supply?.estado ||
-                              'Activo'}
+                              "Activo"}
                           </span>
-                        </td>
-                        <td>
-                          {new Date(
-                            item.fechaUltimaActualizacion,
-                          ).toLocaleDateString()}
                         </td>
                         <td>
                           <div className={styles.actionButtons}>
@@ -258,9 +247,7 @@ export default function Inventory() {
                               ✏️
                             </button>
                             <button
-                              className={`${styles.btnAction} ${
-                                styles.delete
-                              }`}
+                              className={`${styles.btnAction} ${styles.delete}`}
                               onClick={() => handleDelete(item)}
                               title="Eliminar"
                             >
@@ -276,22 +263,15 @@ export default function Inventory() {
             </div>
 
             <div className={styles.mobileView}>
-              {itemsFiltrados.map(item => (
-                <div
-                  key={item.inventarioId}
-                  className={styles.mobileCard}
-                >
+              {itemsFiltrados.map((item) => (
+                <div key={item.inventarioId} className={styles.mobileCard}>
                   <div className={styles.cardHeader}>
                     <span
                       className={`${styles.itemType} ${
-                        item.herramientaId
-                          ? styles.herramienta
-                          : styles.insumo
+                        item.herramientaId ? styles.herramienta : styles.insumo
                       }`}
                     >
-                      {item.tipo === 'herramienta'
-                        ? '🛠️ Equipo'
-                        : '📦 Insumo'}
+                      {item.tipo === "herramienta" ? "🛠️ Equipo" : "📦 Insumo"}
                     </span>
                     <div className={styles.cardActions}>
                       <button
@@ -309,9 +289,7 @@ export default function Inventory() {
                         ✏️
                       </button>
                       <button
-                        className={`${styles.btnAction} ${
-                          styles.delete
-                        }`}
+                        className={`${styles.btnAction} ${styles.delete}`}
                         onClick={() => handleDelete(item)}
                         title="Eliminar"
                       >
@@ -325,7 +303,7 @@ export default function Inventory() {
                       {item.nombreItem}
                       {item.supply && (
                         <small className={styles.unit}>
-                          {' '}
+                          {" "}
                           ({item.supply.unidadMedida})
                         </small>
                       )}
@@ -333,16 +311,13 @@ export default function Inventory() {
 
                     <div className={styles.cardDetails}>
                       <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>
-                          Cantidad:
-                        </span>
+                        <span className={styles.detailLabel}>Cantidad:</span>
                         <span
                           className={`${styles.quantity} ${
                             item.supply &&
-                            item.cantidadActual <=
-                              (item.supply.stockMin || 0)
+                            item.cantidadActual <= (item.supply.stockMin || 0)
                               ? styles.lowStock
-                              : ''
+                              : ""
                           }`}
                         >
                           {item.cantidadActual}
@@ -351,36 +326,24 @@ export default function Inventory() {
                       </div>
 
                       <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>
-                          Ubicación:
-                        </span>
+                        <span className={styles.detailLabel}>Ubicación:</span>
                         <span className={styles.detailValue}>
-                          {item.ubicacion || 'Sin ubicación'}
+                          {item.ubicacion || "Sin ubicación"}
                         </span>
                       </div>
 
                       <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>
-                          Estado:
-                        </span>
-                        <span
-                          className={`${styles.status} ${
-                            styles.active
-                          }`}
-                        >
-                          {item.tool?.estado ||
-                            item.supply?.estado ||
-                            'Activo'}
+                        <span className={styles.detailLabel}>Estado:</span>
+                        <span className={`${styles.status} ${styles.active}`}>
+                          {item.tool?.estado || item.supply?.estado || "Activo"}
                         </span>
                       </div>
 
                       <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>
-                          Actualizado:
-                        </span>
+                        <span className={styles.detailLabel}>Actualizado:</span>
                         <span className={styles.detailValue}>
                           {new Date(
-                            item.fechaUltimaActualizacion,
+                            item.fechaUltimaActualizacion
                           ).toLocaleDateString()}
                         </span>
                       </div>
@@ -393,8 +356,8 @@ export default function Inventory() {
             {itemsFiltrados.length === 0 && (
               <div className={styles.emptyState}>
                 {busqueda
-                  ? 'No se encontraron items con esa búsqueda'
-                  : 'No hay items en el inventario'}
+                  ? "No se encontraron items con esa búsqueda"
+                  : "No hay items en el inventario"}
               </div>
             )}
           </div>

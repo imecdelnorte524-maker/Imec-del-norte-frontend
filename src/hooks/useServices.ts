@@ -5,6 +5,7 @@ import {
   getMyServicesRequest 
 } from '../api/services';
 import type { MetricsResponse, ServiceFromAPI, ServicesResponse } from '../interfaces/ServicesInterface';
+import { playErrorSound } from '../utils/sounds';
 
 // Hook para métricas del dashboard
 export const useServicesMetrics = () => {
@@ -21,6 +22,7 @@ export const useServicesMetrics = () => {
         setMetrics(data);
       } catch (err: any) {
         setError(err.response?.data?.error || 'Error al cargar las métricas');
+        playErrorSound();
       } finally {
         setLoading(false);
       }
@@ -66,6 +68,7 @@ export const useServices = (filters?: {
         });
       } catch (err: any) {
         setError(err.response?.data?.error || 'Error al cargar los servicios');
+        playErrorSound();
       } finally {
         setLoading(false);
       }
@@ -109,6 +112,7 @@ export const useMyServices = (filters?: {
         });
       } catch (err: any) {
         setError(err.response?.data?.error || 'Error al cargar mis servicios');
+        playErrorSound();
       } finally {
         setLoading(false);
       }
