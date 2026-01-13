@@ -433,7 +433,6 @@ export default function Dashboard() {
         <div className={styles.pageHeader}>
           <div>
             <h1 className={styles.pageTitle}>
-              Dashboard Principal
               {isAdmin ? (
                 <span className={styles.adminBadge}>
                   <ShieldCheckIcon className={styles.badgeIcon} />

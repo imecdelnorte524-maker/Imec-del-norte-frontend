@@ -1,78 +1,50 @@
-// src/hooks/useOrders.ts
-
-import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAllOrdersRequest } from "../api/orders";
-import type { Order } from "../interfaces/OrderInterfaces";
-import { playErrorSound } from "../utils/sounds";
+import { QUERY_KEYS } from "../api/keys";
 
 export const useOrders = (
   userRole: "cliente" | "tecnico" | "admin",
   filter?: string
 ) => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const { data: orders = [], isLoading, error } = useQuery({
+    // La clave incluye el rol y el filtro, así React Query sabe que son listas distintas
+    queryKey: [QUERY_KEYS.orders, userRole, filter],
+    queryFn: async () => {
+      // 1. Obtenemos TODAS las órdenes del backend (que ya filtra por seguridad/rol)
+      const response = await getAllOrdersRequest();
 
-        // Obtener todas las órdenes (el backend filtra por rol)
-        let response: Order[] = await getAllOrdersRequest();
+      // 2. Aplicamos filtros de UI (pestañas del frontend)
+      if (userRole === "admin" && filter && filter !== "all") {
+        const filterMap: Record<string, string> = {
+          pending: "Pendiente",
+          assigned: "Asignada",
+          completed: "Completado",
+          cancelled: "Cancelada",
+        };
 
-        // Aplicar filtros adicionales en frontend
-        let filteredOrders = response;
-
-        if (userRole === "admin" && filter && filter !== "all") {
-          // Mapear los valores del filtro a los estados reales de las órdenes
-          const filterMap: Record<string, string> = {
-            pending: "Pendiente",
-            assigned: "Asignada",
-            completed: "Completado",
-            cancelled: "Cancelada",
-          };
-
-          const targetEstado = filterMap[filter];
-
-          if (targetEstado) {
-            // Filtrar por estado
-            filteredOrders = response.filter(
-              (order) => order.estado === targetEstado
-            );
-
-            // Caso especial para 'pending': también verificar que no tenga técnico
-            if (filter === "pending") {
-              filteredOrders = filteredOrders.filter(
-                (order) => !order.tecnico_id
-              );
-            }
-
-            // Caso especial para 'assigned': debe tener estado "Asignada" Y tener técnico
-            if (filter === "assigned") {
-              filteredOrders = filteredOrders.filter(
-                (order) => order.tecnico_id
-              );
-            }
+        const targetEstado = filterMap[filter];
+        if (targetEstado) {
+          let filtered = response.filter((o) => o.estado === targetEstado);
+          
+          if (filter === "pending") {
+            filtered = filtered.filter((o) => !o.tecnico_id);
           }
+          if (filter === "assigned") {
+            filtered = filtered.filter((o) => o.tecnico_id);
+          }
+          return filtered;
         }
-
-        setOrders(filteredOrders);
-      } catch (err: any) {
-        const errorMessage =
-          err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error al cargar las órdenes";
-        setError(errorMessage);
-        playErrorSound();
-      } finally {
-        setLoading(false);
       }
-    };
+      return response;
+    },
+  });
 
-    loadOrders();
-  }, [userRole, filter]);
-
-  return { orders, loading, error };
+  return { 
+    orders, 
+    loading: isLoading, 
+    error: error ? (error as Error).message : null,
+    refreshOrders: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] })
+  };
 };

@@ -87,17 +87,6 @@ export default function Inventory() {
     return coincideTipo && coincideBusqueda;
   });
 
-  const totalItems = inventario.length;
-  const totalHerramientas = inventario.filter(
-    (item) => item.tool?.herramientaId
-  ).length;
-  const totalInsumos = inventario.filter(
-    (item) => item.supply?.insumoId
-  ).length;
-  const stockBajo = inventario.filter(
-    (item) => item.supply && item.cantidadActual <= (item.supply.stockMin || 0)
-  ).length;
-
   if (loading) {
     return (
       <DashboardLayout>
@@ -113,25 +102,6 @@ export default function Inventory() {
           <h1>Gestión de Inventario</h1>
           <p>Administra herramientas e insumos del taller</p>
         </header>
-
-        <div className={styles.stats}>
-          <div className={styles.statCard}>
-            <h3>Total Items</h3>
-            <span className={styles.statNumber}>{totalItems}</span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Herramientas</h3>
-            <span className={styles.statNumber}>{totalHerramientas}</span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Insumos</h3>
-            <span className={styles.statNumber}>{totalInsumos}</span>
-          </div>
-          <div className={`${styles.statCard} ${styles.warning}`}>
-            <h3>Stock Bajo</h3>
-            <span className={styles.statNumber}>{stockBajo}</span>
-          </div>
-        </div>
 
         <div className={styles.controls}>
           <div className={styles.filters}>
@@ -178,7 +148,7 @@ export default function Inventory() {
                     <tr>
                       <th>Tipo</th>
                       <th>Nombre</th>
-                      <th>Cantidad</th>
+                      <th>Cantidad / Stock Min</th>
                       <th>Ubicación</th>
                       <th>Estado</th>
                       <th>Acciones</th>

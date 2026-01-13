@@ -3,15 +3,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { HeightWorkFormData } from "../../interfaces/SgSstInterface";
-import type { Usuario, Rol } from "../../interfaces/UserInterfaces";
+import type { Usuario } from "../../interfaces/UserInterfaces";
+import type { Rol } from "../../interfaces/RolesInterfaces";
 import type { Client } from "../../interfaces/ClientInterfaces";
 import type { Order } from "../../interfaces/OrderInterfaces";
-import { users } from "../../api/users";
+import { usersApi } from "../../api/users";
 import { sgSstService } from "../../api/sg-sst";
 import { getMyAssignedOrdersRequest } from "../../api/orders";
 import SignaturePad from "./SignaturePad";
 import styles from "../../styles/components/sg-sst/HeightWorkForm.module.css";
 import { useAuth } from "../../hooks/useAuth";
+import { rolesApi } from "../../api/roles";
 
 interface HeightWorkFormProps {
   onSubmit: (data: HeightWorkFormData) => void;
@@ -98,8 +100,8 @@ export default function HeightWorkForm({
     try {
       setIsLoading(true);
       const [usuariosData, rolesData] = await Promise.all([
-        users.getAllUsers(),
-        users.getAllRoles(),
+        usersApi.getAllUsers(),
+        rolesApi.getAllRoles(),
       ]);
       setUsuarios(usuariosData || []);
       setRoles(rolesData || []);

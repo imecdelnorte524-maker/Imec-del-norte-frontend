@@ -1,5 +1,5 @@
 // src/components/layout/DashboardLayout.tsx
-import { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "../../styles/components/layouts/DashboardLayout.module.css";
@@ -8,13 +8,18 @@ import {
   useNotifications,
   type Notification,
 } from "../../hooks/useNotifications";
-import { users } from "../../api/users"; // ⬅️ para cargar la foto
+import { useModules } from "../../hooks/useModules";
+import type { Module as ModuleInterface } from "../../interfaces/ModulesInterfaces";
+import type { Rol } from "../../interfaces/RolesInterfaces";
+import { getDisplayRoleName as getDisplayRoleNameFromConfig } from "../../config/roles.config";
+import { useUserPhoto } from "../../hooks/useUserPhoto";
 
 import type { SVGProps } from "react";
 import type { ForwardRefExoticComponent, RefAttributes } from "react";
 
 import {
   HomeIcon,
+  ClipboardIcon,
   ClipboardDocumentListIcon,
   CubeIcon,
   UsersIcon,
@@ -31,11 +36,51 @@ import {
   UserGroupIcon,
   DocumentTextIcon,
   WrenchIcon,
+  ShoppingBagIcon,
+  BuildingStorefrontIcon,
 } from "@heroicons/react/24/outline";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
+
+const ICON_MAP: Record<
+  string,
+  ForwardRefExoticComponent<
+    Omit<SVGProps<SVGSVGElement>, "ref"> & {
+      title?: string;
+      titleId?: string;
+    } & RefAttributes<SVGSVGElement>
+  >
+> = {
+  HomeIcon,
+  ClipboardIcon,
+  ClipboardDocumentListIcon,
+  CubeIcon,
+  UsersIcon,
+  Cog6ToothIcon,
+  BellIcon,
+  Bars3Icon,
+  XMarkIcon,
+  CurrencyDollarIcon,
+  ChartBarSquareIcon,
+  PowerIcon,
+  ChevronDownIcon,
+  ShieldCheckIcon,
+  UserCircleIcon,
+  UserGroupIcon,
+  DocumentTextIcon,
+  WrenchIcon,
+  ShoppingBagIcon,
+  BuildingStorefrontIcon,
+};
+
+type ModuleCategory =
+  | "principal"
+  | "operativo"
+  | "administrativo"
+  | "cliente"
+  | "otros";
 
 interface NavigationItem {
   name: string;
@@ -47,7 +92,8 @@ interface NavigationItem {
     } & RefAttributes<SVGSVGElement>
   >;
   current: boolean;
-  moduleType?: "principal" | "operativo" | "administrativo" | "cliente";
+  moduleType: ModuleCategory;
+  order: number;
 }
 
 interface UserDropdownProps {
@@ -55,158 +101,6 @@ interface UserDropdownProps {
   onLogout: () => void;
   onProfile: () => void;
 }
-
-type ModuleKey =
-  | "dashboard"
-  | "sg-sst"
-  | "orders"
-  | "my-tasks"
-  | "my-orders"
-  | "requirements"
-  | "cost-centers"
-  | "areas"
-  | "reports"
-  | "statistics"
-  | "inventory"
-  | "users"
-  | "clients"
-  | "purchases"
-  | "inspections"
-  | "settings"
-  | "equipments";
-
-type RoleKey =
-  | "ADMINISTRADOR"
-  | "SG-SST"
-  | "SECRETARIA"
-  | "COORDINADOR"
-  | "TECNICO"
-  | "CLIENTE"
-  | "MARKETING";
-
-type HeroIcon = ForwardRefExoticComponent<
-  Omit<SVGProps<SVGSVGElement>, "ref"> & {
-    title?: string;
-    titleId?: string;
-  } & RefAttributes<SVGSVGElement>
->;
-
-interface ModuleConfig {
-  name: string;
-  href: string;
-  icon: HeroIcon;
-  moduleType: "principal" | "operativo" | "administrativo" | "cliente";
-}
-
-const MODULE_CONFIG = {
-  modules: {
-    dashboard: {
-      name: "Página Principal",
-      href: "/dashboard",
-      icon: HomeIcon,
-      moduleType: "principal" as const,
-    },
-    "sg-sst": {
-      name: "SG-SST",
-      href: "/sg-sst",
-      icon: ShieldCheckIcon,
-      moduleType: "administrativo" as const,
-    },
-    orders: {
-      name: "Órdenes de Servicio",
-      href: "/orders",
-      icon: ClipboardDocumentListIcon,
-      moduleType: "operativo" as const,
-    },
-    requirements: {
-      name: "Requerimientos",
-      href: "/requirements",
-      icon: DocumentTextIcon,
-      moduleType: "operativo" as const,
-    },
-    "cost-centers": {
-      name: "Centro de Costos",
-      href: "/cost-centers",
-      icon: CurrencyDollarIcon,
-      moduleType: "administrativo" as const,
-    },
-    reports: {
-      name: "Reportes",
-      href: "/reports",
-      icon: ChartBarSquareIcon,
-      moduleType: "administrativo" as const,
-    },
-    inventory: {
-      name: "Inventario",
-      href: "/inventory",
-      icon: CubeIcon,
-      moduleType: "administrativo" as const,
-    },
-    users: {
-      name: "Usuarios",
-      href: "/users",
-      icon: UsersIcon,
-      moduleType: "administrativo" as const,
-    },
-    clients: {
-      name: "Clientes",
-      href: "/clients",
-      icon: UserGroupIcon,
-      moduleType: "administrativo" as const,
-    },
-    settings: {
-      name: "Configuración",
-      href: "/settings",
-      icon: Cog6ToothIcon,
-      moduleType: "administrativo" as const,
-    },
-    equipments: {
-      name: "Equipos",
-      href: "/equipment",
-      icon: WrenchIcon,
-      moduleType: "operativo" as const,
-    },
-  } as Record<ModuleKey, ModuleConfig>,
-
-  roleAccess: {
-    ADMINISTRADOR: ["all"] as ModuleKey[] | ["all"],
-    "SG-SST": [
-      "dashboard",
-      "sg-sst",
-      "orders",
-      "requirements",
-      "reports",
-      "inspections",
-    ] as ModuleKey[],
-    SECRETARIA: ["all"] as ModuleKey[] | ["all"],
-    COORDINADOR: [
-      "dashboard",
-      "orders",
-      "requirements",
-      "reports",
-      "inventory",
-    ] as ModuleKey[],
-    TECNICO: [
-      "dashboard",
-      "orders",
-      "my-tasks",
-      "reports",
-      "sg-sst",
-    ] as ModuleKey[],
-    CLIENTE: ["dashboard", "orders", "requirements", "reports"] as ModuleKey[],
-    MARKETING: ["all"] as ModuleKey[] | ["all"],
-  } as Record<RoleKey, ModuleKey[] | ["all"]>,
-
-  roleNames: {
-    ADMINISTRADOR: "Administrador",
-    "SG-SST": "SG-SST",
-    SECRETARIA: "Secretaría",
-    COORDINADOR: "Coordinador",
-    TECNICO: "Técnico",
-    CLIENTE: "Cliente",
-    MARKETING: "MARKETING",
-  } as Record<RoleKey, string>,
-};
 
 function UserDropdown({
   isCollapsed = false,
@@ -250,10 +144,51 @@ function UserDropdown({
   );
 }
 
+const determineModuleType = (module: ModuleInterface): ModuleCategory => {
+  if (module.codigoInterno) {
+    if (
+      module.codigoInterno.startsWith("MOD_DASHBOARD") ||
+      module.codigoInterno.startsWith("MOD_REG_BOARD")
+    ) {
+      return "principal";
+    }
+    if (
+      module.codigoInterno.startsWith("MOD_ORDERS") ||
+      module.codigoInterno.startsWith("MOD_REQUIREMENTS") ||
+      module.codigoInterno.startsWith("MOD_EQUIPMENTS") ||
+      module.codigoInterno.startsWith("MOD_INSPECTIONS")
+    ) {
+      return "operativo";
+    }
+    if (
+      module.codigoInterno.startsWith("MOD_SGSST") ||
+      module.codigoInterno.startsWith("MOD_HR") ||
+      module.codigoInterno.startsWith("MOD_COST_CENTERS") ||
+      module.codigoInterno.startsWith("MOD_REPORTS") ||
+      module.codigoInterno.startsWith("MOD_INVENTORY") ||
+      module.codigoInterno.startsWith("MOD_USERS") ||
+      module.codigoInterno.startsWith("MOD_CLIENTS") ||
+      module.codigoInterno.startsWith("MOD_SETTINGS")
+    ) {
+      return "administrativo";
+    }
+  }
+  if (module.orden < 200) return "principal";
+  if (module.orden >= 200 && module.orden < 300) return "operativo";
+  if (module.orden >= 300) return "administrativo";
+  return "otros";
+};
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { photo: userPhoto } = useUserPhoto(user?.usuarioId);
+  const {
+    modules,
+    loading: modulesLoading,
+    error: modulesError,
+  } = useModules();
 
   const httpBaseUrl =
     (import.meta as any).env?.VITE_API_URL || "http://localhost:3000/api";
@@ -266,14 +201,120 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [filteredNavigation, setFilteredNavigation] = useState<
-    NavigationItem[]
-  >([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  // NUEVO: foto de perfil para el layout
-  const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
+  // --- Reminder global state & refs ---
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
+  const reminderIntervalRef = useRef<number | null>(null);
+  const reminderTimeoutRef = useRef<number | null>(null);
 
+  // helper to check if role is Cliente
+  const isClientRole = useCallback(() => {
+    return user?.role?.nombreRol?.toLowerCase() === "cliente";
+  }, [user]);
+
+  // Helper to determine if profile is complete
+  const isProfileComplete = useCallback((u: any | undefined | null) => {
+    if (!u) return true;
+    if (String(u.role?.nombreRol || "").toLowerCase() === "cliente") return true;
+
+    const get = (keys: string[]) => {
+      for (const k of keys) {
+        const v = (u as any)[k];
+        if (v) return v;
+      }
+      return "";
+    };
+
+    const ubic = get(["ubicacionResidencia", "ubicacion"]);
+    const arl = u.arl ?? "";
+    const eps = u.eps ?? "";
+    const afp = u.afp ?? "";
+
+    const emergencyName =
+      u.contactoEmergenciaNombre ?? u.contactoEmergencia?.nombre ?? "";
+    const emergencyPhone =
+      u.contactoEmergenciaTelefono ?? u.contactoEmergencia?.telefono ?? "";
+    const emergencyRelation =
+      u.contactoEmergenciaParentesco ??
+      u.contactoEmergencia?.parentesco ??
+      "";
+
+    const fields = [ubic, arl, eps, afp, emergencyName, emergencyPhone, emergencyRelation];
+
+    return fields.every((v) => v && String(v).trim().length > 0);
+  }, []);
+
+  // show reminder briefly (~17s)
+  const showReminderOnce = useCallback(() => {
+    setShowProfileReminder(true);
+    if (reminderTimeoutRef.current) window.clearTimeout(reminderTimeoutRef.current);
+    reminderTimeoutRef.current = window.setTimeout(() => {
+      setShowProfileReminder(false);
+    }, 17_000);
+  }, []);
+
+  const stopReminderTimers = useCallback(() => {
+    if (reminderIntervalRef.current) {
+      window.clearInterval(reminderIntervalRef.current);
+      reminderIntervalRef.current = null;
+    }
+    if (reminderTimeoutRef.current) {
+      window.clearTimeout(reminderTimeoutRef.current);
+      reminderTimeoutRef.current = null;
+    }
+    setShowProfileReminder(false);
+  }, []);
+
+  // When user changes, initialize reminder logic globally
+  useEffect(() => {
+    // Only for authenticated non-client users
+    if (!user || isClientRole()) {
+      stopReminderTimers();
+      return;
+    }
+
+    const completedKey = `profileCompleted_${user.usuarioId}`;
+    // If user already marked as completed (localStorage) -> nothing to do
+    if (localStorage.getItem(completedKey) === "true") {
+      stopReminderTimers();
+      return;
+    }
+
+    // If the profile (from server) is already complete -> mark and stop
+    if (isProfileComplete(user)) {
+      localStorage.setItem(completedKey, "true");
+      stopReminderTimers();
+      return;
+    }
+
+    // Show one now and then schedule every 15 minutes
+    showReminderOnce();
+
+    reminderIntervalRef.current = window.setInterval(() => {
+      // Recheck localStorage (profile page may have set it)
+      if (localStorage.getItem(completedKey) === "true") {
+        stopReminderTimers();
+        return;
+      }
+
+      // Recheck server-side data (if user object updated via auth refresh)
+      if (isProfileComplete(user)) {
+        localStorage.setItem(completedKey, "true");
+        stopReminderTimers();
+        return;
+      }
+
+      // Otherwise show again
+      showReminderOnce();
+    }, 15 * 60 * 1000); // 15 minutes
+
+    return () => {
+      stopReminderTimers();
+    };
+  }, [user, isClientRole, isProfileComplete, showReminderOnce, stopReminderTimers]);
+
+  // Utilities & UI helpers (existing)
   const sidebarUserMenuRef = useClickOutside(() => {
     setShowUserMenu(false);
   }, [`.${styles.dropdownItem}`]);
@@ -286,109 +327,80 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setShowNotifications(false);
   }, []);
 
-  const getUserRole = useCallback((): string => {
-    if (!user) return "TECNICO";
-
-    if (user.role && typeof user.role === "object" && user.role.nombreRol) {
-      return user.role.nombreRol;
-    }
-
-    if (typeof user.role === "string") {
-      return user.role;
-    }
-
-    return user.role?.nombreRol || "TECNICO";
+  const getUserRole = useCallback((): Rol | undefined => {
+    if (!user) return undefined;
+    return user.role;
   }, [user]);
 
-  // Cargar foto de perfil para el layout
-  useEffect(() => {
-    const loadPhoto = async () => {
-      if (!user) {
-        setUserPhotoUrl(null);
-        return;
-      }
+  // --- Sidebar scroll automático ---
+  const activeModuleRef = useRef<HTMLButtonElement | null>(null);
 
-      try {
-        const data = await users.getUserPhoto(user.usuarioId);
-        if (data && data.url) {
-          setUserPhotoUrl(data.url);
-        } else {
-          setUserPhotoUrl(null);
-        }
-      } catch (err) {
-        console.error("Error cargando foto de usuario en layout:", err);
-        setUserPhotoUrl(null);
-      }
-    };
-
-    loadPhoto();
-  }, [user]);
-
-  useEffect(() => {
-    if (!user || !user.role) {
-      setFilteredNavigation([]);
-      return;
+  const filteredNavigation = useMemo(() => {
+    if (!user || !user.role || modulesLoading || modulesError) {
+      return [];
     }
 
-    const userRoleRaw = getUserRole().toUpperCase();
-
-    const isValidRole = (role: string): role is RoleKey => {
-      return role in MODULE_CONFIG.roleAccess;
-    };
-
-    const userRole = isValidRole(userRoleRaw)
-      ? userRoleRaw
-      : ("TECNICO" as RoleKey);
-
-    const allowedModules = MODULE_CONFIG.roleAccess[userRole] || [];
-
-    let modulesToShow: ModuleKey[] = [];
-
-    if (allowedModules[0] === "all") {
-      modulesToShow = Object.keys(MODULE_CONFIG.modules) as ModuleKey[];
-    } else {
-      modulesToShow = allowedModules as ModuleKey[];
-    }
-
+    const userRole = user.role;
     const navigationItems: NavigationItem[] = [];
 
-    modulesToShow.forEach((moduleKey) => {
-      const module = MODULE_CONFIG.modules[moduleKey];
-      if (module) {
+    modules.forEach((moduleItem: ModuleInterface) => {
+      const hasAccess =
+        moduleItem.activo &&
+        moduleItem.roles.some((mRole) => mRole.rolId === userRole.rolId);
+
+      if (hasAccess) {
+        const IconComponent =
+          ICON_MAP[moduleItem.icono || "CubeIcon"] || CubeIcon;
+        const determinedModuleType = determineModuleType(moduleItem);
+
         navigationItems.push({
-          name: module.name,
-          href: module.href,
-          icon: module.icon,
-          current: location.pathname === module.href,
-          moduleType: module.moduleType,
+          name: moduleItem.nombreModulo,
+          href: moduleItem.rutaFrontend || "#",
+          icon: IconComponent,
+          current: location.pathname === moduleItem.rutaFrontend,
+          moduleType: determinedModuleType,
+          order: moduleItem.orden,
         });
       }
     });
 
-    const orderedNavigation = navigationItems.sort((a, b) => {
-      const order = {
+    return navigationItems.sort((a, b) => {
+      if (a.order !== b.order) {
+        return a.order - b.order;
+      }
+      const orderByType: Record<ModuleCategory, number> = {
         principal: 1,
         operativo: 2,
         cliente: 3,
         administrativo: 4,
+        otros: 5,
       };
       return (
-        (order[a.moduleType || "principal"] || 5) -
-        (order[b.moduleType || "principal"] || 5)
+        (orderByType[a.moduleType] || 5) - (orderByType[b.moduleType] || 5)
       );
     });
+  }, [
+    user,
+    modules,
+    modulesLoading,
+    modulesError,
+    location.pathname,
+  ]);
 
-    setFilteredNavigation(orderedNavigation);
-  }, [user, location.pathname, getUserRole]);
+  useEffect(() => {
+    if (activeModuleRef.current) {
+      activeModuleRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [filteredNavigation, location.pathname]);
 
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebarCollapsed = useCallback(
     () => setSidebarCollapsed((prev) => !prev),
-    []
-  );
-  const toggleUserMenu = useCallback(
-    () => setShowUserMenu((prev) => !prev),
     []
   );
   const toggleNotifications = useCallback(
@@ -410,11 +422,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate("/", { replace: true });
   }, [logout, navigate]);
 
+  // When user clicks "Mi perfil" in the dropdown we send state to focus the additional form
   const handleGoProfile = useCallback(() => {
-    navigate("/profile");
+    navigate("/profile", { state: { focus: "additional" } });
     setShowUserMenu(false);
     closeSidebar();
   }, [navigate, closeSidebar]);
+
+  // When notification CTA clicked from global reminder
+  const globalGoToProfile = useCallback(() => {
+    navigate("/profile", { state: { focus: "additional" } });
+    setShowProfileReminder(false);
+  }, [navigate]);
 
   const getNotificationTargetPath = useCallback(
     (notif: Notification): string | null => {
@@ -471,48 +490,51 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [user]);
 
   const getDisplayRoleName = useCallback(() => {
-    const roleKey = getUserRole().toUpperCase();
-
-    if (roleKey in MODULE_CONFIG.roleNames) {
-      return MODULE_CONFIG.roleNames[roleKey as RoleKey];
-    }
-
-    return roleKey;
+    const userRole = getUserRole();
+    if (!userRole) return "Sin Rol";
+    return (
+      getDisplayRoleNameFromConfig(userRole.nombreRol) || userRole.nombreRol
+    );
   }, [getUserRole]);
 
   const getCurrentPageTitle = useCallback(() => {
-    for (const module of Object.values(MODULE_CONFIG.modules)) {
-      if (location.pathname === module.href) {
+    const pathname = location.pathname;
+    for (const module of filteredNavigation) {
+      if (pathname === module.href) {
         return module.name;
       }
     }
-
-    const pageTitles: Record<string, string> = {
+    const staticTitles: Record<string, string> = {
       "/profile": "Mi Perfil",
       "/roles": "Gestión de Roles",
-      "/equipment": "Gestión de Equipos",
-      "/equipment/": "Hoja de Vida del Equipo",
+      "/modules": "Gestión de Módulos",
     };
-
-    return pageTitles[location.pathname] || "Dashboard";
-  }, [location.pathname]);
+    if (staticTitles[pathname]) {
+      return staticTitles[pathname];
+    }
+    if (pathname.startsWith("/equipment/")) {
+      return "Hoja de Vida del Equipo";
+    }
+    if (pathname.startsWith("/clients/")) {
+      return "Perfil del Cliente";
+    }
+    return "Dashboard";
+  }, [location.pathname, filteredNavigation]);
 
   const groupedNavigation = useMemo(() => {
-    const groups: Record<string, NavigationItem[]> = {};
-
+    const groups: { [key in ModuleCategory]?: NavigationItem[] } = {};
     filteredNavigation.forEach((item) => {
-      const group = item.moduleType || "otros";
+      const group = item.moduleType;
       if (!groups[group]) {
         groups[group] = [];
       }
-      groups[group].push(item);
+      groups[group]?.push(item);
     });
-
     return groups;
   }, [filteredNavigation]);
 
-  const getGroupTitle = (groupType: string): string => {
-    const titles: Record<string, string> = {
+  const getGroupTitle = (groupType: ModuleCategory): string => {
+    const titles: Record<ModuleCategory, string> = {
       principal: "Principal",
       operativo: "Operativo",
       cliente: "Cliente",
@@ -557,47 +579,65 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
 
         <nav className={styles.nav}>
-          {Object.entries(groupedNavigation).map(([groupType, items]) => (
-            <div key={groupType} className={styles.navSection}>
-              {!sidebarCollapsed && items.length > 0 && (
-                <h3 className={styles.sectionTitle}>
-                  {getGroupTitle(groupType)}
-                </h3>
-              )}
-
-              {items.map((item) => (
-                <button
-                  key={item.name}
-                  className={`${styles.navItem} ${
-                    item.current ? styles.navItemActive : ""
-                  }`}
-                  onClick={() => handleNavigation(item.href)}
-                  title={item.name}
-                >
-                  <item.icon className={styles.navIcon} />
-                  {!sidebarCollapsed && (
-                    <span className={styles.navText}>{item.name}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          ))}
-
-          {filteredNavigation.length === 0 && user && (
-            <div className={styles.noModulesMessage}>
-              <p>No tienes módulos asignados.</p>
-              <p>Contacta al administrador.</p>
-            </div>
+          {modulesLoading && (
+            <p className={styles.loadingMessage}>Cargando módulos...</p>
           )}
+          {modulesError && (
+            <p className={styles.errorMessage}>
+              Error al cargar módulos: {modulesError}
+            </p>
+          )}
+
+          {!modulesLoading &&
+            !modulesError &&
+            Object.entries(groupedNavigation).map(([groupType, items]) => (
+              <div key={groupType} className={styles.navSection}>
+                {!sidebarCollapsed && items.length > 0 && (
+                  <h3 className={styles.sectionTitle}>
+                    {getGroupTitle(groupType as ModuleCategory)}
+                  </h3>
+                )}
+
+                {items.map((item) => {
+                  const isActive = item.current;
+                  return (
+                    <button
+                      key={item.name}
+                      ref={isActive ? activeModuleRef : undefined}
+                      className={`${styles.navItem} ${
+                        isActive ? styles.navItemActive : ""
+                      }`}
+                      onClick={() => handleNavigation(item.href)}
+                      title={item.name}
+                    >
+                      <item.icon className={styles.navIcon} />
+                      {!sidebarCollapsed && (
+                        <span className={styles.navText}>{item.name}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+
+          {!modulesLoading &&
+            !modulesError &&
+            filteredNavigation.length === 0 &&
+            user && (
+              <div className={styles.noModulesMessage}>
+                <p>No tienes módulos asignados o activos.</p>
+                <p>Contacta al administrador.</p>
+              </div>
+            )}
         </nav>
 
         {/* ===== USER FOOTER (DESKTOP) ===== */}
         <div className={styles.sidebarFooter} ref={sidebarUserMenuRef}>
-          <div className={styles.userProfile} onClick={toggleUserMenu}>
+          <div className={styles.userProfile} onClick={() => setShowUserMenu((s) => !s)}>
             <div className={styles.userAvatar}>
-              {userPhotoUrl ? (
+              {userPhoto?.url ? (
                 <img
-                  src={userPhotoUrl}
+                  src={userPhoto.url}
                   alt="Foto de perfil"
                   className={styles.userAvatarImage}
                 />
@@ -652,9 +692,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Bars3Icon className={styles.navIcon} />
             </button>
 
-            <h1 className={styles.pageTitle}>
-              {getCurrentPageTitle()}
-            </h1>
+            <h1 className={styles.pageTitle}>{getCurrentPageTitle()}</h1>
           </div>
 
           {/* ===== HEADER RIGHT (NOTIFICACIONES + USUARIO) ===== */}
@@ -727,12 +765,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* USUARIO (AVATAR) */}
             <button
               className={styles.userAvatarButton}
-              onClick={toggleUserMenu}
+              onClick={() => setShowUserMenu((s) => !s)}
             >
               <div className={styles.userAvatar}>
-                {userPhotoUrl ? (
+                {userPhoto?.url ? (
                   <img
-                    src={userPhotoUrl}
+                    src={userPhoto.url}
                     alt="Foto de perfil"
                     className={styles.userAvatarImage}
                   />
@@ -764,6 +802,37 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         <div className={styles.content}>{children}</div>
       </main>
+
+      {/* ===== GLOBAL PROFILE REMINDER (visible en todo el sitio) ===== */}
+      {!isClientRole() && user && (
+        <div
+          className={`${styles.globalProfileReminder} ${
+            showProfileReminder ? styles.globalProfileReminderVisible : ""
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className={styles.reminderContent}>
+            <p className={styles.reminderTitle}>Por favor completa tu información</p>
+            <p style={{ margin: 0, fontSize: 13 }}>
+              Diligencia ubicación, ARL, EPS, AFP y un contacto de emergencia.
+            </p>
+          </div>
+
+          <div className={styles.reminderActions}>
+            <button onClick={globalGoToProfile} className={styles.ctaButton}>
+              Ir a mi perfil
+            </button>
+            <button
+              aria-label="Cerrar"
+              className={styles.reminderClose}
+              onClick={() => setShowProfileReminder(false)}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

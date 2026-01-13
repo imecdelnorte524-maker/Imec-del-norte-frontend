@@ -14,7 +14,7 @@ import {
   addToolDetailRequest,
   removeToolDetailRequest,
 } from "../../api/orders";
-import { users } from "../../api/users";
+import { usersApi } from "../../api/users";
 import { inventory } from "../../api/inventory";
 import type {
   Order,
@@ -92,7 +92,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       try {
         setTechLoading(true);
         setTechError(null);
-        const data = await users.getTechnicians();
+        const data = await usersApi.getTechnicians();
         setTechnicians(data);
       } catch (err: any) {
         console.error("Error cargando técnicos:", err);

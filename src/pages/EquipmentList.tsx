@@ -337,7 +337,6 @@ export default function EquipmentListPage() {
         clientId: selectedClientId,
         category: createForm.category,
         name: createForm.name,
-        code: createForm.code || undefined, // backend ignora y genera automáticamente
         brand: createForm.brand || undefined,
         model: createForm.model || undefined,
         serialNumber: createForm.serialNumber || undefined,
@@ -351,6 +350,7 @@ export default function EquipmentListPage() {
         areaId: typeof selectedAreaId === "number" ? selectedAreaId : undefined,
         subAreaId:
           typeof selectedSubAreaId === "number" ? selectedSubAreaId : undefined,
+        code: createForm.code || undefined,
       };
 
       await createEquipmentRequest(payload);
@@ -564,20 +564,6 @@ export default function EquipmentListPage() {
                 </div>
 
                 <div className={listStyles.formRow}>
-                  <label>Código interno (se generará automáticamente)</label>
-                  <input
-                    name="code"
-                    value={createForm.code}
-                    readOnly
-                    placeholder="Se generará al guardar (ej: AACI001)"
-                  />
-                  <span className={listStyles.helperText}>
-                    El sistema generará el código interno según la categoría y
-                    la empresa.
-                  </span>
-                </div>
-
-                <div className={listStyles.formRow}>
                   <label>Marca</label>
                   <input
                     name="brand"
@@ -641,16 +627,6 @@ export default function EquipmentListPage() {
                 </div>
 
                 <div className={listStyles.formRow}>
-                  <label>Fabricante</label>
-                  <input
-                    name="manufacturer"
-                    value={createForm.brand}
-                    onChange={handleCreateFormChange}
-                    disabled
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
                   <label>Área (opcional)</label>
                   <select
                     value={selectedAreaId || ""}
@@ -704,6 +680,20 @@ export default function EquipmentListPage() {
                     onChange={handleCreateFormChange}
                     rows={3}
                   />
+                </div>
+
+                <div className={listStyles.formRow}>
+                  <label>Código interno (se generará automáticamente)</label>
+                  <input
+                    name="code"
+                    value={createForm.code}
+                    readOnly
+                    placeholder="Se generará al guardar (ej: AACI001)"
+                  />
+                  <span className={listStyles.helperText}>
+                    El sistema generará el código interno según la categoría y
+                    la empresa.
+                  </span>
                 </div>
 
                 <div className={listStyles.formActions}>

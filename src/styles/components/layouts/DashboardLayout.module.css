@@ -1220,3 +1220,70 @@
   object-fit: cover;
   display: block;
 }
+
+.globalProfileReminder {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2000;
+  min-width: 300px;
+  max-width: 420px;
+  background: linear-gradient(90deg,#2563eb,#1d4ed8);
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  box-shadow: 0 12px 30px rgba(37,99,235,0.18);
+  transform: translateX(120%);
+  opacity: 0;
+  transition: transform 0.45s cubic-bezier(.22,.9,.2,1), opacity 0.45s;
+  pointer-events: auto;
+}
+
+.globalProfileReminderVisible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.reminderContent {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.reminderTitle {
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+  font-size: 0.95rem;
+}
+
+.reminderActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ctaButton {
+  background: #ffffff;
+  color: #1d4ed8;
+  border-radius: 9999px;
+  padding: 0.4rem 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.ctaButton:hover {
+  opacity: 0.95;
+}
+
+.reminderClose {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+}

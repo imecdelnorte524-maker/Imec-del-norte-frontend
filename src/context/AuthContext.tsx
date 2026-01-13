@@ -5,12 +5,12 @@ import type { LoginData } from "../interfaces/AuthInterfaces";
 import type { Usuario } from "../interfaces/UserInterfaces";
 import {
   loginRequest,
-  getProfileRequest,
   requestPasswordResetRequest,
   resetPasswordRequest,
   changePasswordRequest,
 } from "../api/auth";
 import { playErrorSound } from "../utils/sounds";
+import { usersApi } from "../api/users";
 
 interface AuthContextType {
   user: Usuario | null;
@@ -23,10 +23,8 @@ interface AuthContextType {
   isAdmin: boolean;
   requestPasswordReset: (email: string) => Promise<string>;
   resetPassword: (token: string, password: string) => Promise<string>;
-  changePassword: (
-    currentPassword: string,
-    newPassword: string
-  ) => Promise<string>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<string>;
+  refetchUser: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -44,31 +42,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user?.role?.nombreRol === "SECRETARIA";
 
   const normalizeUser = (userData: any): Usuario => {
+    // Si ya es un Usuario mapeado (viene de usersApi.getMe), úsalo directamente
+    if (!userData) {
+      // returns a minimal object to satisfy typing (caller should avoid calling with falsy)
+      return {
+        usuarioId: 0,
+        nombre: "",
+        apellido: "",
+        tipoCedula: "CC",
+        cedula: "",
+        email: "",
+        username: "",
+        telefono: "",
+        activo: true,
+        fechaCreacion: new Date().toISOString(),
+        role: { rolId: 0, nombreRol: "Usuario", descripcion: "", fechaCreacion: new Date().toISOString() },
+      } as Usuario;
+    }
+
     return {
-      usuarioId: userData.usuarioId || userData.userId || 0,
-      nombre: userData.nombre || "",
-      apellido: userData.apellido || "",
-      tipoCedula: userData.tipoCedula || "CC",
-      cedula: userData.cedula || "",
-      email: userData.email || "",
-      username: userData.username || "",
-      telefono: userData.telefono || "",
+      usuarioId: userData.usuarioId ?? userData.userId ?? 0,
+      nombre: userData.nombre ?? "",
+      apellido: userData.apellido ?? "",
+      tipoCedula: userData.tipoCedula ?? "CC",
+      cedula: userData.cedula ?? "",
+      email: userData.email ?? "",
+      username: userData.username ?? "",
+      telefono: userData.telefono ?? "",
       activo: userData.activo !== undefined ? userData.activo : true,
-      fechaCreacion: userData.fechaCreacion || new Date().toISOString(),
-      resetToken: userData.resetToken,
-      resetTokenExpiry: userData.resetTokenExpiry,
-      mustChangePassword:
-        typeof userData.mustChangePassword === "boolean"
-          ? userData.mustChangePassword
-          : false,
-      role: userData.role || {
-        rolId: userData.rolId || 0,
-        nombreRol: userData.rol || userData.role?.nombreRol || "TECNICO",
-        descripcion: userData.role?.descripcion || "",
-        fechaCreacion:
-          userData.role?.fechaCreacion || new Date().toISOString(),
+      fechaCreacion: userData.fechaCreacion ?? new Date().toISOString(),
+      fechaNacimiento: userData.fechaNacimiento ?? userData.birthdate ?? undefined,
+      genero: userData.genero ?? undefined,
+      resetToken: userData.resetToken ?? undefined,
+      resetTokenExpiry: userData.resetTokenExpiry ?? undefined,
+      mustChangePassword: typeof userData.mustChangePassword === "boolean" ? userData.mustChangePassword : false,
+      role: userData.role ?? {
+        rolId: userData.rolId ?? 0,
+        nombreRol: userData.role?.nombreRol ?? userData.role ?? "Usuario",
+        descripcion: userData.role?.descripcion ?? "",
+        fechaCreacion: userData.role?.fechaCreacion ?? new Date().toISOString(),
       },
-    };
+      ubicacionResidencia: (userData as any).ubicacionResidencia ?? (userData as any).ubicacion ?? null,
+      arl: (userData as any).arl ?? null,
+      eps: (userData as any).eps ?? null,
+      afp: (userData as any).afp ?? null,
+      contactoEmergenciaNombre: (userData as any).contactoEmergenciaNombre ?? (userData as any).contactoEmergencia?.nombre ?? null,
+      contactoEmergenciaTelefono: (userData as any).contactoEmergenciaTelefono ?? (userData as any).contactoEmergencia?.telefono ?? null,
+      contactoEmergenciaParentesco: (userData as any).contactoEmergenciaParentesco ?? (userData as any).contactoEmergencia?.parentesco ?? null,
+    } as Usuario;
   };
 
   useEffect(() => {
@@ -76,26 +97,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const savedToken = localStorage.getItem("authToken");
       const savedUser = localStorage.getItem("user");
 
-      if (savedToken && savedUser) {
+      if (savedToken) {
         try {
           setToken(savedToken);
 
           try {
-            const userData = await getProfileRequest();
-            const normalizedUser = normalizeUser(userData.user);
+            // Preferimos usersApi.getMe (mapea y garantiza estructura)
+            const me = await usersApi.getMe();
+            const normalizedUser = normalizeUser(me);
             setUser(normalizedUser);
             localStorage.setItem("user", JSON.stringify(normalizedUser));
           } catch (profileError) {
-            console.error("Error obteniendo perfil:", profileError);
-            const savedUserData = JSON.parse(savedUser);
-            const normalizedUser = normalizeUser(savedUserData);
-            setUser(normalizedUser);
+            console.error("Error obteniendo perfil con usersApi.getMe:", profileError);
+            // fallback: usar el user guardado en localStorage si existe
+            if (savedUser) {
+              const savedUserData = JSON.parse(savedUser);
+              const normalizedUser = normalizeUser(savedUserData);
+              setUser(normalizedUser);
+            } else {
+              // si no hay user guardado, limpiar token (no autenticado)
+              setToken(null);
+              localStorage.removeItem("authToken");
+            }
           }
         } catch (error) {
           console.error("Token inválido:", error);
           logout();
         }
+      } else if (savedUser) {
+        // no hay token pero hay usuario guardado (raro), usa el usuario local
+        try {
+          const parsed = JSON.parse(savedUser);
+          const normalizedUser = normalizeUser(parsed);
+          setUser(normalizedUser);
+        } catch {
+          // noop
+        }
       }
+
       setLoading(false);
     };
 
@@ -110,7 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const res = await loginRequest(data);
 
-      const actualToken = (res as any).access_token || (res as any).token;
+      const actualToken = (res as any).access_token || (res as any).token || (res as any).accessToken;
 
       if (!actualToken) {
         throw new Error("No se recibió token en la respuesta");
@@ -119,21 +158,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("authToken", actualToken);
       setToken(actualToken);
 
+      // Obtener perfil usando usersApi.getMe (más consistente)
       let userData;
-
       try {
-        const profileResponse = await getProfileRequest();
-        userData = profileResponse.user;
+        userData = await usersApi.getMe();
       } catch (profileError) {
-        console.warn(
-          "⚠️ No se pudo obtener el perfil, usando datos del login:",
-          profileError
-        );
-        userData = (res as any).user;
+        console.warn("⚠️ No se pudo obtener el perfil tras el login:", profileError);
+        // fallback: intentar leer user desde respuesta del login
+        userData = (res as any).user ?? null;
       }
 
       const normalizedUser = normalizeUser(userData);
-
       localStorage.setItem("user", JSON.stringify(normalizedUser));
       setUser(normalizedUser);
     } catch (err: any) {
@@ -153,7 +188,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    // SOLO limpiar estado, sin recargar toda la página
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     setUser(null);
@@ -212,10 +246,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const res = await changePasswordRequest(currentPassword, newPassword);
 
-      // Ya no está obligado a cambiar contraseña
-      setUser((prev) =>
-        prev ? { ...prev, mustChangePassword: false } : prev
-      );
+      // Actualizar estado local: ya no debe cambiar la contraseña obligatoriamente
+      setUser((prev) => (prev ? { ...prev, mustChangePassword: false } : prev));
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         const parsed = JSON.parse(storedUser);
@@ -234,6 +266,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const refetchUser = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const me = await usersApi.getMe();
+      const normalizedUser = normalizeUser(me);
+      setUser(normalizedUser);
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+    } catch (err: any) {
+      console.error("Error refrescando usuario:", err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
@@ -246,6 +293,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     requestPasswordReset,
     resetPassword,
     changePassword,
+    refetchUser,
   };
 
   return (

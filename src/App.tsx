@@ -26,6 +26,9 @@ import EquipmentListPage from "./pages/EquipmentList";
 import UserProfilePage from "./pages/UserProfile";
 import RecoveryPage from "./pages/Recovey";
 import ResetPasswordPage from "./pages/ResetPassword";
+import RegistrationBoard from "./pages/RegistrationBoard";
+import ClientDetailsPage from "./pages/ClientDetails";
+import HumanResources from "./pages/HumanResources";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading, user } = useAuth();
@@ -71,6 +74,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/registration-board"
+          element={
+            <ProtectedRoute>
+              <RegistrationBoard />
             </ProtectedRoute>
           }
         />
@@ -166,6 +178,15 @@ function App() {
         />
 
         <Route
+          path="/clients/:id"
+          element={
+            <ProtectedRoute>
+              <ClientDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/settings"
           element={
             <ProtectedRoute>
@@ -197,6 +218,15 @@ function App() {
           element={
             <ProtectedRoute>
               <UserProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/recursos-humanos"
+          element={
+            <ProtectedRoute>
+              <HumanResources />
             </ProtectedRoute>
           }
         />

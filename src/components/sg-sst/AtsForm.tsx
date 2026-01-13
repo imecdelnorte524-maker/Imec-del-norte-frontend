@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useMemo } from "react";
 import type { AtsFormData } from "../../interfaces/SgSstInterface";
-import type { Usuario, Rol } from "../../interfaces/UserInterfaces";
+import type { Usuario } from "../../interfaces/UserInterfaces";
+import type { Rol } from "../../interfaces/RolesInterfaces";
 import type { Client, Area, SubArea } from "../../interfaces/ClientInterfaces";
 import type { Order } from "../../interfaces/OrderInterfaces";
-import { users } from "../../api/users";
+import { usersApi } from "../../api/users";
 import { sgSstService } from "../../api/sg-sst";
 import { clients } from "../../api/clients";
 import { getMyAssignedOrdersRequest } from "../../api/orders";
 import SignaturePad from "./SignaturePad";
 import styles from "../../styles/components/sg-sst/AtsForm.module.css";
 import { useAuth } from "../../hooks/useAuth";
+import { rolesApi } from "../../api/roles";
 
 interface AtsFormProps {
   onSubmit: (data: AtsFormData) => void;
@@ -266,8 +268,8 @@ export default function AtsForm({
     try {
       setIsLoading(true);
       const [usuariosData, rolesData] = await Promise.all([
-        users.getAllUsers(),
-        users.getAllRoles(),
+        usersApi.getAllUsers(),
+        rolesApi.getAllRoles(),
       ]);
 
       setUsuarios(usuariosData);

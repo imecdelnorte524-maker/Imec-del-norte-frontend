@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import styles from "../../styles/components/inventory/ViewInventoryModal.module.css";
 import type { Inventory } from "../../interfaces/InventoryInterfaces";
-import { imagesApi, type ImageRecord } from "../../api/images";
+import { imagesApi, type ClientImage } from "../../api/images";
 
 interface Props {
   isOpen: boolean;
@@ -27,7 +27,7 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
         setImageError(null);
         setImageUrl(null);
 
-        let images: ImageRecord[] = [];
+        let images: ClientImage[] = [];
 
         if (item.herramientaId) {
           images = await imagesApi.getToolImages(item.herramientaId);

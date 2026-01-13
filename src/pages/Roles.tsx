@@ -1,17 +1,23 @@
+// src/pages/Roles.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useRoles } from "../hooks/useRoles";
 import RoleModal from '../components/roles/RoleModal';
-import type { Rol } from '../interfaces/UserInterfaces';
+import ModulesPermission from '../components/roles/ModulesPermission';
+import type { Rol } from '../interfaces/RolesInterfaces';
 import styles from '../styles/pages/RolesPage.module.css';
 
 export default function Roles() {
-    const { roles, loading, error, deleteRole, createRole, updateRole } = useRoles(); // 🔥 Agregar createRole y updateRole
+    const { roles, loading, error, deleteRole, createRole, updateRole } = useRoles();
     const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
     const [editingRole, setEditingRole] = useState<Rol | null>(null);
     const [busqueda, setBusqueda] = useState('');
+
+    // Estado para modal de permisos (módulos)
+    const [showModulesModal, setShowModulesModal] = useState(false);
+    const [selectedRoleForModules, setSelectedRoleForModules] = useState<Rol | null>(null);
 
     const rolesFiltrados = roles.filter(rol =>
         busqueda === '' ||
@@ -50,6 +56,26 @@ export default function Roles() {
                 // El error ya se maneja en el hook
             }
         }
+    };
+
+    // Abrir modal de módulos para un rol
+    const handleOpenModules = (rol: Rol) => {
+        setSelectedRoleForModules(rol);
+        setShowModulesModal(true);
+    };
+
+    const handleCloseModules = () => {
+        setShowModulesModal(false);
+        setSelectedRoleForModules(null);
+    };
+
+    // Callback cuando se guarden permisos en el modal.
+    // Aquí intento recargar la página (simplificación) para que el listado se actualice
+    // Si prefieres, puedes reemplazar con una llamada al hook para refrescar sin reload.
+    const handleModulesSaved = () => {
+        // Si useRoles tiene una función de refrescar, cámbialo por esa función.
+        // Por simplicidad y compatibilidad segura, recargo la página.
+        window.location.reload();
     };
 
     if (loading && roles.length === 0) {
@@ -149,6 +175,17 @@ export default function Roles() {
                                                     >
                                                         ✏️
                                                     </button>
+
+                                                    {/* BOTÓN DE PERMISOS / MÓDULOS */}
+                                                    <button
+                                                        className={styles.btnAction}
+                                                        onClick={() => handleOpenModules(rol)}
+                                                        title="⚙️ Permisos"
+                                                        aria-label={`Permisos ${rol.nombreRol}`}
+                                                    >
+                                                        ⚙️
+                                                    </button>
+
                                                     <button
                                                         className={`${styles.btnAction} ${styles.delete}`}
                                                         onClick={() => handleDelete(rol)}
@@ -182,6 +219,17 @@ export default function Roles() {
                                         >
                                             ✏️
                                         </button>
+
+                                        {/* BOTÓN DE PERMISOS (móvil) */}
+                                        <button
+                                            className={styles.btnAction}
+                                            onClick={() => handleOpenModules(rol)}
+                                            title="⚙️ Permisos"
+                                            aria-label={`Permisos ${rol.nombreRol}`}
+                                        >
+                                            ⚙️
+                                        </button>
+
                                         <button
                                             className={`${styles.btnAction} ${styles.delete}`}
                                             onClick={() => handleDelete(rol)}
@@ -236,6 +284,13 @@ export default function Roles() {
                     editingRole={editingRole}
                     onCreateRole={createRole} // 🔥 Pasar la función que incluye recarga
                     onUpdateRole={updateRole} // 🔥 Pasar la función que incluye recarga
+                />
+
+                <ModulesPermission
+                  isOpen={showModulesModal}
+                  role={selectedRoleForModules}
+                  onClose={handleCloseModules}
+                  onSaved={handleModulesSaved}
                 />
             </div>
         </DashboardLayout>

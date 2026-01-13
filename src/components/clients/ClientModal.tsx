@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { clients as clientsAPI } from "../../api/clients";
-import { users as usersAPI } from "../../api/users";
+import { imagesApi } from "../../api/images";
+import { usersApi as usersAPI } from "../../api/users";
 import { useAuth } from "../../hooks/useAuth";
 import type {
   Client,
   CreateClientDto,
   ClientFormData,
   Usuario,
+  AreaFormData,
+  SubAreaFormData,
 } from "../../interfaces/ClientInterfaces";
 import styles from "../../styles/components/clients/ClientModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
@@ -35,21 +38,35 @@ export default function ClientModal({
   const [userSearch, setUserSearch] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<Usuario[]>([]);
   const [showUserList, setShowUserList] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // Estados para ÁREAS / SUBÁREAS
+  // Nueva área
   const [newAreaName, setNewAreaName] = useState("");
-  const [newSubAreaName, setNewSubAreaName] = useState("");
-  const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | "">("");
-  const [protectedAreaId, setProtectedAreaId] = useState<number | null>(null);
+  // Nueva subárea
+  const [selectedAreaForSubarea, setSelectedAreaForSubarea] = useState<
+    number | null
+  >(null);
+  const [selectedParentSubarea, setSelectedParentSubarea] = useState<
+    number | null
+  >(null);
+  const [newSubareaName, setNewSubareaName] = useState("");
 
   const [formData, setFormData] = useState<ClientFormData>({
     nombre: "",
     nit: "",
-    direccion: "",
+    // Campos de dirección separados
+    direccionBase: "",
+    barrio: "",
+    ciudad: "",
+    departamento: "",
+    pais: "Colombia",
     contacto: "",
     email: "",
     telefono: "",
     localizacion: "",
+    fecha_creacion: "",
     idUsuarioContacto: null,
     areas: [],
   });
@@ -58,21 +75,28 @@ export default function ClientModal({
     setFormData({
       nombre: "",
       nit: "",
-      direccion: "",
+      direccionBase: "",
+      barrio: "",
+      ciudad: "",
+      departamento: "",
+      pais: "Colombia",
       contacto: "",
       email: "",
       telefono: "",
       localizacion: "",
+      fecha_creacion: "",
       idUsuarioContacto: null,
       areas: [],
     });
     setUserSearch("");
+    setNewAreaName("");
+    setNewSubareaName("");
+    setSelectedAreaForSubarea(null);
+    setSelectedParentSubarea(null);
+    setLogoFile(null);
+    setLogoPreview(null);
     setStep(1);
     setError(null);
-    setNewAreaName("");
-    setNewSubAreaName("");
-    setSelectedAreaIndex("");
-    setProtectedAreaId(null);
   };
 
   const loadUsers = async () => {
@@ -89,32 +113,34 @@ export default function ClientModal({
     if (!isOpen) return;
 
     setError(null);
-    setNewAreaName("");
-    setNewSubAreaName("");
-    setSelectedAreaIndex("");
 
     if (editingClient) {
-      // área principal protegida (la primera creada)
-      setProtectedAreaId(editingClient.areas?.[0]?.idArea ?? null);
-
       setFormData({
         nombre: editingClient.nombre,
         nit: editingClient.nit,
-        direccion: editingClient.direccion,
+        // Cargar campos de dirección desglosados
+        direccionBase: editingClient.direccionBase || "",
+        barrio: editingClient.barrio || "",
+        ciudad: editingClient.ciudad || "",
+        departamento: editingClient.departamento || "",
+        pais: editingClient.pais || "Colombia",
+        
         contacto: editingClient.contacto,
         email: editingClient.email,
         telefono: editingClient.telefono,
         localizacion: editingClient.localizacion,
+        fecha_creacion: editingClient.fechaCreacionEmpresa || "",
         idUsuarioContacto: editingClient.idUsuarioContacto,
         areas:
-          editingClient.areas?.map((area) => ({
-            id: area.idArea,
+          editingClient.areas?.map((area, index) => ({
+            id: area.idArea || -(index + 1),
             nombreArea: area.nombreArea,
             subAreas:
-              area.subAreas?.map((subArea) => ({
-                id: subArea.idSubArea,
+              area.subAreas?.map((subArea, subIndex) => ({
+                id: subArea.idSubArea || -(subIndex + 1),
                 nombreSubArea: subArea.nombreSubArea,
                 areaId: subArea.areaId,
+                parentSubAreaId: subArea.parentSubAreaId,
               })) || [],
           })) || [],
       });
@@ -123,21 +149,25 @@ export default function ClientModal({
         const u = editingClient.usuarioContacto;
         setUserSearch(`${u.nombre} ${u.apellido || ""}`);
       }
+
+      // Cargar logo si existe
+      const logo = editingClient.images?.find(img => img.isLogo);
+      if (logo) {
+        setLogoPreview(logo.url);
+      }
     } else {
       resetForm();
 
-      // Si es cliente, usar su propio usuario como contacto (solo nombre)
+      // Si es cliente, usar su propio usuario como contacto
       if (isCliente && user) {
         const fullName = `${user.nombre} ${user.apellido || ""}`.trim();
         setFormData((prev) => ({
           ...prev,
           idUsuarioContacto: user.usuarioId,
           contacto: fullName,
-          // NO autocompletar email del usuario personal
         }));
         setUserSearch(fullName);
       }
-      setProtectedAreaId(null);
     }
 
     // Solo Admin/Secretaria cargan usuarios
@@ -146,7 +176,7 @@ export default function ClientModal({
     }
   }, [isOpen, editingClient, isCliente, user]);
 
-  // Filtrar usuarios (solo para Admin/Secretaria)
+  // Filtrar usuarios
   useEffect(() => {
     if (!userSearch.trim() || isCliente) {
       setFilteredUsers([]);
@@ -171,141 +201,169 @@ export default function ClientModal({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleUserSelect = (
-    userId: number,
-    userName: string,
-  ) => {
+  const handleUserSelect = (userId: number, userName: string) => {
     setFormData((prev) => ({
       ...prev,
       idUsuarioContacto: userId,
-      contacto: userName, // Solo autocompletar el nombre
-      // NO autocompletar email ni teléfono
+      contacto: userName,
     }));
-
     setUserSearch(userName);
     setShowUserList(false);
   };
 
-  // Handlers para ÁREAS / SUBÁREAS
-  const handleAddArea = () => {
-    const name = newAreaName.trim();
-    if (!name) {
-      setError("El nombre del área es obligatorio");
-      playErrorSound();
+  // Manejo de logo
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setError("Por favor, sube una imagen válida (JPEG, PNG, GIF, WebP)");
       return;
     }
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen es demasiado grande. Máximo 5MB");
+      return;
+    }
+
+    setLogoFile(file);
+    
+    // Crear preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (logoInputRef.current) {
+      logoInputRef.current.value = "";
+    }
+  };
+
+  // ========== MANEJO DE ÁREAS ==========
+  const handleAddArea = () => {
+    if (!newAreaName.trim()) return;
+
+    const newArea: AreaFormData = {
+      id: -(formData.areas.length + 1), // ID temporal negativo
+      nombreArea: newAreaName.trim(),
+      subAreas: [],
+    };
 
     setFormData((prev) => ({
       ...prev,
-      areas: [...prev.areas, { nombreArea: name, subAreas: [] }],
+      areas: [...prev.areas, newArea],
     }));
-
     setNewAreaName("");
-    setError(null);
   };
 
-  const handleRemoveArea = (areaIndex: number) => {
-    setFormData((prev) => {
-      if (areaIndex < 0 || areaIndex >= prev.areas.length) return prev;
-
-      const isOnlyArea = prev.areas.length === 1;
-      const area = prev.areas[areaIndex];
-
-      // NUEVO CLIENTE: no permitir borrar la primera creada (index 0)
-      const isProtectedByIndex = !editingClient && areaIndex === 0;
-
-      // EDICIÓN: no permitir borrar el área original principal
-      const isProtectedById =
-        !!editingClient &&
-        area.id &&
-        protectedAreaId &&
-        area.id === protectedAreaId;
-
-      if (isOnlyArea || isProtectedByIndex || isProtectedById) {
-        return prev;
-      }
-
-      const areas = prev.areas.filter((_, idx) => idx !== areaIndex);
-      return { ...prev, areas };
-    });
-  };
-
-  const handleRemoveSubArea = (areaIndex: number, subIndex: number) => {
-    setFormData((prev) => {
-      if (
-        areaIndex < 0 ||
-        areaIndex >= prev.areas.length ||
-        subIndex < 0 ||
-        subIndex >= prev.areas[areaIndex].subAreas.length
-      ) {
-        return prev;
-      }
-
-      const area = prev.areas[areaIndex];
-      const updatedSubAreas = area.subAreas.filter((_, i) => i !== subIndex);
-      const updatedArea = { ...area, subAreas: updatedSubAreas };
-      const areas = [...prev.areas];
-      areas[areaIndex] = updatedArea;
-
-      return { ...prev, areas };
-    });
-  };
-
-  const handleAddSubArea = () => {
-    const name = newSubAreaName.trim();
-    if (selectedAreaIndex === "" || !name) {
-      setError("Debe seleccionar un área y escribir el nombre de la subárea");
-      playErrorSound();
-      return;
+  const handleRemoveArea = (areaId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      areas: prev.areas.filter((a) => a.id !== areaId),
+    }));
+    if (selectedAreaForSubarea === areaId) {
+      setSelectedAreaForSubarea(null);
+      setSelectedParentSubarea(null);
     }
-
-    setFormData((prev) => {
-      // Asegurarnos de que es un número válido
-      if (
-        typeof selectedAreaIndex !== "number" ||
-        selectedAreaIndex < 0 ||
-        selectedAreaIndex >= prev.areas.length
-      ) {
-        return prev;
-      }
-
-      const area = prev.areas[selectedAreaIndex];
-      const newSubArea = {
-        nombreSubArea: name,
-        areaId: area.id, // puede ser undefined; se corrige en el submit
-      };
-
-      const updatedArea = {
-        ...area,
-        subAreas: [...area.subAreas, newSubArea],
-      };
-
-      const areas = [...prev.areas];
-      areas[selectedAreaIndex] = updatedArea;
-
-      return { ...prev, areas };
-    });
-
-    setNewSubAreaName("");
-    setError(null);
   };
 
+  // ========== MANEJO DE SUBÁREAS (incluye jerarquía) ==========
+  const handleAddSubarea = () => {
+    if (!newSubareaName.trim() || selectedAreaForSubarea === null) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      areas: prev.areas.map((area) => {
+        if (area.id === selectedAreaForSubarea) {
+          const newId = -(area.subAreas.length + 1);
+          const newSub: SubAreaFormData = {
+            id: newId,
+            nombreSubArea: newSubareaName.trim(),
+            areaId: area.id, // temporal o real
+            parentSubAreaId: selectedParentSubarea ?? undefined,
+          };
+          return {
+            ...area,
+            subAreas: [...area.subAreas, newSub],
+          };
+        }
+        return area;
+      }),
+    }));
+    setNewSubareaName("");
+    // Dejamos seleccionado el mismo padre para poder crear varias hijas
+  };
+
+  // Eliminar una subárea y todos sus descendientes
+  const handleRemoveSubarea = (areaId: number, subareaId: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      areas: prev.areas.map((area) => {
+        if (area.id === areaId) {
+          const idsToRemove = new Set<number>();
+          idsToRemove.add(subareaId);
+
+          let changed = true;
+          while (changed) {
+            changed = false;
+            for (const s of area.subAreas) {
+              if (
+                s.parentSubAreaId !== undefined &&
+                idsToRemove.has(s.parentSubAreaId) &&
+                s.id !== undefined &&
+                !idsToRemove.has(s.id)
+              ) {
+                idsToRemove.add(s.id);
+                changed = true;
+              }
+            }
+          }
+
+          return {
+            ...area,
+            subAreas: area.subAreas.filter(
+              (s) => !(s.id !== undefined && idsToRemove.has(s.id))
+            ),
+          };
+        }
+        return area;
+      }),
+    }));
+  };
+
+  // ========== VALIDACIONES ==========
   const validateStep1 = (): boolean => {
-    // Campos obligatorios (incluye Teléfono)
     const requiredFields: (keyof ClientFormData)[] = [
       "nombre",
       "nit",
-      "direccion",
-      "localizacion",
+      // Validamos los campos separados
+      "direccionBase",
+      "barrio",
+      "ciudad",
+      "departamento",
+      "pais",
       "telefono",
+      "fecha_creacion",
     ];
 
     const fieldLabels: Partial<Record<keyof ClientFormData, string>> = {
       nombre: "Nombre de la Empresa",
       nit: "NIT",
-      direccion: "Dirección",
-      localizacion: "Ubicación",
+      direccionBase: "Dirección Base",
+      barrio: "Barrio",
+      ciudad: "Ciudad",
+      departamento: "Departamento",
+      pais: "País",
       telefono: "Teléfono",
+      fecha_creacion: "Fecha de Creación",
     };
 
     for (const field of requiredFields) {
@@ -319,7 +377,24 @@ export default function ClientModal({
       }
     }
 
-    // Email: validar solo si viene algo
+    // Validar ubicación (mapa)
+    if (!formData.localizacion || formData.localizacion.trim() === "") {
+      setError("Debes seleccionar una ubicación en el mapa");
+      playErrorSound();
+      return false;
+    }
+
+    // Fecha de creación
+    if (formData.fecha_creacion) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.fecha_creacion)) {
+        setError("Seleccione una fecha de creación válida");
+        playErrorSound();
+        return false;
+      }
+    }
+
+    // Email opcional
     const emailTrimmed = formData.email.trim();
     if (emailTrimmed) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -330,7 +405,7 @@ export default function ClientModal({
       }
     }
 
-    // Teléfono: siempre validar, ya sabemos que no está vacío
+    // Teléfono
     const phoneTrimmed = formData.telefono.trim();
     const phoneRegex = /^[\d\s\-\+\(\)]{7,}$/;
     if (!phoneRegex.test(phoneTrimmed.replace(/\s/g, ""))) {
@@ -339,33 +414,91 @@ export default function ClientModal({
       return false;
     }
 
-    // Ya NO es obligatorio tener usuario contacto
     return true;
   };
 
-  const validateAreas = (): boolean => {
+  const validateStep2 = (): boolean => {
     if (formData.areas.length === 0) {
-      setError("Debe agregar al menos un área para el cliente.");
+      setError("Debes agregar al menos 1 área para el cliente");
       playErrorSound();
-      setStep(2);
       return false;
     }
-
-    for (const area of formData.areas) {
-      if (!area.nombreArea || area.nombreArea.trim() === "") {
-        setError("Todas las áreas deben tener un nombre.");
-        playErrorSound();
-        setStep(2);
-        return false;
-      }
-    }
-
     return true;
+  };
+
+  const handleNextStep = () => {
+    setError(null);
+    if (step === 1 && validateStep1()) {
+      setStep(2);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setError(null);
+    setStep(1);
+  };
+
+  // Crear subáreas en el backend respetando la jerarquía
+  const createSubareasForArea = async (
+    area: AreaFormData,
+    dbAreaId: number
+  ) => {
+    const newSubs = area.subAreas.filter(
+      (s) => s.id === undefined || (s.id as number) < 0
+    );
+    if (newSubs.length === 0) return;
+
+    const tempToReal = new Map<number, number>();
+    let pending = [...newSubs];
+
+    while (pending.length > 0) {
+      let createdSomething = false;
+      const remaining: SubAreaFormData[] = [];
+
+      for (const sub of pending) {
+        let parentDbId: number | undefined;
+
+        if (
+          sub.parentSubAreaId === undefined ||
+          sub.parentSubAreaId === null
+        ) {
+          parentDbId = undefined;
+        } else if (sub.parentSubAreaId > 0) {
+          parentDbId = sub.parentSubAreaId;
+        } else {
+          const mapped = tempToReal.get(sub.parentSubAreaId);
+          if (!mapped) {
+            remaining.push(sub);
+            continue;
+          }
+          parentDbId = mapped;
+        }
+
+        const created = await clientsAPI.createSubArea({
+          nombreSubArea: sub.nombreSubArea,
+          areaId: dbAreaId,
+          parentSubAreaId: parentDbId,
+        });
+
+        if (sub.id !== undefined && sub.id < 0) {
+          tempToReal.set(sub.id, created.idSubArea);
+        }
+        createdSomething = true;
+      }
+
+      if (!createdSomething) {
+        console.warn(
+          "No se pudieron resolver algunas subáreas por referencias de padre inválidas."
+        );
+        break;
+      }
+
+      pending = remaining;
+    }
   };
 
   const handleSubmit = async () => {
-    // Validar que haya al menos un área
-    if (!validateAreas()) return;
+    if (!validateStep2()) return;
 
     try {
       setLoading(true);
@@ -374,141 +507,110 @@ export default function ClientModal({
       const clientData: CreateClientDto = {
         nombre: formData.nombre,
         nit: formData.nit,
-        direccion: formData.direccion,
+        // Enviar campos desglosados
+        direccionBase: formData.direccionBase,
+        barrio: formData.barrio,
+        ciudad: formData.ciudad,
+        departamento: formData.departamento,
+        pais: formData.pais,
+        
         contacto: formData.contacto,
         email: formData.email,
         telefono: formData.telefono,
         localizacion: formData.localizacion,
+        fechaCreacionEmpresa: formData.fecha_creacion,
       };
 
       if (formData.idUsuarioContacto) {
         clientData.idUsuarioContacto = formData.idUsuarioContacto;
       }
 
-      let clientId: number;
+      let savedClient: Client;
 
       if (editingClient) {
-        // 1) Actualizar cliente base
+        // Actualizar cliente
         await clientsAPI.updateClient(editingClient.idCliente, clientData);
-        clientId = editingClient.idCliente;
 
-        // 2) Sincronizar ÁREAS y SUBÁREAS
-        const originalAreas = editingClient.areas || [];
+        // Manejo de áreas existentes vs nuevas
+        const existingAreaIds =
+          editingClient.areas?.map((a) => a.idArea) || [];
+        const currentAreaIds =
+          formData.areas
+            .filter((a) => a.id !== undefined && a.id > 0)
+            .map((a) => a.id as number) || [];
 
-        // Áreas a eliminar (no presentes en el formulario y que no sean el área protegida)
-        const originalAreaIds = originalAreas.map((a) => a.idArea);
-        const currentAreaIds = formData.areas
-          .filter((a) => a.id)
-          .map((a) => a.id as number);
-
-        const areasToDelete = originalAreaIds.filter(
-          (id) =>
-            !currentAreaIds.includes(id) &&
-            (!protectedAreaId || id !== protectedAreaId)
-        );
-
-        for (const areaId of areasToDelete) {
-          await clientsAPI.deleteArea(areaId);
+        // Eliminar áreas que ya no están
+        for (const areaId of existingAreaIds) {
+          if (!currentAreaIds.includes(areaId)) {
+            await clientsAPI.deleteArea(areaId);
+          }
         }
 
-        // Crear / actualizar áreas y sus subáreas
-        for (const areaForm of formData.areas) {
-          const trimmedAreaName = areaForm.nombreArea.trim();
-          let areaId: number;
-
-          const originalArea = areaForm.id
-            ? originalAreas.find((a) => a.idArea === areaForm.id)
-            : undefined;
-
-          if (!areaForm.id) {
+        // Crear/actualizar áreas y subáreas
+        for (const area of formData.areas) {
+          if (area.id !== undefined && area.id < 0) {
             // Área nueva
             const createdArea = await clientsAPI.createArea({
-              nombreArea: trimmedAreaName,
-              clienteId: clientId,
+              nombreArea: area.nombreArea,
+              clienteId: editingClient.idCliente,
             });
-            areaId = createdArea.idArea;
-          } else {
-            // Área existente
-            areaId = areaForm.id;
 
-            if (originalArea && originalArea.nombreArea !== trimmedAreaName) {
-              await clientsAPI.updateArea(areaId, {
-                nombreArea: trimmedAreaName,
-              });
-            }
-          }
+            await createSubareasForArea(area, createdArea.idArea);
+          } else if (area.id !== undefined && area.id > 0) {
+            // Área existente: eliminar subáreas quitadas y crear nuevas
+            const existingArea = editingClient.areas?.find(
+              (a) => a.idArea === area.id
+            );
+            const existingSubareaIds =
+              existingArea?.subAreas?.map((s) => s.idSubArea) || [];
+            const currentSubareaIds =
+              area.subAreas
+                .filter((s) => s.id !== undefined && s.id > 0)
+                .map((s) => s.id as number) || [];
 
-          // Subáreas: eliminar las que ya no estén
-          const originalSubAreas = originalArea?.subAreas || [];
-          const originalSubIds = originalSubAreas.map((s) => s.idSubArea);
-          const currentSubIds = areaForm.subAreas
-            .filter((s) => s.id)
-            .map((s) => s.id as number);
-
-          const subToDelete = originalSubIds.filter(
-            (id) => !currentSubIds.includes(id)
-          );
-          for (const subId of subToDelete) {
-            await clientsAPI.deleteSubArea(subId);
-          }
-
-          // Crear / actualizar subáreas
-          for (const subForm of areaForm.subAreas) {
-            const trimmedSubName = subForm.nombreSubArea.trim();
-            if (!trimmedSubName) continue;
-
-            if (!subForm.id) {
-              // Subárea nueva
-              await clientsAPI.createSubArea({
-                nombreSubArea: trimmedSubName,
-                areaId,
-              });
-            } else {
-              // Subárea existente
-              const originalSub = originalSubAreas.find(
-                (s) => s.idSubArea === subForm.id
-              );
-              if (originalSub && originalSub.nombreSubArea !== trimmedSubName) {
-                await clientsAPI.updateSubArea(subForm.id, {
-                  nombreSubArea: trimmedSubName,
-                });
+            // Eliminar subáreas que ya no están
+            for (const subId of existingSubareaIds) {
+              if (!currentSubareaIds.includes(subId)) {
+                await clientsAPI.deleteSubArea(subId);
               }
             }
+
+            await createSubareasForArea(area, area.id);
           }
         }
+
+        savedClient = await clientsAPI.getClientById(editingClient.idCliente);
       } else {
-        // CREACIÓN
-        const client = await clientsAPI.createClient(clientData);
-        clientId = client.idCliente;
+        // Crear cliente
+        const newClient = await clientsAPI.createClient(clientData);
 
-        // Crear áreas y subáreas
-        for (const areaForm of formData.areas) {
-          const trimmedAreaName = areaForm.nombreArea.trim();
-
+        // Crear áreas + subáreas
+        for (const area of formData.areas) {
           const createdArea = await clientsAPI.createArea({
-            nombreArea: trimmedAreaName,
-            clienteId: clientId,
+            nombreArea: area.nombreArea,
+            clienteId: newClient.idCliente,
           });
 
-          for (const subForm of areaForm.subAreas) {
-            const trimmedSubName = subForm.nombreSubArea.trim();
-            if (!trimmedSubName) continue;
+          await createSubareasForArea(area, createdArea.idArea);
+        }
 
-            await clientsAPI.createSubArea({
-              nombreSubArea: trimmedSubName,
-              areaId: createdArea.idArea,
-            });
-          }
+        savedClient = await clientsAPI.getClientById(newClient.idCliente);
+      }
+
+      // Subir logo si hay uno seleccionado
+      if (logoFile && savedClient) {
+        try {
+          await imagesApi.uploadClientLogo(savedClient.idCliente, logoFile);
+        } catch (uploadError: any) {
+          console.error("Error subiendo logo:", uploadError);
+          // No detenemos el flujo si falla la subida del logo
+          setError(`Cliente guardado, pero error al subir logo: ${uploadError.message}`);
         }
       }
 
-      // Recargar cliente con áreas/subáreas completas
-      const finalClient = await clientsAPI.getClientById(
-        editingClient ? editingClient.idCliente : clientId!
-      );
-
-      onSuccess(finalClient);
+      onSuccess(savedClient);
       resetForm();
+      onClose();
     } catch (err: any) {
       setError(err.message || "Error al guardar el cliente");
       playErrorSound();
@@ -518,6 +620,48 @@ export default function ClientModal({
   };
 
   if (!isOpen) return null;
+
+  // Área actualmente seleccionada para agregar subárea
+  const currentAreaForSubarea = formData.areas.find(
+    (a) => a.id === selectedAreaForSubarea
+  );
+
+  // Render recursivo de subáreas como árbol
+  const renderSubareasTree = (
+    area: AreaFormData,
+    parentId: number | null = null
+  ): React.ReactNode[] => {
+    const children = area.subAreas.filter(
+      (s) =>
+        (s.parentSubAreaId ?? null) === parentId &&
+        s.id !== undefined &&
+        s.id !== null
+    );
+
+    if (!children.length) return [];
+
+    return children.map((sub) => (
+      <div key={sub.id} className={styles.subareaTreeItem}>
+        <div className={styles.subareaItem}>
+          <span className={styles.subareaName}>📂 {sub.nombreSubArea}</span>
+          <button
+            type="button"
+            onClick={() =>
+              handleRemoveSubarea(area.id as number, sub.id as number)
+            }
+            className={styles.removeButtonSmall}
+            disabled={loading}
+            title="Eliminar subárea (y sus subniveles)"
+          >
+            ×
+          </button>
+        </div>
+        <div className={styles.subareaChildren}>
+          {renderSubareasTree(area, sub.id as number)}
+        </div>
+      </div>
+    ));
+  };
 
   return (
     <div className={styles.modalOverlay}>
@@ -529,9 +673,9 @@ export default function ClientModal({
               {editingClient ? "Editar Cliente" : "Nuevo Cliente"}
             </h2>
             <div className={styles.stepIndicator}>
-              <span className={step >= 1 ? styles.activeStep : ""}>1</span>
-              <span className={styles.stepDivider}>›</span>
-              <span className={step >= 2 ? styles.activeStep : ""}>2</span>
+              <span className={step === 1 ? styles.activeStep : ""}>1</span>
+              <span className={styles.stepDivider}>→</span>
+              <span className={step === 2 ? styles.activeStep : ""}>2</span>
             </div>
           </div>
           <button
@@ -558,7 +702,7 @@ export default function ClientModal({
             </div>
           )}
 
-          {/* Paso 1 */}
+          {/* ========== PASO 1: Información del Cliente ========== */}
           {step === 1 && (
             <div className={styles.step}>
               <h3 className={styles.stepTitle}>
@@ -596,36 +740,80 @@ export default function ClientModal({
                   />
                 </div>
 
+                {/* Logo de la Empresa */}
+                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                  <label className={styles.formLabel}>
+                    Logo de la Empresa (Opcional)
+                  </label>
+                  <div className={styles.logoUploadContainer}>
+                    {logoPreview ? (
+                      <div className={styles.logoPreview}>
+                        <img
+                          src={logoPreview}
+                          alt="Preview logo"
+                          className={styles.logoPreviewImage}
+                        />
+                        <button
+                          type="button"
+                          onClick={removeLogo}
+                          className={styles.removeLogoBtn}
+                          disabled={loading}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={styles.logoUploadPlaceholder}>
+                        <span className={styles.logoIcon}>🏢</span>
+                        <span className={styles.logoText}>Subir logo</span>
+                        <span className={styles.logoHint}>
+                          Formatos: JPG, PNG, GIF, WebP
+                          <br />
+                          Máximo: 5MB
+                        </span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      ref={logoInputRef}
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleLogoChange}
+                      className={styles.logoInput}
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
                 {/* Contacto y Email */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>
-                    Persona de Contacto 
+                    Persona de Contacto
                   </label>
                   <input
                     type="text"
                     name="contacto"
                     value={formData.contacto}
                     onChange={handleInputChange}
-                    placeholder="Se autocompletará al seleccionar el usuario"
+                    placeholder="Se autocompletará al seleccionar usuario"
                     className={styles.formInput}
                     disabled={true}
                   />
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Email </label>
+                  <label className={styles.formLabel}>Email</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="Email corporativo de la empresa"
+                    placeholder="Email corporativo"
                     className={styles.formInput}
                     disabled={loading}
                   />
                 </div>
 
-                {/* Teléfono y ubicación */}
+                {/* Teléfono y Fecha */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Teléfono *</label>
                   <input
@@ -640,41 +828,102 @@ export default function ClientModal({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Ubicación *</label>
+                  <label className={styles.formLabel}>
+                    Fecha de Creación *
+                  </label>
                   <input
-                    type="text"
-                    name="localizacion"
-                    value={formData.localizacion}
+                    type="date"
+                    name="fecha_creacion"
+                    value={formData.fecha_creacion}
                     onChange={handleInputChange}
-                    placeholder="Ciudad, Departamento"
                     className={styles.formInput}
                     disabled={loading}
                   />
                 </div>
 
-                {/* Dirección */}
+                {/* --- SECCIÓN DE DIRECCIÓN DESGLOSADA --- */}
                 <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label className={styles.formLabel}>
-                    Dirección Completa *
+                  <label className={styles.formLabel} style={{marginBottom: '0.5rem', display: 'block'}}>
+                    Dirección de la Empresa *
                   </label>
-                  <textarea
-                    name="direccion"
-                    value={formData.direccion}
-                    onChange={handleInputChange}
-                    placeholder="Dirección física completa de la empresa"
-                    className={styles.formTextarea}
-                    rows={3}
-                    disabled={loading}
-                  />
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                    
+                    {/* Dirección Base (calle/carrera) - Ocupa todo el ancho */}
+                    <div style={{ gridColumn: '1 / -1' }}>
+                       <input
+                        type="text"
+                        name="direccionBase"
+                        value={formData.direccionBase}
+                        onChange={handleInputChange}
+                        placeholder="Dirección base (ej: Calle 10 # 20-30, Oficina 401)"
+                        className={styles.formInput}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    {/* Barrio */}
+                    <div>
+                      <input
+                        type="text"
+                        name="barrio"
+                        value={formData.barrio}
+                        onChange={handleInputChange}
+                        placeholder="Barrio"
+                        className={styles.formInput}
+                        disabled={loading}
+                      />
+                    </div>
+
+                     {/* Ciudad */}
+                    <div>
+                      <input
+                        type="text"
+                        name="ciudad"
+                        value={formData.ciudad}
+                        onChange={handleInputChange}
+                        placeholder="Ciudad"
+                        className={styles.formInput}
+                        disabled={loading}
+                      />
+                    </div>
+
+                     {/* Departamento */}
+                    <div>
+                      <input
+                        type="text"
+                        name="departamento"
+                        value={formData.departamento}
+                        onChange={handleInputChange}
+                        placeholder="Departamento"
+                        className={styles.formInput}
+                        disabled={loading}
+                      />
+                    </div>
+
+                     {/* País */}
+                    <div>
+                      <input
+                        type="text"
+                        name="pais"
+                        value={formData.pais}
+                        onChange={handleInputChange}
+                        placeholder="País"
+                        className={styles.formInput}
+                        disabled={loading}
+                      />
+                    </div>
+
+                  </div>
                 </div>
 
-                {/* Usuario contacto: buscador (solo Admin/Secretaria) */}
+                {/* Usuario contacto (solo Admin/Secretaria) */}
                 {!isCliente && (
                   <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                     <label className={styles.formLabel}>
-                      Buscar y Seleccionar Usuario Contacto (opcional)
+                      Buscar Usuario Contacto (opcional)
                       <span className={styles.fieldNote}>
-                        (Solo autocompletará el nombre de la persona de contacto)
+                        (Autocompleta el nombre de contacto)
                       </span>
                     </label>
                     <div className={styles.autocompleteWrapper}>
@@ -686,7 +935,7 @@ export default function ClientModal({
                           setShowUserList(true);
                         }}
                         onFocus={() => setShowUserList(true)}
-                        placeholder="Buscar usuario por nombre, apellido o email..."
+                        placeholder="Buscar por nombre, apellido o email..."
                         className={styles.formInput}
                         disabled={loading}
                       />
@@ -717,11 +966,6 @@ export default function ClientModal({
                                   <small className={styles.userEmail}>
                                     {u.email}
                                   </small>
-                                  {u.telefono && (
-                                    <small className={styles.userPhone}>
-                                      {u.telefono}
-                                    </small>
-                                  )}
                                 </div>
                               </div>
                               <span className={styles.selectIcon}>✓</span>
@@ -736,9 +980,7 @@ export default function ClientModal({
                         <span className={styles.checkmark}>✓</span>
                         <div className={styles.selectedUserInfo}>
                           <strong>Usuario contacto seleccionado</strong>
-                          <small>
-                            Solo el campo de nombre de contacto se ha autocompletado
-                          </small>
+                          <small>Nombre de contacto autocompletado</small>
                         </div>
                         <button
                           className={styles.clearUserButton}
@@ -746,12 +988,11 @@ export default function ClientModal({
                             setFormData((prev) => ({
                               ...prev,
                               idUsuarioContacto: null,
-                              contacto: "", // También limpiar el nombre
+                              contacto: "",
                             }));
                             setUserSearch("");
                           }}
                           disabled={loading}
-                          title="Cambiar usuario contacto"
                         >
                           Cambiar
                         </button>
@@ -760,7 +1001,7 @@ export default function ClientModal({
                   </div>
                 )}
 
-                {/* Cliente: se muestra su propio usuario como contacto */}
+                {/* Cliente: info de su usuario */}
                 {isCliente && user && (
                   <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                     <div className={styles.selectedUser}>
@@ -768,30 +1009,9 @@ export default function ClientModal({
                       <div className={styles.selectedUserInfo}>
                         <strong>Usuario contacto</strong>
                         <small>
-                          Se usará su usuario ({user.nombre}{" "}
-                          {user.apellido || ""}) como contacto de la empresa.
+                          Se usará tu usuario ({user.nombre}{" "}
+                          {user.apellido || ""}) como contacto.
                         </small>
-                        <small>Email y teléfono deben ser los de la empresa</small>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Nota de simplificación */}
-                {!formData.idUsuarioContacto && !isCliente && (
-                  <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                    <div className={styles.simplificationNote}>
-                      <span className={styles.noteIcon}>💡</span>
-                      <div className={styles.noteContent}>
-                        <p className={styles.noteTitle}>
-                          Simplificación de formulario
-                        </p>
-                        <p className={styles.noteText}>
-                          Al seleccionar un usuario contacto, solo el campo{" "}
-                          <strong>Persona de Contacto</strong> se autocompletará.
-                          Los campos <strong>Email</strong> y <strong>Teléfono </strong>  
-                           deben ser los de la empresa y se deben ingresar manualmente.
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -800,339 +1020,188 @@ export default function ClientModal({
             </div>
           )}
 
-          {/* Paso 2: Áreas, Subáreas y Resumen */}
+          {/* ========== PASO 2: Áreas y Subáreas ========== */}
           {step === 2 && (
             <div className={styles.step}>
               <h3 className={styles.stepTitle}>
                 <span className={styles.stepNumber}>2</span>
-                Áreas, Subáreas y Confirmación
+                Áreas y Subáreas
               </h3>
-              <p className={styles.stepDescription}>
-                Defina al menos un área principal para el cliente y, si lo
-                desea, sus subáreas.
-              </p>
 
-              {/* SECCIÓN ÁREAS */}
-              <div className={styles.areasSection}>
-                {/* Formulario para añadir área */}
-                <div className={styles.addAreaForm}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>
-                      Nombre del área principal *
-                    </label>
-                    <div className={styles.areaInputGroup}>
-                      <input
-                        type="text"
-                        value={newAreaName}
-                        onChange={(e) => setNewAreaName(e.target.value)}
-                        placeholder="Ej: Comercial, Producción, Contabilidad..."
-                        className={styles.areaInput}
-                        disabled={loading}
-                      />
-                      <button
-                        type="button"
-                        className={styles.addButton}
-                        onClick={handleAddArea}
-                        disabled={loading || !newAreaName.trim()}
-                      >
-                        <span className={styles.plusIcon}>+</span>
-                        Añadir área
-                      </button>
-                    </div>
-                    <small>
-                      Debe existir al menos un área para poder guardar el
-                      cliente.
-                    </small>
-                  </div>
+              <div className={styles.stepDescription}>
+                <p>
+                  Agrega las áreas de la empresa y organiza las subáreas en
+                  niveles (subáreas dentro de subáreas).
+                </p>
+                <span className={styles.requiredText}>
+                  * Debes agregar al menos 1 área
+                </span>
+              </div>
+
+              {/* Agregar Área */}
+              <div className={styles.addAreaForm}>
+                <div className={styles.areaInputGroup}>
+                  <input
+                    type="text"
+                    value={newAreaName}
+                    onChange={(e) => setNewAreaName(e.target.value)}
+                    placeholder="Nombre del área (ej: Producción, Bodega, Oficinas)"
+                    className={styles.areaInput}
+                    disabled={loading}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddArea();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddArea}
+                    className={styles.addButton}
+                    disabled={loading || !newAreaName.trim()}
+                  >
+                    <span className={styles.plusIcon}>+</span>
+                    Agregar Área
+                  </button>
                 </div>
+              </div>
 
-                {/* Lista de áreas o mensaje vacío */}
-                {formData.areas.length === 0 ? (
-                  <div className={styles.noAreas}>
-                    <div className={styles.noDataIcon}>📁</div>
-                    <p>Aún no hay áreas registradas para este cliente.</p>
-                    <small>
-                      Agrega al menos una área utilizando el formulario
-                      superior.
-                    </small>
-                  </div>
-                ) : (
+              {/* Lista de Áreas */}
+              {formData.areas.length > 0 ? (
+                <div className={styles.areasSection}>
+                  <h4 className={styles.listTitle}>
+                    Áreas agregadas ({formData.areas.length})
+                  </h4>
                   <div className={styles.areasList}>
-                    <h4 className={styles.listTitle}>Áreas del cliente</h4>
-                    {formData.areas.map((area, index) => {
-                      const isOnlyArea = formData.areas.length === 1;
-                      const isProtectedByIndex = !editingClient && index === 0;
-                      const isProtectedById =
-                        !!editingClient &&
-                        area.id !== undefined &&
-                        protectedAreaId !== null &&
-                        area.id === protectedAreaId;
-                      const disableRemove =
-                        isOnlyArea || isProtectedByIndex || isProtectedById;
-
-                      return (
-                        <div key={area.id ?? index} className={styles.areaItem}>
-                          <div className={styles.areaHeader}>
-                            <div className={styles.areaInfo}>
-                              <div className={styles.areaName}>
-                                <span className={styles.areaBullet}>•</span>
-                                <input
-                                  type="text"
-                                  value={area.nombreArea}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setFormData((prev) => {
-                                      const areas = [...prev.areas];
-                                      areas[index] = {
-                                        ...areas[index],
-                                        nombreArea: value,
-                                      };
-                                      return { ...prev, areas };
-                                    });
-                                  }}
-                                  className={styles.areaInput}
-                                  placeholder={`Nombre del área ${index + 1}`}
-                                  disabled={loading}
-                                />
-                              </div>
-                              <span className={styles.subareaCount}>
-                                {area.subAreas.length} subárea
-                                {area.subAreas.length === 1 ? "" : "s"}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              className={styles.removeButton}
-                              onClick={() => handleRemoveArea(index)}
-                              disabled={loading || disableRemove}
-                              title={
-                                disableRemove
-                                  ? "Debe existir al menos un área principal"
-                                  : "Eliminar área"
-                              }
-                            >
-                              ×
-                            </button>
+                    {formData.areas.map((area) => (
+                      <div key={area.id} className={styles.areaItem}>
+                        <div className={styles.areaHeader}>
+                          <div className={styles.areaInfo}>
+                            <span className={styles.areaBullet}>📁</span>
+                            <span className={styles.areaName}>
+                              {area.nombreArea}
+                            </span>
+                            <span className={styles.subareaCount}>
+                              {area.subAreas.length} subárea
+                              {area.subAreas.length !== 1 ? "s" : ""}
+                            </span>
                           </div>
-
-                          {area.subAreas.length > 0 && (
-                            <div className={styles.subareasList}>
-                              {area.subAreas.map((sub, subIndex) => (
-                                <div
-                                  key={sub.id ?? subIndex}
-                                  className={styles.subareaItem}
-                                >
-                                  <span className={styles.subareaName}>
-                                    {sub.nombreSubArea}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className={styles.removeButtonSmall}
-                                    onClick={() =>
-                                      handleRemoveSubArea(index, subIndex)
-                                    }
-                                    disabled={loading}
-                                    title="Eliminar subárea"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveArea(area.id as number)}
+                            className={styles.removeButton}
+                            disabled={loading}
+                            title="Eliminar área"
+                          >
+                            ×
+                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
 
-                {/* SECCIÓN SUBÁREAS: SOLO SI HAY AL MENOS 1 ÁREA */}
-                {formData.areas.length > 0 && (
+                        {/* Subáreas como árbol */}
+                        {area.subAreas.length > 0 && (
+                          <div className={styles.subareasList}>
+                            {renderSubareasTree(area, null)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Agregar Subáreas */}
                   <div className={styles.subareasSection}>
                     <h4 className={styles.subareasTitle}>
-                      Agregar subáreas (opcional)
+                      Agregar subáreas (pueden ser hijas de otras subáreas)
                     </h4>
                     <div className={styles.addSubAreaForm}>
                       <div className={styles.subareaControls}>
+                        {/* Seleccionar Área */}
                         <select
-                          className={styles.areaSelect}
-                          value={
-                            selectedAreaIndex === ""
-                              ? ""
-                              : String(selectedAreaIndex)
-                          }
+                          value={selectedAreaForSubarea ?? ""}
                           onChange={(e) => {
                             const value = e.target.value;
-                            setSelectedAreaIndex(
-                              value === "" ? "" : parseInt(value, 10)
-                            );
+                            const areaId = value ? parseInt(value) : null;
+                            setSelectedAreaForSubarea(areaId);
+                            setSelectedParentSubarea(null);
                           }}
+                          className={styles.areaSelect}
                           disabled={loading}
                         >
-                          <option value="">Selecciona un área</option>
-                          {formData.areas.map((area, index) => (
-                            <option key={area.id ?? index} value={index}>
-                              {area.nombreArea || `Área ${index + 1}`}
+                          <option value="">Área...</option>
+                          {formData.areas.map((area) => (
+                            <option key={area.id} value={area.id}>
+                              {area.nombreArea}
                             </option>
                           ))}
                         </select>
 
+                        {/* Seleccionar Subárea Padre */}
+                        <select
+                          value={selectedParentSubarea ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSelectedParentSubarea(
+                              value ? parseInt(value) : null
+                            );
+                          }}
+                          className={styles.areaSelect}
+                          disabled={
+                            loading ||
+                            !currentAreaForSubarea ||
+                            currentAreaForSubarea.subAreas.length === 0
+                          }
+                        >
+                          <option value="">
+                            Sin subárea padre (nivel superior)
+                          </option>
+                          {currentAreaForSubarea?.subAreas.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              {sub.nombreSubArea}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Nombre de la subárea */}
                         <input
                           type="text"
-                          className={styles.subareaInput}
+                          value={newSubareaName}
+                          onChange={(e) => setNewSubareaName(e.target.value)}
                           placeholder="Nombre de la subárea"
-                          value={newSubAreaName}
-                          onChange={(e) => setNewSubAreaName(e.target.value)}
-                          disabled={loading}
+                          className={styles.subareaInput}
+                          disabled={loading || selectedAreaForSubarea === null}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddSubarea();
+                            }
+                          }}
                         />
 
                         <button
                           type="button"
+                          onClick={handleAddSubarea}
                           className={styles.addSubareaButton}
-                          onClick={handleAddSubArea}
                           disabled={
                             loading ||
-                            selectedAreaIndex === "" ||
-                            !newSubAreaName.trim()
+                            !newSubareaName.trim() ||
+                            selectedAreaForSubarea === null
                           }
                         >
-                          <span className={styles.plusIcon}>+</span>
-                          Añadir subárea
+                          + Subárea
                         </button>
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
-
-              {/* SECCIÓN DE RESUMEN */}
-              <div className={styles.confirmationSection}>
-                <div className={styles.summaryCard}>
-                  <h4 className={styles.summaryTitle}>
-                    Información del Cliente
-                  </h4>
-                  <div className={styles.summaryGrid}>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>Empresa:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.nombre}
-                      </span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>NIT:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.nit}
-                      </span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>Contacto:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.contacto}
-                      </span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>Email:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.email}
-                      </span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>Teléfono:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.telefono}
-                      </span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                      <span className={styles.summaryLabel}>Ubicación:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.localizacion}
-                      </span>
-                    </div>
-                    <div
-                      className={`${styles.summaryItem} ${styles.fullWidth}`}
-                    >
-                      <span className={styles.summaryLabel}>Dirección:</span>
-                      <span className={styles.summaryValue}>
-                        {formData.direccion}
-                      </span>
-                    </div>
-                    <div
-                      className={`${styles.summaryItem} ${styles.fullWidth}`}
-                    >
-                      <span className={styles.summaryLabel}>
-                        Usuario Contacto:
-                      </span>
-                      <span className={styles.summaryValue}>
-                        {userSearch || "No seleccionado"}
-                        {formData.idUsuarioContacto && (
-                          <span className={styles.userIdNote}>
-                            {" "}
-                            (ID: {formData.idUsuarioContacto})
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
                 </div>
-
-                {formData.areas.length > 0 && (
-                  <div className={styles.summaryCard}>
-                    <h4 className={styles.summaryTitle}>
-                      Resumen de Áreas y Subáreas
-                    </h4>
-                    <div className={styles.areasSummary}>
-                      {formData.areas.map((area, index) => (
-                        <div
-                          key={area.id ?? index}
-                          className={styles.areaSummaryItem}
-                        >
-                          <div className={styles.areaSummaryHeader}>
-                            <div className={styles.areaSummaryName}>
-                              <span className={styles.areaNumber}>
-                                Área {index + 1}:
-                              </span>
-                              <span>{area.nombreArea}</span>
-                            </div>
-                            <span className={styles.areaSubareaCount}>
-                              {area.subAreas.length} subárea
-                              {area.subAreas.length === 1 ? "" : "s"}
-                            </span>
-                          </div>
-                          {area.subAreas.length > 0 && (
-                            <div className={styles.subareasSummary}>
-                              {area.subAreas.map((sub, subIndex) => (
-                                <div
-                                  key={sub.id ?? subIndex}
-                                  className={styles.subareaSummaryItem}
-                                >
-                                  <span className={styles.subareaBullet}>
-                                    •
-                                  </span>
-                                  <span className={styles.subareaName}>
-                                    {sub.nombreSubArea}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className={styles.noteSection}>
-                  <div className={styles.noteIcon}>💡</div>
-                  <div className={styles.noteContent}>
-                    <p className={styles.noteTitle}>Recuerda</p>
-                    <p className={styles.noteText}>
-                      El cliente debe tener al menos un área. Puedes añadir o
-                      editar áreas y subáreas luego desde la gestión de
-                      clientes.
-                    </p>
-                  </div>
+              ) : (
+                <div className={styles.noAreas}>
+                  <div className={styles.noDataIcon}>📁</div>
+                  <p>No hay áreas agregadas</p>
+                  <small>
+                    Agrega al menos 1 área para poder guardar el cliente
+                  </small>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -1141,13 +1210,13 @@ export default function ClientModal({
         <div className={styles.modalFooter}>
           <div className={styles.footerContent}>
             <div className={styles.navigationButtons}>
-              {step > 1 && (
+              {step === 2 && (
                 <button
                   className={styles.backButton}
-                  onClick={() => setStep(step - 1)}
+                  onClick={handlePrevStep}
                   disabled={loading}
                 >
-                  ← Volver
+                  ← Anterior
                 </button>
               )}
             </div>
@@ -1161,20 +1230,13 @@ export default function ClientModal({
                 Cancelar
               </button>
 
-              {step < 2 ? (
+              {step === 1 ? (
                 <button
                   className={styles.nextButton}
-                  onClick={() => {
-                    if (step === 1) {
-                      if (validateStep1()) {
-                        setStep(2);
-                        setError(null);
-                      }
-                    }
-                  }}
+                  onClick={handleNextStep}
                   disabled={loading}
                 >
-                  Continuar →
+                  Siguiente →
                 </button>
               ) : (
                 <button

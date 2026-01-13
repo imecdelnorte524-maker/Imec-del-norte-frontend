@@ -1,34 +1,55 @@
-// src/api/clients.ts
-import type { 
-  CreateClientDto, 
+import type {
+  CreateClientDto,
   UpdateClientDto,
   CreateAreaDto,
-  CreateSubAreaDto
+  CreateSubAreaDto,
 } from '../interfaces/ClientInterfaces';
 import api from './axios';
+
+// Mapear imágenes del backend
+const mapImageFromBackend = (data: any) => ({
+  id: data.id,
+  url: data.url,
+  public_id: data.public_id,
+  folder: data.folder,
+  isLogo: data.isLogo,
+  created_at: data.created_at,
+});
 
 // Mapear datos del backend al frontend
 const mapClientFromBackend = (data: any) => ({
   idCliente: data.idCliente,
   nombre: data.nombre,
   nit: data.nit,
-  direccion: data.direccion,
+  // Mapeo de nueva estructura de dirección
+  direccionBase: data.direccionBase,
+  barrio: data.barrio,
+  ciudad: data.ciudad,
+  departamento: data.departamento,
+  pais: data.pais,
+  direccionCompleta: data.direccionCompleta, // Backend lo envía autogenerado
+
   contacto: data.contacto,
   email: data.email,
   telefono: data.telefono,
   localizacion: data.localizacion,
+  fechaCreacionEmpresa:
+    data.fechaCreacionEmpresa ?? data.fecha_creacion_empresa ?? '',
   idUsuarioContacto: data.idUsuarioContacto,
-  usuarioContacto: data.usuarioContacto ? {
-    usuarioId: data.usuarioContacto.usuarioId,
-    nombre: data.usuarioContacto.nombre,
-    apellido: data.usuarioContacto.apellido,
-    email: data.usuarioContacto.email,
-    telefono: data.usuarioContacto.telefono,
-    role: data.usuarioContacto.role
-  } : undefined, // Ahora puede ser undefined
+  usuarioContacto: data.usuarioContacto
+    ? {
+        usuarioId: data.usuarioContacto.usuarioId,
+        nombre: data.usuarioContacto.nombre,
+        apellido: data.usuarioContacto.apellido,
+        email: data.usuarioContacto.email,
+        telefono: data.usuarioContacto.telefono,
+        role: data.usuarioContacto.role,
+      }
+    : undefined,
   areas: data.areas?.map(mapAreaFromBackend) || [],
+  images: data.images?.map(mapImageFromBackend) || [],
   createdAt: data.createdAt,
-  updatedAt: data.updatedAt
+  updatedAt: data.updatedAt,
 });
 
 const mapAreaFromBackend = (data: any) => ({
@@ -38,16 +59,18 @@ const mapAreaFromBackend = (data: any) => ({
   cliente: data.cliente ? mapClientFromBackend(data.cliente) : undefined,
   subAreas: data.subAreas?.map(mapSubAreaFromBackend) || [],
   createdAt: data.createdAt,
-  updatedAt: data.updatedAt
+  updatedAt: data.updatedAt,
 });
 
 const mapSubAreaFromBackend = (data: any) => ({
   idSubArea: data.idSubArea,
   nombreSubArea: data.nombreSubArea,
   areaId: data.areaId,
+  parentSubAreaId: data.parentSubAreaId ?? undefined,
   area: data.area ? mapAreaFromBackend(data.area) : undefined,
+  children: data.children?.map(mapSubAreaFromBackend) || [],
   createdAt: data.createdAt,
-  updatedAt: data.updatedAt
+  updatedAt: data.updatedAt,
 });
 
 export const clients = {
@@ -58,7 +81,9 @@ export const clients = {
       return response.data.data.map(mapClientFromBackend);
     } catch (error: any) {
       console.error('Error obteniendo clientes:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener clientes');
+      throw new Error(
+        error.response?.data?.message || 'Error al obtener clientes',
+      );
     }
   },
 
@@ -68,7 +93,9 @@ export const clients = {
       return mapClientFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error obteniendo cliente:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener cliente');
+      throw new Error(
+        error.response?.data?.message || 'Error al obtener cliente',
+      );
     }
   },
 
@@ -78,17 +105,24 @@ export const clients = {
       return mapClientFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error obteniendo cliente por NIT:', error);
-      throw new Error(error.response?.data?.message || 'Error al buscar cliente por NIT');
+      throw new Error(
+        error.response?.data?.message || 'Error al buscar cliente por NIT',
+      );
     }
   },
 
   getClientsByUsuarioContacto: async (usuarioId: number) => {
     try {
-      const response = await api.get(`/clients/usuario-contacto/${usuarioId}`);
+      const response = await api.get(
+        `/clients/usuario-contacto/${usuarioId}`,
+      );
       return response.data.data.map(mapClientFromBackend);
     } catch (error: any) {
       console.error('Error obteniendo clientes por usuario:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener clientes por usuario contacto');
+      throw new Error(
+        error.response?.data?.message ||
+          'Error al obtener clientes por usuario contacto',
+      );
     }
   },
 
@@ -98,10 +132,13 @@ export const clients = {
       return mapClientFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error creando cliente:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          'Error al crear cliente';
-      throw new Error(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Error al crear cliente';
+      throw new Error(
+        Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage,
+      );
     }
   },
 
@@ -111,7 +148,9 @@ export const clients = {
       return mapClientFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error actualizando cliente:', error);
-      throw new Error(error.response?.data?.message || 'Error al actualizar cliente');
+      throw new Error(
+        error.response?.data?.message || 'Error al actualizar cliente',
+      );
     }
   },
 
@@ -120,7 +159,9 @@ export const clients = {
       await api.delete(`/clients/${id}`);
     } catch (error: any) {
       console.error('Error eliminando cliente:', error);
-      throw new Error(error.response?.data?.message || 'Error al eliminar cliente');
+      throw new Error(
+        error.response?.data?.message || 'Error al eliminar cliente',
+      );
     }
   },
 
@@ -132,7 +173,9 @@ export const clients = {
       return response.data.data.map(mapAreaFromBackend);
     } catch (error: any) {
       console.error('Error obteniendo áreas:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener áreas');
+      throw new Error(
+        error.response?.data?.message || 'Error al obtener áreas',
+      );
     }
   },
 
@@ -142,7 +185,9 @@ export const clients = {
       return mapAreaFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error obteniendo área:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener área');
+      throw new Error(
+        error.response?.data?.message || 'Error al obtener área',
+      );
     }
   },
 
@@ -152,10 +197,13 @@ export const clients = {
       return mapAreaFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error creando área:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          'Error al crear área';
-      throw new Error(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Error al crear área';
+      throw new Error(
+        Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage,
+      );
     }
   },
 
@@ -165,7 +213,9 @@ export const clients = {
       return mapAreaFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error actualizando área:', error);
-      throw new Error(error.response?.data?.message || 'Error al actualizar área');
+      throw new Error(
+        error.response?.data?.message || 'Error al actualizar área',
+      );
     }
   },
 
@@ -174,7 +224,9 @@ export const clients = {
       await api.delete(`/areas/${id}`);
     } catch (error: any) {
       console.error('Error eliminando área:', error);
-      throw new Error(error.response?.data?.message || 'Error al eliminar área');
+      throw new Error(
+        error.response?.data?.message || 'Error al eliminar área',
+      );
     }
   },
 
@@ -183,19 +235,21 @@ export const clients = {
     try {
       let url = '/sub-areas';
       const params = new URLSearchParams();
-      
+
       if (areaId) params.append('areaId', areaId.toString());
       if (clienteId) params.append('clienteId', clienteId.toString());
-      
+
       if (params.toString()) {
         url = `${url}?${params.toString()}`;
       }
-      
+
       const response = await api.get(url);
       return response.data.data.map(mapSubAreaFromBackend);
     } catch (error: any) {
       console.error('Error obteniendo subáreas:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener subáreas');
+      throw new Error(
+        error.response?.data?.message || 'Error al obtener subáreas',
+      );
     }
   },
 
@@ -205,7 +259,9 @@ export const clients = {
       return mapSubAreaFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error obteniendo subárea:', error);
-      throw new Error(error.response?.data?.message || 'Error al obtener subárea');
+      throw new Error(
+        error.response?.data?.message || 'Error al obtener subárea',
+      );
     }
   },
 
@@ -215,10 +271,13 @@ export const clients = {
       return mapSubAreaFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error creando subárea:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          'Error al crear subárea';
-      throw new Error(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Error al crear subárea';
+      throw new Error(
+        Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage,
+      );
     }
   },
 
@@ -228,7 +287,9 @@ export const clients = {
       return mapSubAreaFromBackend(response.data.data);
     } catch (error: any) {
       console.error('Error actualizando subárea:', error);
-      throw new Error(error.response?.data?.message || 'Error al actualizar subárea');
+      throw new Error(
+        error.response?.data?.message || 'Error al actualizar subárea',
+      );
     }
   },
 
@@ -237,7 +298,9 @@ export const clients = {
       await api.delete(`/sub-areas/${id}`);
     } catch (error: any) {
       console.error('Error eliminando subárea:', error);
-      throw new Error(error.response?.data?.message || 'Error al eliminar subárea');
+      throw new Error(
+        error.response?.data?.message || 'Error al eliminar subárea',
+      );
     }
   },
 

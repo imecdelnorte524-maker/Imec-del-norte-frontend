@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import type { SgSstForm, SignatureType } from "../../interfaces/SgSstInterface";
 import type { Usuario } from "../../interfaces/UserInterfaces";
 import { sgSstService } from "../../api/sg-sst";
-import { users } from "../../api/users";
+import { usersApi } from "../../api/users";
 import SignaturePad from "./SignaturePad";
 import styles from "../../styles/components/sg-sst/FormDetailsModal.module.css";
 
@@ -74,7 +74,7 @@ export default function FormDetailsModal({
   const loadUsers = async () => {
     try {
       setIsLoadingUsers(true);
-      const usuariosData = await users.getAllUsers();
+      const usuariosData = await usersApi.getAllUsers();
       setUsuarios(usuariosData || []);
     } catch (error) {
       console.error("Error cargando usuarios:", error);
