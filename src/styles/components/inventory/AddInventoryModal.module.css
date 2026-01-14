@@ -156,6 +156,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
   gap: clamp(12px, 2vw, 16px);
+  margin-bottom: clamp(16px, 2vw, 20px);
 }
 
 .formGroup {
@@ -243,120 +244,6 @@
   padding-left: 30px;
 }
 
-/* Sección de carga de imágenes */
-.fileUpload {
-  margin-top: 8px;
-}
-
-.imageControls {
-  display: flex;
-  gap: clamp(8px, 1.5vw, 12px);
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.fileInput {
-  display: none;
-}
-
-.fileButton {
-  background: #f3f4f6;
-  border: 2px solid #d1d5db;
-  color: #374151;
-  padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: clamp(0.85rem, 2vw, 0.9rem);
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  min-height: 44px;
-  min-width: 44px;
-  justify-content: center;
-  flex: 1;
-}
-
-.fileButton:hover {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-}
-
-.removeFile {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
-  padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2vw, 16px);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: clamp(0.85rem, 2vw, 0.9rem);
-  transition: all 0.2s;
-  font-weight: 500;
-  min-height: 44px;
-  min-width: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-}
-
-.removeFile:hover {
-  background-color: #fee2e2;
-  border-color: #f87171;
-}
-
-.fileInfo {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 6px;
-  padding: clamp(8px, 1.5vw, 10px) clamp(10px, 1.5vw, 12px);
-  margin: 12px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: clamp(0.85rem, 2vw, 0.9rem);
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.fileName {
-  font-weight: 500;
-  color: #374151;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-.fileSize {
-  color: #6b7280;
-  font-size: clamp(0.75rem, 1.5vw, 0.8rem);
-  flex-shrink: 0;
-}
-
-.preview {
-  margin: 16px 0;
-  border-radius: 8px;
-  overflow: hidden;
-  max-width: min(300px, 100%);
-  max-height: 200px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.preview img {
-  width: 100%;
-  height: auto;
-  max-height: 200px;
-  object-fit: contain;
-  display: block;
-}
-
 /* Mensajes de error */
 .errorMessage {
   background-color: #fef2f2;
@@ -371,9 +258,16 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .errorText {
@@ -390,6 +284,15 @@
   padding: clamp(30px, 6vw, 40px);
   color: #6b7280;
   font-size: clamp(0.9rem, 2vw, 1rem);
+}
+
+.loadingSmall {
+  text-align: center;
+  padding: 12px;
+  color: #6b7280;
+  font-size: 0.9rem;
+  background: #f3f4f6;
+  border-radius: 6px;
 }
 
 /* Botones de acción */
@@ -470,42 +373,42 @@
     max-height: 85vh;
     margin: 10px;
   }
-  
+
   .tabs {
     top: clamp(60px, 12vw, 70px);
     flex-direction: row;
   }
-  
+
   .tab {
     min-width: min(140px, 50%);
     padding: 12px 14px;
   }
-  
+
   .formActions {
     flex-direction: column;
   }
-  
+
   .btnPrimary,
   .btnSecondary {
     width: 100%;
     min-width: 100%;
   }
-  
+
   .imageControls {
     flex-direction: column;
   }
-  
+
   .fileButton,
   .removeFile {
     width: 100%;
     justify-content: center;
   }
-  
+
   .preview {
     max-width: min(250px, 100%);
     max-height: 150px;
   }
-  
+
   .preview img {
     max-height: 150px;
   }
@@ -515,59 +418,59 @@
   .modalOverlay {
     padding: 10px;
   }
-  
+
   .modal {
     max-height: 90vh;
   }
-  
+
   .modalHeader {
     padding: 16px;
   }
-  
+
   .modalHeader h2 {
     font-size: clamp(1.1rem, 4vw, 1.3rem);
   }
-  
+
   .tab {
     min-width: 100%;
     padding: 10px 12px;
     font-size: 0.85rem;
   }
-  
+
   .form {
     padding: 16px;
   }
-  
+
   .formRow {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .textarea {
     min-height: 60px;
   }
-  
+
   .fileInfo {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
   }
-  
+
   .fileName {
     max-width: 100%;
     white-space: normal;
     word-break: break-word;
   }
-  
+
   .preview {
     max-width: 100%;
     max-height: 120px;
   }
-  
+
   .preview img {
     max-height: 120px;
   }
-  
+
   .closeButton {
     min-width: 44px;
     min-height: 44px;
@@ -581,22 +484,22 @@
     text-align: center;
     gap: 10px;
   }
-  
+
   .closeButton {
     align-self: flex-end;
     position: absolute;
     top: 16px;
     right: 16px;
   }
-  
+
   .modalHeader h2 {
     margin-right: 40px;
   }
-  
+
   .tabs {
     flex-direction: column;
   }
-  
+
   .tab {
     width: 100%;
     text-align: left;
@@ -609,19 +512,19 @@
     max-height: 85vh;
     max-width: 90vw;
   }
-  
+
   .form {
     padding: 16px;
   }
-  
+
   .formGroup {
     margin-bottom: 12px;
   }
-  
+
   .preview {
     max-height: 100px;
   }
-  
+
   .preview img {
     max-height: 100px;
   }
@@ -633,7 +536,7 @@
     background: #1f2937;
     color: #f9fafb;
   }
-  
+
   .input,
   .select,
   .textarea {
@@ -641,97 +544,103 @@
     border-color: #4b5563;
     color: #f9fafb;
   }
-  
+
   .input:disabled,
   .select:disabled,
   .textarea:disabled {
     background-color: #374151;
     color: #9ca3af;
   }
-  
+
   .formGroup label {
     color: #d1d5db;
   }
-  
+
   .helpText {
     color: #9ca3af;
   }
-  
+
   .tabs {
     background: #374151;
     border-bottom-color: #4b5563;
   }
-  
+
   .tab {
     color: #9ca3af;
   }
-  
+
   .tab:hover {
     background: #4b5563;
     color: #d1d5db;
   }
-  
+
   .tab.active {
     background: #1f2937;
     color: #10b981;
   }
-  
+
   .fileButton {
     background: #4b5563;
     border-color: #6b7280;
     color: #d1d5db;
   }
-  
+
   .fileButton:hover {
     background: #6b7280;
     border-color: #9ca3af;
   }
-  
+
   .removeFile {
     background-color: #7f1d1d;
     border-color: #991b1b;
     color: #fecaca;
   }
-  
+
   .removeFile:hover {
     background-color: #991b1b;
     border-color: #b91c1c;
   }
-  
+
   .fileInfo {
     background: #1e3a8a;
     border-color: #1d4ed8;
   }
-  
+
   .fileName {
     color: #d1d5db;
   }
-  
+
   .fileSize {
     color: #9ca3af;
   }
-  
+
   .preview {
     background: #374151;
     border-color: #4b5563;
   }
-  
+
   .formActions {
     border-top-color: #4b5563;
   }
-  
+
   .errorMessage {
     background-color: #7f1d1d;
     border-color: #991b1b;
     color: #fecaca;
   }
-  
+
   .errorText {
     color: #fca5a5;
   }
-  
+
   .currencySymbol {
     color: #9ca3af;
+  }
+
+  .loading,
+  .loadingSmall {
+    color: #9ca3af;
+    background: #374151;
   }
 }
 
@@ -758,11 +667,11 @@
   .modal::-webkit-scrollbar-track {
     background: #374151;
   }
-  
+
   .modal::-webkit-scrollbar-thumb {
     background: #6b7280;
   }
-  
+
   .modal::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
   }
@@ -792,8 +701,6 @@
 .input,
 .select,
 .textarea,
-.fileButton,
-.removeFile,
 .btnPrimary,
 .btnSecondary {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -803,8 +710,6 @@
 .input:focus-visible,
 .select:focus-visible,
 .textarea:focus-visible,
-.fileButton:focus-visible,
-.removeFile:focus-visible,
 .btnPrimary:focus-visible,
 .btnSecondary:focus-visible,
 .tab:focus-visible,
@@ -817,18 +722,14 @@
 @media (hover: none) and (pointer: coarse) {
   .btnPrimary:hover,
   .btnSecondary:hover,
-  .fileButton:hover,
-  .removeFile:hover,
   .tab:hover,
   .closeButton:hover {
     transform: none;
     box-shadow: none;
   }
-  
+
   .btnPrimary:active,
   .btnSecondary:active,
-  .fileButton:active,
-  .removeFile:active,
   .tab:active,
   .closeButton:active {
     transform: scale(0.98);
@@ -841,14 +742,43 @@
   .modal,
   .btnPrimary,
   .btnSecondary,
-  .fileButton,
-  .removeFile,
   .closeButton {
     animation: none;
     transition: none;
   }
-  
+
   .errorMessage {
     animation: none;
+  }
+}
+
+/* Agregar al final del archivo AddInventoryModal.module.css */
+
+.autocompleteInput {
+  margin-bottom: 1.25rem;
+}
+
+.autocompleteInput .input {
+  background-color: white;
+}
+
+.autocompleteInput .suggestionsDropdown {
+  z-index: 1001; /* Asegurar que se vea sobre el modal */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Ajustes específicos para el autocomplete en modal */
+.modal .autocompleteInput {
+  position: relative;
+}
+
+.modal .autocompleteInput .suggestionsDropdown {
+  max-height: 200px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .modal .autocompleteInput .input {
+    background-color: #374151;
+    color: #f9fafb;
   }
 }

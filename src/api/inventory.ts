@@ -31,10 +31,8 @@ export const inventory = {
         } else if (hasTool && !hasSupply) {
           tipo = "herramienta";
         } else if (hasSupply) {
-          // Si por alguna razón vienen ambos, priorizar insumo
           tipo = "insumo";
         } else {
-          // Fallback
           tipo = item.insumoId ? "insumo" : "herramienta";
         }
 
@@ -48,10 +46,10 @@ export const inventory = {
           nombreItem = item.nombreItem || "Sin nombre";
         }
 
-        // IDs coherentes (usar raíz o relations)
+        // IDs coherentes
         const insumoId = item.insumoId ?? item.supply?.insumoId ?? undefined;
-        const herramientaId =
-          item.herramientaId ?? item.tool?.herramientaId ?? undefined;
+        const herramientaId = item.herramientaId ?? item.tool?.herramientaId ?? undefined;
+        const bodegaId = item.bodegaId ?? item.bodega?.bodegaId ?? undefined;
 
         const cantidadActual = item.cantidadActual
           ? parseFloat(item.cantidadActual)
@@ -61,11 +59,13 @@ export const inventory = {
           inventarioId: item.inventarioId,
           insumoId,
           herramientaId,
+          bodegaId, // NUEVO
           cantidadActual,
           ubicacion: item.ubicacion || "",
           fechaUltimaActualizacion: item.fechaUltimaActualizacion,
           tipo,
           nombreItem,
+          bodega: item.bodega || null, // NUEVO: Información completa de la bodega y cliente
         };
 
         if (item.tool) {
@@ -91,6 +91,7 @@ export const inventory = {
               (item.supply.categoria as SupplyCategory) ||
               SupplyCategory.GENERAL,
             unidadMedida:
+              (item.supply.unidadMedida?.nombre as UnitOfMeasure) || // Editado para manejar objeto unidadMedida
               (item.supply.unidadMedida as UnitOfMeasure) ||
               UnitOfMeasure.UNIDAD,
             estado:
@@ -111,30 +112,24 @@ export const inventory = {
       return transformedData;
     } catch (error: any) {
       console.error("❌ Error obteniendo inventario:", error);
-      console.error("🔍 Detalles del error:", error.response?.data);
       throw new Error(
         error.response?.data?.message || "Error al obtener inventario"
       );
     }
   },
 
-  // ✅ Crear registro de inventario (manual, casi no lo usas)
+  // ✅ Crear registro de inventario
   createInventory: async (data: {
     insumoId?: number;
     herramientaId?: number;
+    bodegaId?: number;
     cantidadActual?: number;
     ubicacion?: string;
   }) => {
     try {
-      if (data.herramientaId) {
-        console.warn("⚠️ Las herramientas ya tienen inventario automático");
-      }
-
       const response = await api.post("/inventory", data);
       return response.data;
     } catch (error: any) {
-      console.error("❌ Error creando inventario:", error);
-      console.error("🔍 Detalles del error:", error.response?.data);
       throw new Error(
         error.response?.data?.message || "Error al crear registro de inventario"
       );
@@ -147,7 +142,6 @@ export const inventory = {
       const response = await api.patch(`/inventory/${id}`, data);
       return response.data;
     } catch (error: any) {
-      console.error("Error actualizando inventario:", error);
       throw new Error(
         error.response?.data?.message || "Error al actualizar inventario"
       );
@@ -160,35 +154,21 @@ export const inventory = {
       const response = await api.delete(`/inventory/${id}`);
       return response.data;
     } catch (error: any) {
-      console.error("Error eliminando inventario:", error);
       throw new Error(
         error.response?.data?.message || "Error al eliminar inventario"
       );
     }
   },
 
-  // ✅ Eliminar inventario + item asociado (ya lo tienes en backend)
+  // ✅ Eliminar inventario + item asociado
   deleteInventoryAndItem: async (inventarioId: number): Promise<any> => {
     try {
       const response = await api.delete(`/inventory/complete/${inventarioId}`);
       return response.data;
     } catch (error: any) {
-      console.error("❌ Error en eliminación completa:", error);
-
-      if (error.response) {
-        console.error("🔍 Detalles del error:", error.response.data);
-        throw new Error(
-          `Error del servidor (${error.response.status}): ${
-            error.response.data.message || "Error al eliminar"
-          }`
-        );
-      } else if (error.request) {
-        throw new Error(
-          "No se pudo conectar con el servidor. Verifica tu conexión."
-        );
-      } else {
-        throw new Error("Error al procesar la solicitud de eliminación.");
-      }
+      throw new Error(
+        error.response?.data?.message || "Error al eliminar completamente"
+      );
     }
   },
 
@@ -199,7 +179,6 @@ export const inventory = {
       });
       return response.data.data;
     } catch (error: any) {
-      console.error("Error buscando inventario:", error);
       throw new Error(
         error.response?.data?.message || "Error al buscar inventario"
       );
@@ -213,7 +192,6 @@ export const inventory = {
       });
       return response.data.data;
     } catch (error: any) {
-      console.error("Error obteniendo stock bajo:", error);
       throw new Error(
         error.response?.data?.message || "Error al obtener stock bajo"
       );
@@ -225,7 +203,6 @@ export const inventory = {
       const response = await api.patch(`/inventory/${id}/stock`, { cantidad });
       return response.data;
     } catch (error: any) {
-      console.error("Error actualizando stock:", error);
       throw new Error(
         error.response?.data?.message || "Error al actualizar stock"
       );

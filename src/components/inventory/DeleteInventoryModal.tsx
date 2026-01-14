@@ -1,6 +1,8 @@
+// src/components/inventory/DeleteInventoryModal.tsx
 import { useState } from "react";
 import { inventory } from "../../api/inventory";
-import { catalog } from "../../api/catalog";
+import { toolsApi } from "../../api/tools";
+import { suppliesApi } from "../../api/supplies";
 import type { Inventory } from "../../interfaces/InventoryInterfaces";
 import styles from "../../styles/components/inventory/DeleteInventoryModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
@@ -34,7 +36,7 @@ export default function DeleteConfirmationModal({
 
       if (item.herramientaId && item.tool) {
         try {
-          await catalog.deleteHerramienta(item.herramientaId);
+          await toolsApi.deleteHerramienta(item.herramientaId);
         } catch (toolError: any) {
           console.warn(
             "⚠️ Error al eliminar herramienta, continuando con eliminación de inventario:",
@@ -45,7 +47,7 @@ export default function DeleteConfirmationModal({
 
       if (item.insumoId && item.supply) {
         try {
-          await catalog.deleteInsumo(item.insumoId);
+          await suppliesApi.deleteInsumo(item.insumoId);
         } catch (supplyError: any) {
           console.warn(
             "⚠️ Error al eliminar insumo, continuando con eliminación de inventario:",

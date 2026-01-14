@@ -1,12 +1,16 @@
-import { useRef, useState } from "react";
+// src/components/inventory/AddInventoryModal.tsx
+import { useState, useEffect } from "react";
 import { useCatalogActions } from "../../hooks/useInventory";
+import { imagesApi } from "../../api/images";
+import { warehouses, type Warehouse } from "../../api/warehouses";
+import UnitMeasureAutocomplete from "../common/UnitMeasureAutocomplete";
+import MultiImageUpload from "../common/MultiImageUpload";
 import styles from "../../styles/components/inventory/AddInventoryModal.module.css";
 import {
   ToolStatus,
   ToolType,
   SupplyCategory,
   SupplyStatus,
-  UnitOfMeasure,
 } from "../../shared/enums";
 
 interface AddInventoryModalProps {
@@ -30,47 +34,15 @@ export default function AddInventoryModal({
     error: createError,
   } = useCatalogActions();
 
-  const [herramientaFile, setHerramientaFile] = useState<File | null>(null);
-  const [herramientaPreview, setHerramientaPreview] = useState<string>("");
-  const [insumoFile, setInsumoFile] = useState<File | null>(null);
-  const [insumoPreview, setInsumoPreview] = useState<string>("");
+  // Estados para imágenes
+  const [toolImages, setToolImages] = useState<File[]>([]);
+  const [supplyImages, setSupplyImages] = useState<File[]>([]);
 
-  const herramientaFileRef = useRef<HTMLInputElement>(null);
-  const insumoFileRef = useRef<HTMLInputElement>(null);
+  // Estados para bodegas
+  const [warehousesList, setWarehousesList] = useState<Warehouse[]>([]);
+  const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
-  const loading = createLoading;
-  const error = createError;
-
-  const handleFileSelect = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "herramienta" | "insumo"
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.match("image.*")) {
-      alert("Por favor selecciona una imagen (JPG, PNG, GIF, WebP)");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("La imagen no debe superar los 5MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (type === "herramienta") {
-        setHerramientaFile(file);
-        setHerramientaPreview(reader.result as string);
-      } else {
-        setInsumoFile(file);
-        setInsumoPreview(reader.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
+  // Estados para herramienta
   const [nuevaHerramienta, setNuevaHerramienta] = useState({
     nombre: "",
     marca: "",
@@ -81,19 +53,42 @@ export default function AddInventoryModal({
     tipo: "Herramienta" as ToolType,
     estado: "Disponible" as ToolStatus,
     valorUnitario: 0,
-    ubicacion: "",
+    bodegaId: undefined as number | undefined,
   });
 
+  // Estados para insumo
   const [nuevoInsumo, setNuevoInsumo] = useState({
     nombre: "",
     categoria: "General" as SupplyCategory,
-    unidadMedida: "Unidad" as UnitOfMeasure,
+    unidadMedida: "",
     stockMin: 0,
     valorUnitario: 0,
     estado: "Disponible" as SupplyStatus,
     cantidadInicial: 0,
-    ubicacion: "",
+    bodegaId: undefined as number | undefined,
   });
+
+  const loading = createLoading;
+  const error = createError;
+
+  // Cargar bodegas al abrir el modal
+  useEffect(() => {
+    if (isOpen) {
+      loadWarehouses();
+    }
+  }, [isOpen]);
+
+  const loadWarehouses = async () => {
+    try {
+      setLoadingWarehouses(true);
+      const data = await warehouses.getAll();
+      setWarehousesList(data);
+    } catch (err) {
+      console.error("Error cargando bodegas:", err);
+    } finally {
+      setLoadingWarehouses(false);
+    }
+  };
 
   const handleSubmitHerramienta = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,14 +105,29 @@ export default function AddInventoryModal({
     }
 
     try {
-      const herramientaCreada = await createHerramienta(
-        nuevaHerramienta,
-        herramientaFile || undefined
-      );
+      // 1. Crear la herramienta
+      const herramientaCreada = await createHerramienta(nuevaHerramienta);
 
       if (!herramientaCreada) {
         throw new Error("No se pudo crear la herramienta");
       }
+
+      // 2. Subir imágenes si hay
+      if (toolImages.length > 0 && herramientaCreada.herramientaId) {
+        try {
+          await imagesApi.uploadToolImages(
+            herramientaCreada.herramientaId,
+            toolImages
+          );
+        } catch (imgError: any) {
+          console.warn(
+            "⚠️ No se pudieron subir todas las imágenes:",
+            imgError?.message
+          );
+          // Continuar aunque falle la subida de imágenes
+        }
+      }
+
       onSuccess();
       handleClose();
     } catch (err: any) {
@@ -134,10 +144,12 @@ export default function AddInventoryModal({
       !nuevoInsumo.unidadMedida ||
       nuevoInsumo.cantidadInicial === undefined
     ) {
+      alert("Por favor complete los campos obligatorios");
       return;
     }
 
     try {
+      // 1. Crear el insumo
       const insumoData = {
         nombre: nuevoInsumo.nombre,
         categoria: nuevoInsumo.categoria,
@@ -145,25 +157,33 @@ export default function AddInventoryModal({
         stockMin: nuevoInsumo.stockMin,
         valorUnitario: nuevoInsumo.valorUnitario,
         estado: nuevoInsumo.estado,
-        ubicacion: nuevoInsumo.ubicacion,
+        bodegaId: nuevoInsumo.bodegaId,
         cantidadInicial: nuevoInsumo.cantidadInicial,
       };
 
       const cleanData: any = { ...insumoData };
-      if ("inventarioId" in cleanData) {
-        delete cleanData.inventarioId;
-      }
-      if ("stock" in cleanData) {
-        delete cleanData.stock;
-      }
-      const insumoCreado = await createInsumo(
-        cleanData,
-        insumoFile || undefined
-      );
+      const insumoCreado = await createInsumo(cleanData);
 
       if (!insumoCreado) {
         throw new Error("No se pudo crear el insumo");
       }
+
+      // 2. Subir imágenes si hay
+      if (supplyImages.length > 0 && insumoCreado.insumoId) {
+        try {
+          await imagesApi.uploadSupplyImages(
+            insumoCreado.insumoId,
+            supplyImages
+          );
+        } catch (imgError: any) {
+          console.warn(
+            "⚠️ No se pudieron subir todas las imágenes:",
+            imgError?.message
+          );
+          // Continuar aunque falle la subida de imágenes
+        }
+      }
+
       onSuccess();
       handleClose();
     } catch (err: any) {
@@ -171,11 +191,7 @@ export default function AddInventoryModal({
 
       const errorMessage = err.message || "No se pudo crear el insumo";
 
-      if (errorMessage.includes("inventarioId")) {
-        alert(
-          `⚠️ Error: El backend está recibiendo un campo 'inventarioId'.\n\nEsto es un problema en el servicio. Revisa catalog.ts y useInventory.ts.`
-        );
-      } else if (
+      if (
         errorMessage.includes("valor unitario") ||
         errorMessage.includes("stock") ||
         errorMessage.includes("número")
@@ -200,22 +216,20 @@ export default function AddInventoryModal({
       tipo: "Herramienta",
       estado: "Disponible",
       valorUnitario: 0,
-      ubicacion: "",
+      bodegaId: undefined,
     });
     setNuevoInsumo({
       nombre: "",
       categoria: "General",
-      unidadMedida: "Unidad",
+      unidadMedida: "",
       stockMin: 0,
       valorUnitario: 0,
       estado: "Disponible",
       cantidadInicial: 0,
-      ubicacion: "",
+      bodegaId: undefined,
     });
-    setHerramientaFile(null);
-    setHerramientaPreview("");
-    setInsumoFile(null);
-    setInsumoPreview("");
+    setToolImages([]);
+    setSupplyImages([]);
   };
 
   const handleClose = () => {
@@ -411,73 +425,51 @@ export default function AddInventoryModal({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="ubicacionHerramienta">
-                    Ubicación en Inventario
+                  <label htmlFor="bodegaHerramienta">
+                    Bodega de Almacenamiento
                   </label>
-                  <input
-                    type="text"
-                    id="ubicacionHerramienta"
-                    value={nuevaHerramienta.ubicacion}
-                    onChange={(e) =>
-                      setNuevaHerramienta({
-                        ...nuevaHerramienta,
-                        ubicacion: e.target.value,
-                      })
-                    }
-                    placeholder="Ej: Taller principal - Estante A..."
-                    className={styles.input}
-                  />
+                  {loadingWarehouses ? (
+                    <div className={styles.loadingSmall}>
+                      Cargando bodegas...
+                    </div>
+                  ) : (
+                    <select
+                      id="bodegaHerramienta"
+                      value={nuevaHerramienta.bodegaId || ""}
+                      onChange={(e) =>
+                        setNuevaHerramienta({
+                          ...nuevaHerramienta,
+                          bodegaId: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        })
+                      }
+                      className={styles.select}
+                    >
+                      <option value="">Seleccionar bodega...</option>
+                      {warehousesList.map((warehouse) => (
+                        <option
+                          key={warehouse.bodegaId}
+                          value={warehouse.bodegaId}
+                        >
+                          {warehouse.nombre}
+                          {!warehouse.activa && " (Inactiva)"}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   <small className={styles.helpText}>
-                    Opcional. Define dónde se almacenará la herramienta
+                    Opcional. Selecciona dónde se almacenará la herramienta
                   </small>
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="fotoHerramienta">
-                    Foto de la Herramienta (Opcional)
-                  </label>
-                  <div className={styles.fileUpload}>
-                    <input
-                      type="file"
-                      id="fotoHerramienta"
-                      ref={herramientaFileRef}
-                      onChange={(e) => handleFileSelect(e, "herramienta")}
-                      accept="image/*"
-                      className={styles.fileInput}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => herramientaFileRef.current?.click()}
-                      className={styles.fileButton}
-                    >
-                      📷 Seleccionar Foto
-                    </button>
-                    {herramientaFile && (
-                      <div className={styles.fileInfo}>
-                        <span>{herramientaFile.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHerramientaFile(null);
-                            setHerramientaPreview("");
-                            if (herramientaFileRef.current)
-                              herramientaFileRef.current.value = "";
-                          }}
-                          className={styles.removeFile}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-                    {herramientaPreview && (
-                      <div className={styles.preview}>
-                        <img src={herramientaPreview} alt="Preview" />
-                      </div>
-                    )}
-                    <small className={styles.helpText}>
-                      Máximo 5MB. Formatos: JPG, PNG, GIF, WebP
-                    </small>
-                  </div>
+                  <label>Imágenes de la Herramienta (Múltiples)</label>
+                  <MultiImageUpload
+                    onImagesChange={setToolImages}
+                    maxFiles={10}
+                    maxSizeMB={5}
+                  />
                 </div>
 
                 <div className={styles.formActions}>
@@ -542,25 +534,18 @@ export default function AddInventoryModal({
                     </select>
                   </div>
                   <div className={styles.formGroup}>
-                    <label htmlFor="unidadMedida">Unidad de Medida *</label>
-                    <select
-                      id="unidadMedida"
+                    <UnitMeasureAutocomplete
                       value={nuevoInsumo.unidadMedida}
-                      onChange={(e) =>
+                      onChange={(unitName) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          unidadMedida: e.target.value as UnitOfMeasure,
+                          unidadMedida: unitName,
                         })
                       }
-                      className={styles.select}
                       required
-                    >
-                      {Object.values(UnitOfMeasure).map((unidad) => (
-                        <option key={unidad} value={unidad}>
-                          {unidad}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Ej: Unidad, Kilo, Metro..."
+                      className={styles.autocompleteInput}
+                    />
                   </div>
                 </div>
 
@@ -578,8 +563,8 @@ export default function AddInventoryModal({
                         })
                       }
                       placeholder="Ej: 10, 5.5..."
-                      min="0"
-                      step="0.1"
+                      min=""
+                      step=""
                       className={styles.input}
                       required
                     />
@@ -600,7 +585,7 @@ export default function AddInventoryModal({
                         })
                       }
                       placeholder="0"
-                      min="0"
+                      min=""
                       className={styles.input}
                     />
                     <small className={styles.helpText}>
@@ -636,68 +621,49 @@ export default function AddInventoryModal({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="ubicacionInsumo">
-                    Ubicación en Inventario
-                  </label>
-                  <input
-                    type="text"
-                    id="ubicacionInsumo"
-                    value={nuevoInsumo.ubicacion}
-                    onChange={(e) =>
-                      setNuevoInsumo({
-                        ...nuevoInsumo,
-                        ubicacion: e.target.value,
-                      })
-                    }
-                    placeholder="Ej: Almacén principal - Estante B..."
-                    className={styles.input}
-                  />
+                  <label htmlFor="bodegaInsumo">Bodega de Almacenamiento</label>
+                  {loadingWarehouses ? (
+                    <div className={styles.loadingSmall}>
+                      Cargando bodegas...
+                    </div>
+                  ) : (
+                    <select
+                      id="bodegaInsumo"
+                      value={nuevoInsumo.bodegaId || ""}
+                      onChange={(e) =>
+                        setNuevoInsumo({
+                          ...nuevoInsumo,
+                          bodegaId: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        })
+                      }
+                      className={styles.select}
+                    >
+                      <option value="">Seleccionar bodega...</option>
+                      {warehousesList.map((warehouse) => (
+                        <option
+                          key={warehouse.bodegaId}
+                          value={warehouse.bodegaId}
+                        >
+                          {warehouse.nombre}
+                          {!warehouse.activa && " (Inactiva)"}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <small className={styles.helpText}>
+                    Opcional. Selecciona dónde se almacenará el insumo
+                  </small>
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label htmlFor="fotoInsumo">Foto del Insumo (Opcional)</label>
-                  <div className={styles.fileUpload}>
-                    <input
-                      type="file"
-                      id="fotoInsumo"
-                      ref={insumoFileRef}
-                      onChange={(e) => handleFileSelect(e, "insumo")}
-                      accept="image/*"
-                      className={styles.fileInput}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => insumoFileRef.current?.click()}
-                      className={styles.fileButton}
-                    >
-                      📷 Seleccionar Foto
-                    </button>
-                    {insumoFile && (
-                      <div className={styles.fileInfo}>
-                        <span>{insumoFile.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setInsumoFile(null);
-                            setInsumoPreview("");
-                            if (insumoFileRef.current)
-                              insumoFileRef.current.value = "";
-                          }}
-                          className={styles.removeFile}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    )}
-                    {insumoPreview && (
-                      <div className={styles.preview}>
-                        <img src={insumoPreview} alt="Preview" />
-                      </div>
-                    )}
-                    <small className={styles.helpText}>
-                      Máximo 5MB. Formatos: JPG, PNG, GIF, WebP
-                    </small>
-                  </div>
+                  <label>Imágenes del Insumo (Múltiples)</label>
+                  <MultiImageUpload
+                    onImagesChange={setSupplyImages}
+                    maxFiles={10}
+                    maxSizeMB={5}
+                  />
                 </div>
 
                 <div className={styles.formActions}>

@@ -8,7 +8,7 @@ import type {
 } from "../../interfaces/SgSstInterface";
 import type { Order } from "../../interfaces/OrderInterfaces";
 import type { Client } from "../../interfaces/ClientInterfaces";
-import { catalog } from "../../api/catalog";
+import { toolsApi } from "../../api/tools";
 import { sgSstService } from "../../api/sg-sst";
 import { getMyAssignedOrdersRequest } from "../../api/orders";
 import SignaturePad from "./SignaturePad";
@@ -170,7 +170,7 @@ export default function PreoperationalForm({
     try {
       setLoadingTools(true);
       setError("");
-      const toolList = await catalog.getAvailableHerramientas();
+      const toolList = await toolsApi.getAvailableHerramientas();
       setTools(toolList || []);
     } catch (error: any) {
       console.error("Error cargando herramientas:", error);

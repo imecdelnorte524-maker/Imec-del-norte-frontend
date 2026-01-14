@@ -1,11 +1,16 @@
 // src/hooks/useInventory.ts
 import { useState, useEffect } from "react";
 import { inventory as inventoryAPI } from "../api/inventory";
-import { catalog } from "../api/catalog";
+import { toolsApi } from "../api/tools";
+import { suppliesApi } from "../api/supplies";
+import { warehouses as warehousesApi } from "../api/warehouses";
+import { unitMeasureApi } from "../api/unit-measure";
 import type {
   Inventory,
   Herramienta,
   Insumo,
+  Warehouse,
+  UnitMeasure,
 } from "../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../utils/sounds";
 
@@ -34,23 +39,18 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
     loadInventory();
   }, []);
 
-  // Aplicar filtro
   useEffect(() => {
-    if (!inventory.length) return;
-
-    let filtered = inventory;
-
-    if (filter === "herramientas") {
-      filtered = inventory.filter(
-        (item) =>
-          item.herramientaId !== null && item.herramientaId !== undefined
-      );
-    } else if (filter === "insumos") {
-      filtered = inventory.filter(
-        (item) => item.insumoId !== null && item.insumoId !== undefined
-      );
+    if (!inventory.length) {
+      setFilteredInventory([]);
+      return;
     }
 
+    let filtered = inventory;
+    if (filter === "herramientas") {
+      filtered = inventory.filter((item) => !!item.herramientaId);
+    } else if (filter === "insumos") {
+      filtered = inventory.filter((item) => !!item.insumoId);
+    }
     setFilteredInventory(filtered);
   }, [inventory, filter]);
 
@@ -72,16 +72,15 @@ export const useAvailableHerramientas = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await catalog.getAvailableHerramientas();
+        const data = await toolsApi.getAvailableHerramientas();
         setHerramientas(data);
       } catch (err: any) {
-        setError(err.message || "Error al cargar las herramientas disponibles");
+        setError(err.message || "Error al cargar las herramientas");
         playErrorSound();
       } finally {
         setLoading(false);
       }
     };
-
     loadHerramientas();
   }, []);
 
@@ -99,56 +98,33 @@ export const useAvailableInsumos = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await catalog.getAvailableInsumos();
+        const data = await suppliesApi.getAvailableInsumos();
         setInsumos(data);
       } catch (err: any) {
-        setError(err.message || "Error al cargar los insumos disponibles");
+        setError(err.message || "Error al cargar los insumos");
         playErrorSound();
       } finally {
         setLoading(false);
       }
     };
-
     loadInsumos();
   }, []);
 
   return { insumos, loading, error };
 };
 
-// Hook para acciones de inventario - VERSIÓN SIMPLIFICADA
+// Hook para acciones de inventario
 export const useInventoryActions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ❌ FUNCIONES OBSOLETAS - Mantener para compatibilidad pero con advertencia
-  const addHerramienta = async () => {
-    console.warn(
-      "⚠️ addHerramienta es obsoleto: Las herramientas ya crean inventario automáticamente"
-    );
-    throw new Error(
-      "Esta función está obsoleta. Use createHerramienta en su lugar."
-    );
-  };
-
-  const addInsumo = async () => {
-    console.warn(
-      "⚠️ addInsumo es obsoleto: Los insumos ya crean inventario automáticamente"
-    );
-    throw new Error(
-      "Esta función está obsoleta. Use createInsumo en su lugar."
-    );
-  };
-
-  // ✅ FUNCIONES ACTIVAS
   const updateInsumoQuantity = async (id: number, cantidadActual: number) => {
     setLoading(true);
-    setError(null);
-
     try {
       await inventoryAPI.updateStock(id, cantidadActual);
       return true;
     } catch (err: any) {
-      setError(err.message || "Error al actualizar cantidad");
+      setError(err.message);
       playErrorSound();
       return false;
     } finally {
@@ -156,18 +132,13 @@ export const useInventoryActions = () => {
     }
   };
 
-  const updateHerramientaLocation = async (
-    id: number,
-    data: { ubicacion?: string; estado?: string }
-  ) => {
+  const updateHerramientaLocation = async (id: number, data: any) => {
     setLoading(true);
-    setError(null);
-
     try {
       await inventoryAPI.updateInventory(id, data);
       return true;
     } catch (err: any) {
-      setError(err.message || "Error al actualizar herramienta");
+      setError(err.message);
       playErrorSound();
       return false;
     } finally {
@@ -177,13 +148,11 @@ export const useInventoryActions = () => {
 
   const deleteInventoryItem = async (id: number) => {
     setLoading(true);
-    setError(null);
-
     try {
       await inventoryAPI.deleteInventory(id);
       return true;
     } catch (err: any) {
-      setError(err.message || "Error al eliminar item");
+      setError(err.message);
       playErrorSound();
       return false;
     } finally {
@@ -192,10 +161,6 @@ export const useInventoryActions = () => {
   };
 
   return {
-    // ❌ OBSOLETOS (solo para compatibilidad)
-    addHerramienta,
-    addInsumo,
-    // ✅ ACTIVOS
     updateInsumoQuantity,
     updateHerramientaLocation,
     deleteInventoryItem,
@@ -209,19 +174,12 @@ export const useCatalogActions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createHerramienta = async (
-    data: Omit<Herramienta, "herramientaId" | "fechaRegistro">,
-    file?: File
-  ) => {
+  const createHerramienta = async (data: any, file?: File) => {
     setLoading(true);
-    setError(null);
-
     try {
-      const nuevaHerramienta = await catalog.createHerramienta(data, file);
-      return nuevaHerramienta;
+      return await toolsApi.createHerramienta(data, file);
     } catch (err: any) {
-      console.error("❌ Error en createHerramienta (hook):", err);
-      setError(err.message || "Error al crear herramienta");
+      setError(err.message);
       playErrorSound();
       throw err;
     } finally {
@@ -229,19 +187,12 @@ export const useCatalogActions = () => {
     }
   };
 
-  const createInsumo = async (
-    data: Omit<Insumo, "insumoId" | "fechaRegistro">,
-    file?: File
-  ) => {
+  const createInsumo = async (data: any, file?: File) => {
     setLoading(true);
-    setError(null);
-
     try {
-      const nuevoInsumo = await catalog.createInsumo(data, file);
-      return nuevoInsumo;
+      return await suppliesApi.createInsumo(data, file);
     } catch (err: any) {
-      console.error("❌ Error en createInsumo (hook):", err);
-      setError(err.message || "Error al crear insumo");
+      setError(err.message);
       playErrorSound();
       throw err;
     } finally {
@@ -249,10 +200,45 @@ export const useCatalogActions = () => {
     }
   };
 
-  return {
-    createHerramienta,
-    createInsumo,
-    loading,
-    error,
+  return { createHerramienta, createInsumo, loading, error };
+};
+
+// Hook para obtener bodegas
+export const useWarehouses = (includeInactive = false) => {
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadWarehouses = async () => {
+    try {
+      setLoading(true);
+      const data = await warehousesApi.getAll(includeInactive);
+      setWarehouses(data);
+    } catch (err) {
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadWarehouses();
+  }, []);
+
+  return { warehouses, loading, refetch: loadWarehouses };
+};
+
+// Hook para obtener unidades de medida
+export const useUnitMeasures = () => {
+  const [units, setUnits] = useState<UnitMeasure[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    unitMeasureApi
+      .getAll()
+      .then(setUnits)
+      .catch(() => playErrorSound())
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { units, loading };
 };

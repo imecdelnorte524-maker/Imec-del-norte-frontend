@@ -25,6 +25,7 @@ export default function ClientDetailsPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [clientImages, setClientImages] = useState<ClientImage[]>([]);
+  const [clientLogo, setClientLogo] = useState<ClientImage | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("info");
   const [loading, setLoading] = useState(true);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
@@ -37,6 +38,7 @@ export default function ClientDetailsPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
 
+  // Cargar datos del cliente
   useEffect(() => {
     const loadClientData = async () => {
       if (!id) {
@@ -56,11 +58,32 @@ export default function ClientDetailsPage() {
         setLoading(true);
         setError(null);
 
-        // Cargar datos del cliente
+        // 1. Cargar datos del cliente
         const clientData = await clientsAPI.getClientById(clientId);
         setClient(clientData);
 
-        // Cargar equipos
+        // 2. Cargar logo del cliente (separado)
+        try {
+          const logo = await imagesApi.getClientLogo(clientId);
+          setClientLogo(logo);
+        } catch (err) {
+          console.error("Error cargando logo del cliente:", err);
+          setClientLogo(null);
+        }
+
+        // 3. Cargar imágenes de galería del cliente
+        try {
+          setImagesLoading(true);
+          const images = await imagesApi.getClientImages(clientId);
+          setClientImages(images);
+        } catch (err: any) {
+          console.error("Error cargando imágenes del cliente:", err);
+          setClientImages([]);
+        } finally {
+          setImagesLoading(false);
+        }
+
+        // 4. Cargar equipos
         try {
           setEquipmentLoading(true);
           setEquipmentError(null);
@@ -73,19 +96,9 @@ export default function ClientDetailsPage() {
               err.message ||
               "Error al cargar los equipos del cliente."
           );
+          setEquipmentList([]);
         } finally {
           setEquipmentLoading(false);
-        }
-
-        // Cargar imágenes del cliente
-        try {
-          setImagesLoading(true);
-          const images = await imagesApi.getClientImages(clientId);
-          setClientImages(images);
-        } catch (err: any) {
-          console.error("Error cargando imágenes del cliente:", err);
-        } finally {
-          setImagesLoading(false);
         }
       } catch (err: any) {
         console.error("Error cargando cliente:", err);
@@ -167,22 +180,23 @@ export default function ClientDetailsPage() {
       setUploadingLogo(true);
       const clientId = parseInt(id, 10);
 
-      const uploadedImage = await imagesApi.uploadClientLogo(clientId, file);
+      // Validar archivo
+      const validationError = imagesApi.validateFile(file, 5, [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ]);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
 
-      // Actualizar el cliente con la nueva imagen
-      setClient((prev) => {
-        if (!prev) return null;
-
-        const existingImages = prev.images || [];
-        const filteredImages = existingImages.filter((img) => !img.isLogo);
-
-        return {
-          ...prev,
-          images: [...filteredImages, uploadedImage],
-        };
-      });
+      const uploadedLogo = await imagesApi.uploadClientLogo(clientId, file);
+      setClientLogo(uploadedLogo);
+      setError(null);
 
     } catch (err: any) {
+      console.error("Error subiendo logo:", err);
       setError(err.message || "Error al subir el logo");
     } finally {
       setUploadingLogo(false);
@@ -197,15 +211,31 @@ export default function ClientDetailsPage() {
       setUploadingGallery(true);
       const clientId = parseInt(id, 10);
 
-      const uploadPromises = Array.from(files).map((file) =>
-        imagesApi.uploadClientImage(clientId, file)
-      );
+      // Convertir FileList a array
+      const filesArray = Array.from(files);
 
-      const uploadedImages = await Promise.all(uploadPromises);
+      // Validar archivos
+      for (const file of filesArray) {
+        const validationError = imagesApi.validateFile(file, 5, [
+          "image/jpeg",
+          "image/png",
+          "image/webp",
+        ]);
+        if (validationError) {
+          setError(validationError);
+          return;
+        }
+      }
 
-      // Actualizar las imágenes del cliente
-      setClientImages((prev) => [...prev, ...uploadedImages]);
+      // Subir imágenes
+      const uploadedImages = await imagesApi.uploadClientImages(clientId, filesArray);
+      
+      // Actualizar galería
+      setClientImages(prev => [...prev, ...uploadedImages]);
+      setError(null);
+
     } catch (err: any) {
+      console.error("Error subiendo imágenes:", err);
       setError(err.message || "Error al subir las imágenes");
     } finally {
       setUploadingGallery(false);
@@ -215,8 +245,6 @@ export default function ClientDetailsPage() {
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!validateImageFile(file)) return;
 
     handleLogoUpload(file);
 
@@ -230,13 +258,6 @@ export default function ClientDetailsPage() {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Validar cada archivo
-    for (let i = 0; i < files.length; i++) {
-      if (!validateImageFile(files[i])) {
-        return;
-      }
-    }
-
     handleGalleryUpload(files);
 
     // Resetear el input
@@ -245,50 +266,21 @@ export default function ClientDetailsPage() {
     }
   };
 
-  const validateImageFile = (file: File): boolean => {
-    // Validar tipo de archivo
-    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      setError("Por favor, sube imágenes válidas (JPEG, PNG, GIF, WebP)");
-      return false;
-    }
-
-    // Validar tamaño (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError(
-        "Una o más imágenes son demasiado grandes. Máximo 5MB por imagen"
-      );
-      return false;
-    }
-
-    return true;
-  };
-
   // Función para eliminar logo
   const handleDeleteLogo = async () => {
-    if (!client || !id) return;
+    if (!client || !id || !clientLogo) return;
 
     if (!window.confirm("¿Estás seguro de que quieres eliminar el logo?")) {
       return;
     }
 
     try {
-      const logo = client.images?.find((img) => img.isLogo);
-
-      if (logo) {
-        await imagesApi.deleteClientImage(logo.id);
-
-        // Actualizar el cliente
-        setClient((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            images: prev.images?.filter((img) => img.id !== logo.id) || [],
-          };
-        });
-      }
+      await imagesApi.deleteImage(clientLogo.id);
+      setClientLogo(null);
       setLogoHover(false);
+      setError(null);
     } catch (err: any) {
+      console.error("Error eliminando logo:", err);
       setError(err.message || "Error al eliminar el logo");
     }
   };
@@ -300,16 +292,19 @@ export default function ClientDetailsPage() {
     }
 
     try {
-      await imagesApi.deleteClientImage(imageId);
+      await imagesApi.deleteImage(imageId);
 
       // Actualizar las imágenes
-      setClientImages((prev) => prev.filter((img) => img.id !== imageId));
+      setClientImages(prev => prev.filter((img) => img.id !== imageId));
 
       // Ajustar el índice si es necesario
       if (currentImageIndex >= clientImages.length - 1) {
         setCurrentImageIndex(Math.max(0, clientImages.length - 2));
       }
+
+      setError(null);
     } catch (err: any) {
+      console.error("Error eliminando imagen:", err);
       setError(err.message || "Error al eliminar la imagen");
     }
   };
@@ -469,7 +464,6 @@ export default function ClientDetailsPage() {
 
   const areas = client.areas || [];
   const totalEquipments = equipmentList.length;
-  const clientLogo = client.images?.find((img) => img.isLogo);
 
   return (
     <DashboardLayout>
@@ -482,7 +476,7 @@ export default function ClientDetailsPage() {
             </button>
 
             <div className={styles.clientIdentity}>
-              {/* LOGO CONTAINER - SIMPLIFICADO */}
+              {/* LOGO CONTAINER */}
               <div
                 ref={logoMenuRef}
                 className={styles.logoContainer}
@@ -492,7 +486,7 @@ export default function ClientDetailsPage() {
                 <div className={styles.logoImageWrapper}>
                   {clientLogo ? (
                     <img
-                      src={clientLogo.url}
+                      src={imagesApi.getOptimizedImageUrl(clientLogo.url, 200, 200)}
                       alt={`Logo de ${client.nombre}`}
                       className={styles.clientLogo}
                       onError={(e) => {
@@ -513,14 +507,14 @@ export default function ClientDetailsPage() {
                       }}
                     />
                   ) : null}
-                  {(!clientLogo || !clientLogo.url) && (
+                  {!clientLogo && (
                     <div className={styles.clientLogoPlaceholder}>
                       {client.nombre.charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
 
-                {/* Overlay para hover - ACCIONES DIRECTAS */}
+                {/* Overlay para hover */}
                 {logoHover && (
                   <div className={styles.logoOverlay}>
                     <div className={styles.logoActions}>
@@ -529,7 +523,7 @@ export default function ClientDetailsPage() {
                         type="file"
                         ref={logoFileInputRef}
                         onChange={handleLogoFileChange}
-                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        accept="image/jpeg,image/png,image/webp"
                         style={{ display: "none" }}
                         id="logo-upload-input"
                       />
@@ -537,9 +531,9 @@ export default function ClientDetailsPage() {
                         className={styles.logoActionBtn}
                         onClick={() => logoFileInputRef.current?.click()}
                         disabled={uploadingLogo}
-                        title="Cambiar logo"
+                        title={uploadingLogo ? "Subiendo..." : "Cambiar logo"}
                       >
-                        {uploadingLogo ? "Subiendo..." : "📷"}
+                        {uploadingLogo ? "⏳" : "📷"}
                       </button>
 
                       {/* Botón para eliminar logo (solo si existe) */}
@@ -623,6 +617,20 @@ export default function ClientDetailsPage() {
             </button>
           </nav>
         </header>
+
+        {/* Mostrar errores generales */}
+        {error && (
+          <div className={styles.errorAlert}>
+            <span className={styles.errorIcon}>⚠️</span>
+            <span>{error}</span>
+            <button 
+              className={styles.errorCloseBtn}
+              onClick={() => setError(null)}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Body */}
         <main className={styles.pageBody}>
@@ -906,7 +914,7 @@ export default function ClientDetailsPage() {
                     type="file"
                     ref={galleryFileInputRef}
                     onChange={handleGalleryFileChange}
-                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    accept="image/jpeg,image/png,image/webp"
                     multiple
                     style={{ display: "none" }}
                   />
@@ -958,7 +966,7 @@ export default function ClientDetailsPage() {
                         onClick={() => setShowLightbox(true)}
                       >
                         <img
-                          src={clientImages[currentImageIndex].url}
+                          src={imagesApi.getOptimizedImageUrl(clientImages[currentImageIndex].url, 800)}
                           alt={`Imagen ${currentImageIndex + 1} de ${
                             client.nombre
                           }`}
@@ -1005,7 +1013,7 @@ export default function ClientDetailsPage() {
                         onClick={() => setCurrentImageIndex(index)}
                       >
                         <img
-                          src={image.url}
+                          src={imagesApi.getOptimizedImageUrl(image.url, 150, 150)}
                           alt={`Miniatura ${index + 1}`}
                           className={styles.thumbnailImage}
                         />
