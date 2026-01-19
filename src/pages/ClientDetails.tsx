@@ -5,13 +5,10 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import { clients as clientsAPI } from "../api/clients";
 import { imagesApi } from "../api/images";
 import { getEquipmentByClientRequest } from "../api/equipment";
-import type {
-  Client,
-  SubArea,
-  ClientImage,
-} from "../interfaces/ClientInterfaces";
+import type { Client, ClientImage } from "../interfaces/ClientInterfaces";
 import type { Equipment } from "../interfaces/EquipmentInterfaces";
 import styles from "../styles/pages/ClientDetailsPage.module.css";
+import type { SubArea } from "../interfaces/SubAreaInterfaces";
 
 type TabType = "info" | "areas" | "gallery";
 
@@ -131,13 +128,13 @@ export default function ClientDetailsPage() {
   // Función helper para manejar mouse leave de forma segura
   const handleLogoMouseLeave = (e: React.MouseEvent) => {
     const relatedTarget = e.relatedTarget as Node;
-    
+
     // Verificar que relatedTarget sea válido antes de usar .contains()
     if (!relatedTarget || !(relatedTarget instanceof Node)) {
       setLogoHover(false);
       return;
     }
-    
+
     // Verificar que el contenedor exista y que relatedTarget no esté dentro de él
     if (!logoMenuRef.current || !logoMenuRef.current.contains(relatedTarget)) {
       setLogoHover(false);
@@ -194,7 +191,6 @@ export default function ClientDetailsPage() {
       const uploadedLogo = await imagesApi.uploadClientLogo(clientId, file);
       setClientLogo(uploadedLogo);
       setError(null);
-
     } catch (err: any) {
       console.error("Error subiendo logo:", err);
       setError(err.message || "Error al subir el logo");
@@ -228,12 +224,14 @@ export default function ClientDetailsPage() {
       }
 
       // Subir imágenes
-      const uploadedImages = await imagesApi.uploadClientImages(clientId, filesArray);
-      
-      // Actualizar galería
-      setClientImages(prev => [...prev, ...uploadedImages]);
-      setError(null);
+      const uploadedImages = await imagesApi.uploadClientImages(
+        clientId,
+        filesArray
+      );
 
+      // Actualizar galería
+      setClientImages((prev) => [...prev, ...uploadedImages]);
+      setError(null);
     } catch (err: any) {
       console.error("Error subiendo imágenes:", err);
       setError(err.message || "Error al subir las imágenes");
@@ -295,7 +293,7 @@ export default function ClientDetailsPage() {
       await imagesApi.deleteImage(imageId);
 
       // Actualizar las imágenes
-      setClientImages(prev => prev.filter((img) => img.id !== imageId));
+      setClientImages((prev) => prev.filter((img) => img.id !== imageId));
 
       // Ajustar el índice si es necesario
       if (currentImageIndex >= clientImages.length - 1) {
@@ -486,7 +484,11 @@ export default function ClientDetailsPage() {
                 <div className={styles.logoImageWrapper}>
                   {clientLogo ? (
                     <img
-                      src={imagesApi.getOptimizedImageUrl(clientLogo.url, 200, 200)}
+                      src={imagesApi.getOptimizedImageUrl(
+                        clientLogo.url,
+                        200,
+                        200
+                      )}
                       alt={`Logo de ${client.nombre}`}
                       className={styles.clientLogo}
                       onError={(e) => {
@@ -623,7 +625,7 @@ export default function ClientDetailsPage() {
           <div className={styles.errorAlert}>
             <span className={styles.errorIcon}>⚠️</span>
             <span>{error}</span>
-            <button 
+            <button
               className={styles.errorCloseBtn}
               onClick={() => setError(null)}
             >
@@ -966,7 +968,10 @@ export default function ClientDetailsPage() {
                         onClick={() => setShowLightbox(true)}
                       >
                         <img
-                          src={imagesApi.getOptimizedImageUrl(clientImages[currentImageIndex].url, 800)}
+                          src={imagesApi.getOptimizedImageUrl(
+                            clientImages[currentImageIndex].url,
+                            800
+                          )}
                           alt={`Imagen ${currentImageIndex + 1} de ${
                             client.nombre
                           }`}
@@ -1013,7 +1018,11 @@ export default function ClientDetailsPage() {
                         onClick={() => setCurrentImageIndex(index)}
                       >
                         <img
-                          src={imagesApi.getOptimizedImageUrl(image.url, 150, 150)}
+                          src={imagesApi.getOptimizedImageUrl(
+                            image.url,
+                            150,
+                            150
+                          )}
                           alt={`Miniatura ${index + 1}`}
                           className={styles.thumbnailImage}
                         />

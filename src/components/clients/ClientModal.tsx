@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { clients as clientsAPI } from "../../api/clients";
+import { areas as areasAPI } from "../../api/areas";
+import { subAreas as subAreasAPI } from "../../api/subAreas";
 import { imagesApi } from "../../api/images";
 import { usersApi as usersAPI } from "../../api/users";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,11 +10,11 @@ import type {
   CreateClientDto,
   ClientFormData,
   Usuario,
-  AreaFormData,
-  SubAreaFormData,
 } from "../../interfaces/ClientInterfaces";
 import styles from "../../styles/components/clients/ClientModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
+import type { AreaFormData } from "../../interfaces/AreaInterfaces";
+import type { SubAreaFormData } from "../../interfaces/SubAreaInterfaces";
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -52,6 +54,7 @@ export default function ClientModal({
     number | null
   >(null);
   const [newSubareaName, setNewSubareaName] = useState("");
+  const [isSubareaModalOpen, setIsSubareaModalOpen] = useState(false);
 
   const [formData, setFormData] = useState<ClientFormData>({
     nombre: "",
@@ -95,6 +98,7 @@ export default function ClientModal({
     setSelectedParentSubarea(null);
     setLogoFile(null);
     setLogoPreview(null);
+    setIsSubareaModalOpen(false);
     setStep(1);
     setError(null);
   };
@@ -124,7 +128,7 @@ export default function ClientModal({
         ciudad: editingClient.ciudad || "",
         departamento: editingClient.departamento || "",
         pais: editingClient.pais || "Colombia",
-        
+
         contacto: editingClient.contacto,
         email: editingClient.email,
         telefono: editingClient.telefono,
@@ -151,7 +155,7 @@ export default function ClientModal({
       }
 
       // Cargar logo si existe
-      const logo = editingClient.images?.find(img => img.isLogo);
+      const logo = editingClient.images?.find((img) => img.isLogo);
       if (logo) {
         setLogoPreview(logo.url);
       }
@@ -230,7 +234,7 @@ export default function ClientModal({
     }
 
     setLogoFile(file);
-    
+
     // Crear preview
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -299,7 +303,7 @@ export default function ClientModal({
       }),
     }));
     setNewSubareaName("");
-    // Dejamos seleccionado el mismo padre para poder crear varias hijas
+    setIsSubareaModalOpen(false);
   };
 
   // Eliminar una subárea y todos sus descendientes
@@ -339,12 +343,35 @@ export default function ClientModal({
     }));
   };
 
+  // Iniciar creación de subárea dentro de un área (nivel 1)
+  const startAddSubareaForArea = (areaId: number) => {
+    setSelectedAreaForSubarea(areaId);
+    setSelectedParentSubarea(null);
+    setNewSubareaName("");
+    setIsSubareaModalOpen(true);
+  };
+
+  // Iniciar creación de subárea hija de otra subárea (nivel N)
+  const startAddSubareaForSubarea = (
+    areaId: number,
+    parentSubareaId: number
+  ) => {
+    setSelectedAreaForSubarea(areaId);
+    setSelectedParentSubarea(parentSubareaId);
+    setNewSubareaName("");
+    setIsSubareaModalOpen(true);
+  };
+
+  const closeSubareaModal = () => {
+    setIsSubareaModalOpen(false);
+    setNewSubareaName("");
+  };
+
   // ========== VALIDACIONES ==========
   const validateStep1 = (): boolean => {
     const requiredFields: (keyof ClientFormData)[] = [
       "nombre",
       "nit",
-      // Validamos los campos separados
       "direccionBase",
       "barrio",
       "ciudad",
@@ -458,10 +485,7 @@ export default function ClientModal({
       for (const sub of pending) {
         let parentDbId: number | undefined;
 
-        if (
-          sub.parentSubAreaId === undefined ||
-          sub.parentSubAreaId === null
-        ) {
+        if (sub.parentSubAreaId === undefined || sub.parentSubAreaId === null) {
           parentDbId = undefined;
         } else if (sub.parentSubAreaId > 0) {
           parentDbId = sub.parentSubAreaId;
@@ -474,7 +498,7 @@ export default function ClientModal({
           parentDbId = mapped;
         }
 
-        const created = await clientsAPI.createSubArea({
+        const created = await subAreasAPI.createSubArea({
           nombreSubArea: sub.nombreSubArea,
           areaId: dbAreaId,
           parentSubAreaId: parentDbId,
@@ -513,7 +537,7 @@ export default function ClientModal({
         ciudad: formData.ciudad,
         departamento: formData.departamento,
         pais: formData.pais,
-        
+
         contacto: formData.contacto,
         email: formData.email,
         telefono: formData.telefono,
@@ -532,8 +556,7 @@ export default function ClientModal({
         await clientsAPI.updateClient(editingClient.idCliente, clientData);
 
         // Manejo de áreas existentes vs nuevas
-        const existingAreaIds =
-          editingClient.areas?.map((a) => a.idArea) || [];
+        const existingAreaIds = editingClient.areas?.map((a) => a.idArea) || [];
         const currentAreaIds =
           formData.areas
             .filter((a) => a.id !== undefined && a.id > 0)
@@ -542,7 +565,7 @@ export default function ClientModal({
         // Eliminar áreas que ya no están
         for (const areaId of existingAreaIds) {
           if (!currentAreaIds.includes(areaId)) {
-            await clientsAPI.deleteArea(areaId);
+            await areasAPI.deleteArea(areaId);
           }
         }
 
@@ -550,7 +573,7 @@ export default function ClientModal({
         for (const area of formData.areas) {
           if (area.id !== undefined && area.id < 0) {
             // Área nueva
-            const createdArea = await clientsAPI.createArea({
+            const createdArea = await areasAPI.createArea({
               nombreArea: area.nombreArea,
               clienteId: editingClient.idCliente,
             });
@@ -571,7 +594,7 @@ export default function ClientModal({
             // Eliminar subáreas que ya no están
             for (const subId of existingSubareaIds) {
               if (!currentSubareaIds.includes(subId)) {
-                await clientsAPI.deleteSubArea(subId);
+                await subAreasAPI.deleteSubArea(subId);
               }
             }
 
@@ -586,7 +609,7 @@ export default function ClientModal({
 
         // Crear áreas + subáreas
         for (const area of formData.areas) {
-          const createdArea = await clientsAPI.createArea({
+          const createdArea = await areasAPI.createArea({
             nombreArea: area.nombreArea,
             clienteId: newClient.idCliente,
           });
@@ -604,7 +627,9 @@ export default function ClientModal({
         } catch (uploadError: any) {
           console.error("Error subiendo logo:", uploadError);
           // No detenemos el flujo si falla la subida del logo
-          setError(`Cliente guardado, pero error al subir logo: ${uploadError.message}`);
+          setError(
+            `Cliente guardado, pero error al subir logo: ${uploadError.message}`
+          );
         }
       }
 
@@ -626,6 +651,14 @@ export default function ClientModal({
     (a) => a.id === selectedAreaForSubarea
   );
 
+  // Subárea padre actualmente seleccionada (si hay)
+  const currentParentSubarea =
+    currentAreaForSubarea && selectedParentSubarea != null
+      ? currentAreaForSubarea.subAreas.find(
+          (s) => s.id === selectedParentSubarea
+        ) || null
+      : null;
+
   // Render recursivo de subáreas como árbol
   const renderSubareasTree = (
     area: AreaFormData,
@@ -644,17 +677,33 @@ export default function ClientModal({
       <div key={sub.id} className={styles.subareaTreeItem}>
         <div className={styles.subareaItem}>
           <span className={styles.subareaName}>📂 {sub.nombreSubArea}</span>
-          <button
-            type="button"
-            onClick={() =>
-              handleRemoveSubarea(area.id as number, sub.id as number)
-            }
-            className={styles.removeButtonSmall}
-            disabled={loading}
-            title="Eliminar subárea (y sus subniveles)"
-          >
-            ×
-          </button>
+
+          <div className={styles.subareaActions}>
+            {/* + hija de esta subárea */}
+            <button
+              type="button"
+              onClick={() =>
+                startAddSubareaForSubarea(area.id as number, sub.id as number)
+              }
+              className={styles.addButtonSmall}
+              disabled={loading}
+              title="Añadir subárea dentro de esta subárea"
+            >
+              +
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                handleRemoveSubarea(area.id as number, sub.id as number)
+              }
+              className={styles.removeButtonSmall}
+              disabled={loading}
+              title="Eliminar subárea (y sus subniveles)"
+            >
+              ×
+            </button>
+          </div>
         </div>
         <div className={styles.subareaChildren}>
           {renderSubareasTree(area, sub.id as number)}
@@ -842,16 +891,32 @@ export default function ClientModal({
                 </div>
 
                 {/* --- SECCIÓN DE DIRECCIÓN DESGLOSADA --- */}
-                <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                  <label className={styles.formLabel} style={{marginBottom: '0.5rem', display: 'block'}}>
+                <div
+                  className={`${styles.formGroup} ${styles.fullWidth}`}
+                  style={{
+                    gridColumn: "1 / -1",
+                  }}
+                >
+                  <label
+                    className={styles.formLabel}
+                    style={{
+                      marginBottom: "0.5rem",
+                      display: "block",
+                    }}
+                  >
                     Dirección de la Empresa *
                   </label>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                    
-                    {/* Dirección Base (calle/carrera) - Ocupa todo el ancho */}
-                    <div style={{ gridColumn: '1 / -1' }}>
-                       <input
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: "1rem",
+                    }}
+                  >
+                    {/* Dirección Base */}
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <input
                         type="text"
                         name="direccionBase"
                         value={formData.direccionBase}
@@ -875,7 +940,7 @@ export default function ClientModal({
                       />
                     </div>
 
-                     {/* Ciudad */}
+                    {/* Ciudad */}
                     <div>
                       <input
                         type="text"
@@ -888,7 +953,7 @@ export default function ClientModal({
                       />
                     </div>
 
-                     {/* Departamento */}
+                    {/* Departamento */}
                     <div>
                       <input
                         type="text"
@@ -901,7 +966,7 @@ export default function ClientModal({
                       />
                     </div>
 
-                     {/* País */}
+                    {/* País */}
                     <div>
                       <input
                         type="text"
@@ -913,7 +978,6 @@ export default function ClientModal({
                         disabled={loading}
                       />
                     </div>
-
                   </div>
                 </div>
 
@@ -1087,15 +1151,34 @@ export default function ClientModal({
                               {area.subAreas.length !== 1 ? "s" : ""}
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveArea(area.id as number)}
-                            className={styles.removeButton}
-                            disabled={loading}
-                            title="Eliminar área"
-                          >
-                            ×
-                          </button>
+
+                          <div className={styles.areaActions}>
+                            {/* + subárea nivel 1 */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                startAddSubareaForArea(area.id as number)
+                              }
+                              className={styles.addButtonSmall}
+                              disabled={loading}
+                              title="Añadir subárea dentro de esta área"
+                            >
+                              +
+                            </button>
+
+                            {/* eliminar área */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleRemoveArea(area.id as number)
+                              }
+                              className={styles.removeButton}
+                              disabled={loading}
+                              title="Eliminar área"
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
 
                         {/* Subáreas como árbol */}
@@ -1106,91 +1189,6 @@ export default function ClientModal({
                         )}
                       </div>
                     ))}
-                  </div>
-
-                  {/* Agregar Subáreas */}
-                  <div className={styles.subareasSection}>
-                    <h4 className={styles.subareasTitle}>
-                      Agregar subáreas (pueden ser hijas de otras subáreas)
-                    </h4>
-                    <div className={styles.addSubAreaForm}>
-                      <div className={styles.subareaControls}>
-                        {/* Seleccionar Área */}
-                        <select
-                          value={selectedAreaForSubarea ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            const areaId = value ? parseInt(value) : null;
-                            setSelectedAreaForSubarea(areaId);
-                            setSelectedParentSubarea(null);
-                          }}
-                          className={styles.areaSelect}
-                          disabled={loading}
-                        >
-                          <option value="">Área...</option>
-                          {formData.areas.map((area) => (
-                            <option key={area.id} value={area.id}>
-                              {area.nombreArea}
-                            </option>
-                          ))}
-                        </select>
-
-                        {/* Seleccionar Subárea Padre */}
-                        <select
-                          value={selectedParentSubarea ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setSelectedParentSubarea(
-                              value ? parseInt(value) : null
-                            );
-                          }}
-                          className={styles.areaSelect}
-                          disabled={
-                            loading ||
-                            !currentAreaForSubarea ||
-                            currentAreaForSubarea.subAreas.length === 0
-                          }
-                        >
-                          <option value="">
-                            Sin subárea padre (nivel superior)
-                          </option>
-                          {currentAreaForSubarea?.subAreas.map((sub) => (
-                            <option key={sub.id} value={sub.id}>
-                              {sub.nombreSubArea}
-                            </option>
-                          ))}
-                        </select>
-
-                        {/* Nombre de la subárea */}
-                        <input
-                          type="text"
-                          value={newSubareaName}
-                          onChange={(e) => setNewSubareaName(e.target.value)}
-                          placeholder="Nombre de la subárea"
-                          className={styles.subareaInput}
-                          disabled={loading || selectedAreaForSubarea === null}
-                          onKeyPress={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddSubarea();
-                            }
-                          }}
-                        />
-
-                        <button
-                          type="button"
-                          onClick={handleAddSubarea}
-                          className={styles.addSubareaButton}
-                          disabled={
-                            loading ||
-                            !newSubareaName.trim() ||
-                            selectedAreaForSubarea === null
-                          }
-                        >
-                          + Subárea
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               ) : (
@@ -1259,6 +1257,68 @@ export default function ClientModal({
             </div>
           </div>
         </div>
+
+        {/* Mini-modal para crear subárea */}
+        {isSubareaModalOpen && currentAreaForSubarea && (
+          <div
+            className={styles.subareaModalOverlay}
+            onClick={closeSubareaModal}
+          >
+            <div
+              className={styles.subareaModal}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h4 className={styles.subareaModalTitle}>Agregar subárea</h4>
+              <div className={styles.subareaModalContext}>
+                <div>
+                  Área: <strong>{currentAreaForSubarea.nombreArea}</strong>
+                </div>
+                {currentParentSubarea && (
+                  <div>
+                    Subárea padre:{" "}
+                    <strong>{currentParentSubarea.nombreSubArea}</strong>
+                  </div>
+                )}
+              </div>
+              <input
+                type="text"
+                value={newSubareaName}
+                onChange={(e) => setNewSubareaName(e.target.value)}
+                placeholder="Nombre de la subárea"
+                className={styles.subareaInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddSubarea();
+                  }
+                }}
+                autoFocus
+              />
+              <div className={styles.subareaModalActions}>
+                <button
+                  type="button"
+                  className={styles.subareaModalCancel}
+                  onClick={closeSubareaModal}
+                  disabled={loading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={styles.subareaModalConfirm}
+                  onClick={handleAddSubarea}
+                  disabled={
+                    loading ||
+                    !newSubareaName.trim() ||
+                    selectedAreaForSubarea === null
+                  }
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

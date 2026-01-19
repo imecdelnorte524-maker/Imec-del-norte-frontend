@@ -1,0 +1,202 @@
+/* src/components/equipment-detail/AddPhotoModal.module.css */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-md);
+  z-index: 2000;
+  box-sizing: border-box;
+}
+
+.addPhotoModal {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 550px;
+  width: 100%;
+  padding: var(--spacing-lg);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.modalHeaderRow h4 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--gray-800);
+}
+
+.modalCloseButton {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--gray-400);
+  padding: 4px;
+  border-radius: var(--border-radius);
+  transition: all 0.2s;
+}
+
+.modalCloseButton:hover {
+  background: var(--gray-100);
+  color: var(--gray-800);
+}
+
+.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+  margin-bottom: var(--spacing-md);
+}
+
+.formRow label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.fileInput {
+  border: 2px dashed var(--gray-300);
+  background: var(--gray-50);
+  padding: var(--spacing-lg);
+  text-align: center;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  border-radius: var(--border-radius);
+}
+
+.fileInput:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+}
+
+.selectedFilesList {
+  margin-top: var(--spacing-md);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm);
+}
+
+.selectedFilesList p {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
+  color: var(--gray-800);
+  border-bottom: 1px solid var(--gray-100);
+  padding-bottom: 4px;
+}
+
+.selectedFilesList ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.selectedFilesList li {
+  padding: 4px 0;
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  border-bottom: 1px dashed var(--gray-100);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selectedFilesList li:last-child {
+  border-bottom: none;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-200);
+  flex-wrap: wrap;
+}
+
+.formActions button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  border: none;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.formActions button:first-child {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+
+.formActions button:first-child:hover:not(:disabled) {
+  background: var(--gray-300);
+}
+
+.formActions button:last-child {
+  background: var(--primary-500);
+  color: white;
+}
+
+.formActions button:last-child:hover:not(:disabled) {
+  background: var(--primary-600);
+}
+
+.formActions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .formActions {
+    flex-direction: column;
+  }
+
+  .formActions button {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalOverlay {
+    padding: 10px;
+  }
+
+  .addPhotoModal {
+    padding: var(--spacing-md);
+  }
+}

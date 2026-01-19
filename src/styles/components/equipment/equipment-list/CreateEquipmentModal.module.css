@@ -1,0 +1,284 @@
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--spacing-lg) var(--spacing-md);
+  z-index: 1000;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modalContent {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 800px;
+  width: 100%;
+  padding: var(--spacing-xl);
+  margin: auto;
+  box-sizing: border-box;
+  max-height: 95vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.modalHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--gray-800);
+}
+
+.modalCloseButton {
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  color: var(--gray-500);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius);
+}
+
+.modalCloseButton:hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.formRow label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.formRow input,
+.formRow select,
+.formRow textarea {
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  font-size: var(--font-size-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.formRow textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.creatableSelect {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.creatableSelect select {
+  width: 100%;
+  padding-right: 40px;
+}
+
+.clearButton {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-lg);
+  color: var(--gray-400);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius);
+  width: 24px;
+  height: 24px;
+  transition: all 0.2s;
+}
+
+.clearButton:hover {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.clearButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.createOption {
+  color: var(--primary-600);
+  font-weight: 600;
+  background-color: var(--primary-50);
+}
+
+.helperText {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+}
+
+.componentsSection {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--gray-200);
+}
+
+.componentsSection h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  color: var(--gray-800);
+}
+
+.componentToggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.componentToggleButton {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.componentToggleButton:hover:not(:disabled) {
+  background: var(--gray-200);
+  border-color: var(--gray-400);
+}
+
+.componentToggleButton.active {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  border-color: var(--primary-300);
+}
+
+.componentToggleButton:disabled {
+  background: var(--gray-100);
+  color: var(--gray-400);
+  cursor: not-allowed;
+  border-color: var(--gray-200);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--gray-200);
+  flex-wrap: wrap;
+}
+
+.formActions button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  border: none;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.formActions button:first-child {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+
+.formActions button:first-child:hover:not(:disabled) {
+  background: var(--gray-300);
+}
+
+.formActions button:last-child {
+  background: var(--primary-500);
+  color: white;
+}
+
+.formActions button:last-child:hover:not(:disabled) {
+  background: var(--primary-600);
+}
+
+.formActions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .modalContent {
+    max-width: 90%;
+    padding: var(--spacing-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .modalContent {
+    padding: var(--spacing-lg);
+    max-height: 85vh;
+  }
+
+  .componentToggle {
+    flex-direction: column;
+  }
+
+  .componentToggleButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .formActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .formActions button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal {
+    padding: var(--spacing-md) var(--spacing-sm);
+  }
+
+  .modalContent {
+    padding: var(--spacing-md);
+  }
+
+  .formRow input,
+  .formRow select,
+  .formRow textarea {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+}

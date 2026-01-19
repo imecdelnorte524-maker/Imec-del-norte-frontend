@@ -1,19 +1,21 @@
 // src/components/sg-sst/AtsForm.tsx
-
 import { useState, useEffect, useMemo } from "react";
 import type { AtsFormData } from "../../interfaces/SgSstInterface";
 import type { Usuario } from "../../interfaces/UserInterfaces";
 import type { Rol } from "../../interfaces/RolesInterfaces";
-import type { Client, Area, SubArea } from "../../interfaces/ClientInterfaces";
+import type { Client } from "../../interfaces/ClientInterfaces";
 import type { Order } from "../../interfaces/OrderInterfaces";
+import type { Area } from "../../interfaces/AreaInterfaces";
+import type { SubArea } from "../../interfaces/SubAreaInterfaces";
 import { usersApi } from "../../api/users";
 import { sgSstService } from "../../api/sg-sst";
-import { clients } from "../../api/clients";
-import { getMyAssignedOrdersRequest } from "../../api/orders";
+import { areas as areasAPI } from "../../api/areas";
+import { subAreas as subAreasAPI } from "../../api/subAreas";
 import SignaturePad from "./SignaturePad";
 import styles from "../../styles/components/sg-sst/AtsForm.module.css";
 import { useAuth } from "../../hooks/useAuth";
 import { rolesApi } from "../../api/roles";
+import { getMyAssignedOrdersRequest } from "../../api/orders";
 
 interface AtsFormProps {
   onSubmit: (data: AtsFormData) => void;
@@ -302,7 +304,7 @@ export default function AtsForm({
   const loadAreasByClient = async (clientId: number) => {
     try {
       setIsLoading(true);
-      const areasData = await clients.getAllAreas(clientId);
+      const areasData = await areasAPI.getAllAreas(clientId);
       setAvailableAreas(areasData);
       setAvailableSubAreas([]);
 
@@ -320,7 +322,7 @@ export default function AtsForm({
 
   const loadSubAreasByArea = async (areaId: number) => {
     try {
-      const subAreasData = await clients.getAllSubAreas(areaId);
+      const subAreasData = await subAreasAPI.getAllSubAreas(areaId);
       setAvailableSubAreas(subAreasData);
 
       setFormData((prev) => ({

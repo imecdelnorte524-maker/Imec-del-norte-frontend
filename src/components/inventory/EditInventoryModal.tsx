@@ -120,11 +120,6 @@ export default function EditInventoryModal({
         inventoryUpdateData.bodegaId = formData.bodegaId;
       }
 
-      console.log('📤 Actualizando INVENTARIO:', {
-        inventarioId: item.inventarioId,
-        data: inventoryUpdateData
-      });
-
       // 2. Actualizar el registro de inventario
       await inventory.updateInventory(item.inventarioId, inventoryUpdateData);
 
@@ -140,11 +135,6 @@ export default function EditInventoryModal({
             stockMin: formData.stockMin,
           };
           
-          console.log('📤 Actualizando INSUMO:', {
-            insumoId: item.insumoId,
-            data: supplyUpdateData
-          });
-          
           // Usar la API de insumos para actualizar
           await suppliesApi.updateSupply(item.insumoId, supplyUpdateData);
         } catch (supplyError: any) {
@@ -158,11 +148,6 @@ export default function EditInventoryModal({
             estado: formData.estado,
             valorUnitario: formData.valorUnitario,
           };
-          
-          console.log('📤 Actualizando HERRAMIENTA:', {
-            herramientaId: item.herramientaId,
-            data: toolUpdateData
-          });
           
           // Usar la API de herramientas para actualizar
           await toolsApi.updateTool(item.herramientaId, toolUpdateData);

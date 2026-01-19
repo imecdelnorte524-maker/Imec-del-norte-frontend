@@ -8,32 +8,26 @@ import {
   getEquipmentByClientRequest,
   createEquipmentRequest,
 } from "../api/equipment";
-import type { Equipment } from "../interfaces/EquipmentInterfaces";
-import styles from "../styles/pages/EquipmentDetailPage.module.css"; // Reusamos header/errores
+import type {
+  AirConditionerTypeOption,
+  ClientOption,
+  Equipment,
+  RouteState,
+} from "../interfaces/EquipmentInterfaces";
+import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import listStyles from "../styles/pages/EquipmentListPage.module.css";
 import { playErrorSound } from "../utils/sounds";
 
-interface ClientOption {
-  idCliente: number;
-  nombre: string;
-  nit: string;
-}
-
-interface SimpleArea {
-  idArea: number;
-  nombreArea: string;
-}
-
-interface SimpleSubArea {
-  idSubArea: number;
-  nombreSubArea: string;
-}
-
-interface RouteState {
-  clientId?: number;
-  clientName?: string;
-  clientNit?: string;
-}
+// Importar componentes separados
+import {
+  EquipmentFilters,
+  EquipmentGrid,
+  CreateEquipmentModal,
+  CreateAcTypeModal,
+  EmptyState,
+} from "../components/equipment/equipment-list";
+import type { AreaSimple } from "../interfaces/AreaInterfaces";
+import type { SubAreaSimple } from "../interfaces/SubAreaInterfaces";
 
 export default function EquipmentListPage() {
   const { user } = useAuth();
@@ -47,6 +41,7 @@ export default function EquipmentListPage() {
   );
 
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [search, setSearch] = useState("");
 
   const [loadingClients, setLoadingClients] = useState(true);
@@ -58,24 +53,88 @@ export default function EquipmentListPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [areas, setAreas] = useState<SimpleArea[]>([]);
-  const [subAreas, setSubAreas] = useState<SimpleSubArea[]>([]);
+  const [areas, setAreas] = useState<AreaSimple[]>([]);
+  const [airConditionerTypes, setAirConditionerTypes] = useState<
+    AirConditionerTypeOption[]
+  >([]);
   const [selectedAreaId, setSelectedAreaId] = useState<number | "">("");
   const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | "">("");
+  const [selectedSubSubAreaId, setSelectedSubSubAreaId] = useState<number | "">(
+    ""
+  );
+  const [selectedSubAreaWithChildren, setSelectedSubAreaWithChildren] =
+    useState<any>(null);
+
+  const [showMotorForm, setShowMotorForm] = useState(false);
+  const [showEvaporatorForm, setShowEvaporatorForm] = useState(false);
+  const [showCondenserForm, setShowCondenserForm] = useState(false);
+  const [showCompressorForm, setShowCompressorForm] = useState(false);
+
+  // Estados para crear tipo de aire acondicionado
+  const [showNewAcTypeForm, setShowNewAcTypeForm] = useState(false);
+  const [newAcTypeForm, setNewAcTypeForm] = useState({
+    name: "",
+    hasEvaporator: true,
+    hasCondenser: true,
+  });
+  const [creatingAcType, setCreatingAcType] = useState(false);
+  const [acTypeError, setAcTypeError] = useState<string | null>(null);
+
   const [createForm, setCreateForm] = useState({
     category: "Aires Acondicionados",
+    airConditionerTypeId: "",
     name: "",
-    code: "",
-    brand: "",
-    model: "",
-    serialNumber: "",
-    capacity: "",
-    refrigerantType: "",
-    voltage: "",
     physicalLocation: "",
-    manufacturer: "",
     installationDate: "",
     notes: "",
+  });
+
+  const [motorForm, setMotorForm] = useState({
+    amperaje: "",
+    voltaje: "",
+    rpm: "",
+    serialMotor: "",
+    modeloMotor: "",
+    diametroEje: "",
+    tipoEje: "",
+  });
+
+  const [evaporatorForm, setEvaporatorForm] = useState({
+    marca: "",
+    modelo: "",
+    serial: "",
+    capacidad: "",
+    amperaje: "",
+    tipoRefrigerante: "",
+    voltaje: "",
+    numeroFases: "",
+  });
+
+  const [condenserForm, setCondenserForm] = useState({
+    marca: "",
+    modelo: "",
+    serial: "",
+    capacidad: "",
+    amperaje: "",
+    voltaje: "",
+    tipoRefrigerante: "",
+    numeroFases: "",
+    presionAlta: "",
+    presionBaja: "",
+    hp: "",
+  });
+
+  const [compressorForm, setCompressorForm] = useState({
+    marca: "",
+    modelo: "",
+    serial: "",
+    capacidad: "",
+    amperaje: "",
+    tipoRefrigerante: "",
+    voltaje: "",
+    numeroFases: "",
+    tipoAceite: "",
+    cantidadAceite: "",
   });
 
   const roleName = user?.role?.nombreRol;
@@ -87,6 +146,37 @@ export default function EquipmentListPage() {
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
+  // Funciones auxiliares
+  const findSubAreaInTree = (tree: any[], subAreaId: number): any | null => {
+    for (const node of tree) {
+      if (node.id === subAreaId) {
+        return node;
+      }
+      if (node.children && node.children.length > 0) {
+        const found = findSubAreaInTree(node.children, subAreaId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const convertSubAreasTree = (
+    tree: any[],
+    areaId: number,
+    parentId: number | null = null
+  ): SubAreaSimple[] => {
+    return tree.map((node: any) => ({
+      idSubArea: node.id,
+      nombreSubArea: node.nombre,
+      idAreaPadre: areaId,
+      parentSubAreaId: parentId,
+      subAreas: node.children
+        ? convertSubAreasTree(node.children, areaId, node.id)
+        : [],
+    }));
+  };
+
+  // Cargar clientes
   useEffect(() => {
     if (!canView) {
       setError("No tiene permisos para ver el listado de equipos.");
@@ -100,7 +190,6 @@ export default function EquipmentListPage() {
         setLoadingClients(true);
         setError(null);
 
-        // Si el nombre/NIT ya vienen del state, no es necesario ir al backend
         if (routeState.clientName) {
           setClients([
             {
@@ -163,12 +252,10 @@ export default function EquipmentListPage() {
       }
     };
 
-    // Si venimos de una orden con clientId, usamos ese cliente fijo
     if (hasFixedClientFromRoute && routeState.clientId) {
       setSelectedClientId(routeState.clientId);
       loadSingleClient(routeState.clientId);
     } else {
-      // Modo general: Admin/Secretaria/Técnico pueden elegir la empresa
       loadClients();
     }
   }, [
@@ -180,7 +267,18 @@ export default function EquipmentListPage() {
     selectedClientId,
   ]);
 
-  // Cargar equipos cuando cambia la empresa o la búsqueda
+  // Cargar tipos de aire acondicionado
+  const loadAirConditionerTypes = async () => {
+    try {
+      const res = await api.get("/air-conditioner-types");
+      const data = res.data?.data || [];
+      setAirConditionerTypes(data);
+    } catch (err) {
+      console.error("Error cargando tipos de aire acondicionado:", err);
+    }
+  };
+
+  // Cargar equipos
   useEffect(() => {
     const loadEquipment = async () => {
       if (!selectedClientId || !canView) return;
@@ -188,10 +286,9 @@ export default function EquipmentListPage() {
       try {
         setLoadingEquipment(true);
         setEquipmentError(null);
-        const equipments = await getEquipmentByClientRequest(
-          selectedClientId,
-          search || undefined
-        );
+
+        const equipments = await getEquipmentByClientRequest(selectedClientId);
+        setAllEquipments(equipments);
         setEquipmentList(equipments);
       } catch (err: any) {
         console.error("Error cargando equipos:", err);
@@ -205,10 +302,81 @@ export default function EquipmentListPage() {
     };
 
     loadEquipment();
-  }, [selectedClientId, search, canView]);
+  }, [selectedClientId, canView]);
 
+  // Filtrar equipos
+  useEffect(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) {
+      setEquipmentList(allEquipments);
+      return;
+    }
+
+    const filtered = allEquipments.filter((eq) => {
+      const name = eq.name?.toLowerCase() ?? "";
+      const code = eq.code?.toLowerCase() ?? "";
+      const location = eq.physicalLocation?.toLowerCase() ?? "";
+      const idStr = String(eq.equipmentId);
+
+      return (
+        name.includes(term) ||
+        code.includes(term) ||
+        location.includes(term) ||
+        idStr.includes(term)
+      );
+    });
+
+    setEquipmentList(filtered);
+  }, [search, allEquipments]);
+
+  // Cargar áreas jerárquicas
+  const loadHierarchicalAreas = async () => {
+    try {
+      const areasRes = await api.get("/areas", {
+        params: { clienteId: selectedClientId },
+      });
+      const areasData = areasRes.data?.data || [];
+
+      const areasWithTrees = await Promise.all(
+        areasData.map(async (area: any) => {
+          try {
+            const treeRes = await api.get(`/sub-areas/tree/${area.idArea}`);
+            const treeData = treeRes.data?.data;
+
+            return {
+              idArea: area.idArea,
+              nombreArea: area.nombreArea,
+              treeData: treeData,
+              subAreas: treeData?.subAreas
+                ? convertSubAreasTree(treeData.subAreas, area.idArea)
+                : [],
+            };
+          } catch (err) {
+            console.error(
+              `Error cargando árbol para área ${area.idArea}:`,
+              err
+            );
+            return {
+              idArea: area.idArea,
+              nombreArea: area.nombreArea,
+              treeData: null,
+              subAreas: [],
+            };
+          }
+        })
+      );
+
+      setAreas(areasWithTrees);
+    } catch (err: any) {
+      console.error("Error cargando áreas jerárquicas:", err);
+      throw err;
+    }
+  };
+
+  // Handlers
   const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = parseInt(e.target.value, 10);
+    const value = Number.parseInt(e.target.value, 10);
     setSelectedClientId(isNaN(value) ? 0 : value);
     setSearch("");
   };
@@ -221,89 +389,42 @@ export default function EquipmentListPage() {
     navigate(`/equipment/${equipmentId}`);
   };
 
-  // ---- Crear equipo (hoja de vida) ----
+  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const areaId = value ? Number.parseInt(value, 10) : "";
+    setSelectedAreaId(areaId);
+    setSelectedSubAreaId("");
+    setSelectedSubSubAreaId("");
+    setSelectedSubAreaWithChildren(null);
+  };
 
-  const handleOpenCreateForm = async () => {
-    if (!selectedClientId) {
-      setCreateError("Debe seleccionar una empresa primero.");
+  const handleSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    const subAreaId = value ? Number.parseInt(value, 10) : "";
+    setSelectedSubAreaId(subAreaId);
+    setSelectedSubSubAreaId("");
+
+    if (!subAreaId) {
+      setSelectedSubAreaWithChildren(null);
       return;
     }
 
-    try {
-      setCreateError(null);
-      setCreateLoading(true);
-      const res = await api.get("/areas", {
-        params: { clienteId: selectedClientId },
-      });
-      const data = res.data?.data || [];
-      const mappedAreas: SimpleArea[] = data.map((a: any) => ({
-        idArea: a.idArea,
-        nombreArea: a.nombreArea,
-      }));
-      setAreas(mappedAreas);
-      setSubAreas([]);
-      setSelectedAreaId("");
-      setSelectedSubAreaId("");
-      setCreateForm((prev) => ({
-        ...prev,
-        category: "Aires Acondicionados",
-        name: "",
-        code: "",
-        brand: "",
-        model: "",
-        serialNumber: "",
-        capacity: "",
-        refrigerantType: "",
-        voltage: "",
-        physicalLocation: "",
-        manufacturer: "",
-        installationDate: "",
-        notes: "",
-      }));
-      setShowCreateForm(true);
-    } catch (err: any) {
-      console.error("Error cargando áreas para crear equipo:", err);
-      setCreateError(
-        err.response?.data?.error || "Error al cargar las áreas de la empresa."
+    const selectedArea = areas.find((a) => a.idArea === selectedAreaId);
+    if (selectedArea?.treeData?.subAreas) {
+      const foundSubArea = findSubAreaInTree(
+        selectedArea.treeData.subAreas,
+        subAreaId
       );
-    } finally {
-      setCreateLoading(false);
+      setSelectedSubAreaWithChildren(foundSubArea || null);
+    } else {
+      setSelectedSubAreaWithChildren(null);
     }
   };
 
-  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleSubSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    const areaId = value ? parseInt(value, 10) : "";
-    setSelectedAreaId(areaId);
-    setSelectedSubAreaId("");
-    setSubAreas([]);
-
-    if (!areaId) return;
-
-    const loadSubAreas = async () => {
-      try {
-        setCreateLoading(true);
-        const res = await api.get("/sub-areas", {
-          params: { areaId },
-        });
-        const data = res.data?.data || [];
-        const mappedSub: SimpleSubArea[] = data.map((s: any) => ({
-          idSubArea: s.idSubArea,
-          nombreSubArea: s.nombreSubArea,
-        }));
-        setSubAreas(mappedSub);
-      } catch (err: any) {
-        console.error("Error cargando subáreas:", err);
-        setCreateError(
-          err.response?.data?.error ||
-            "Error al cargar las subáreas del área seleccionada."
-        );
-      } finally {
-        setCreateLoading(false);
-      }
-    };
-
-    loadSubAreas();
+    const subSubAreaId = value ? Number.parseInt(value, 10) : "";
+    setSelectedSubSubAreaId(subSubAreaId);
   };
 
   const handleCreateFormChange = (
@@ -318,6 +439,211 @@ export default function EquipmentListPage() {
     }));
   };
 
+  const handleMotorFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setMotorForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleEvaporatorFormChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+    setEvaporatorForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCondenserFormChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+    setCondenserForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCompressorFormChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const { name, value } = e.target;
+    setCompressorForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleNewAcTypeFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value, type } = e.target;
+
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setNewAcTypeForm((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+    } else {
+      setNewAcTypeForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  // Abrir formulario de creación
+  const handleOpenCreateForm = async () => {
+    if (!selectedClientId) {
+      setCreateError("Debe seleccionar una empresa primero.");
+      return;
+    }
+
+    try {
+      setCreateError(null);
+      setCreateLoading(true);
+
+      await loadHierarchicalAreas();
+      await loadAirConditionerTypes();
+
+      // Resetear selecciones
+      setSelectedAreaId("");
+      setSelectedSubAreaId("");
+      setSelectedSubSubAreaId("");
+      setSelectedSubAreaWithChildren(null);
+
+      // Resetear formularios
+      setCreateForm({
+        category: "Aires Acondicionados",
+        airConditionerTypeId: "",
+        name: "",
+        physicalLocation: "",
+        installationDate: "",
+        notes: "",
+      });
+
+      setMotorForm({
+        amperaje: "",
+        voltaje: "",
+        rpm: "",
+        serialMotor: "",
+        modeloMotor: "",
+        diametroEje: "",
+        tipoEje: "",
+      });
+
+      setEvaporatorForm({
+        marca: "",
+        modelo: "",
+        serial: "",
+        capacidad: "",
+        amperaje: "",
+        tipoRefrigerante: "",
+        voltaje: "",
+        numeroFases: "",
+      });
+
+      setCondenserForm({
+        marca: "",
+        modelo: "",
+        serial: "",
+        capacidad: "",
+        amperaje: "",
+        voltaje: "",
+        tipoRefrigerante: "",
+        numeroFases: "",
+        presionAlta: "",
+        presionBaja: "",
+        hp: "",
+      });
+
+      setCompressorForm({
+        marca: "",
+        modelo: "",
+        serial: "",
+        capacidad: "",
+        amperaje: "",
+        tipoRefrigerante: "",
+        voltaje: "",
+        numeroFases: "",
+        tipoAceite: "",
+        cantidadAceite: "",
+      });
+
+      setShowMotorForm(false);
+      setShowEvaporatorForm(false);
+      setShowCondenserForm(false);
+      setShowCompressorForm(false);
+
+      setShowCreateForm(true);
+    } catch (err: any) {
+      console.error("Error cargando áreas para crear equipo:", err);
+      setCreateError(
+        err.response?.data?.error || "Error al cargar las áreas de la empresa."
+      );
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Crear nuevo tipo de AC
+  const handleCreateNewAcType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAcTypeForm.name.trim()) {
+      setAcTypeError("El nombre del tipo es obligatorio.");
+      return;
+    }
+
+    setCreatingAcType(true);
+    setAcTypeError(null);
+
+    try {
+      const response = await api.post("/air-conditioner-types", {
+        name: newAcTypeForm.name.trim(),
+        hasEvaporator: newAcTypeForm.hasEvaporator,
+        hasCondenser: newAcTypeForm.hasCondenser,
+      });
+
+      const newType = response.data?.data;
+
+      setAirConditionerTypes((prev) => [...prev, newType]);
+      setCreateForm((prev) => ({
+        ...prev,
+        airConditionerTypeId: newType.id.toString(),
+      }));
+
+      setShowNewAcTypeForm(false);
+      setNewAcTypeForm({
+        name: "",
+        hasEvaporator: true,
+        hasCondenser: true,
+      });
+    } catch (err: any) {
+      console.error("Error creando tipo de aire acondicionado:", err);
+
+      let errorMessage = "Error al crear el tipo de aire acondicionado.";
+
+      if (err.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(", ");
+        } else {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+
+      setAcTypeError(errorMessage);
+    } finally {
+      setCreatingAcType(false);
+    }
+  };
+
+  // Crear equipo
   const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClientId) {
@@ -329,50 +655,80 @@ export default function EquipmentListPage() {
       return;
     }
 
+    if (
+      createForm.category === "Aires Acondicionados" &&
+      !createForm.airConditionerTypeId
+    ) {
+      setCreateError("Debe seleccionar un tipo de aire acondicionado.");
+      return;
+    }
+
     setCreateLoading(true);
     setCreateError(null);
 
     try {
-      const payload = {
+      const airConditionerTypeId =
+        createForm.airConditionerTypeId !== ""
+          ? Number(createForm.airConditionerTypeId)
+          : undefined;
+
+      const payload: any = {
         clientId: selectedClientId,
         category: createForm.category,
+        airConditionerTypeId,
         name: createForm.name,
-        brand: createForm.brand || undefined,
-        model: createForm.model || undefined,
-        serialNumber: createForm.serialNumber || undefined,
-        capacity: createForm.capacity || undefined,
-        refrigerantType: createForm.refrigerantType || undefined,
-        voltage: createForm.voltage || undefined,
-        physicalLocation: createForm.physicalLocation || undefined,
-        manufacturer: createForm.manufacturer || undefined,
-        installationDate: createForm.installationDate || undefined,
-        notes: createForm.notes || undefined,
-        areaId: typeof selectedAreaId === "number" ? selectedAreaId : undefined,
-        subAreaId:
-          typeof selectedSubAreaId === "number" ? selectedSubAreaId : undefined,
-        code: createForm.code || undefined,
+        physicalLocation: createForm.physicalLocation || null,
+        installationDate: createForm.installationDate || null,
+        notes: createForm.notes || null,
+        workOrderId: routeState.workOrderId || null,
       };
+
+      if (typeof selectedAreaId === "number") {
+        payload.areaId = selectedAreaId;
+      }
+
+      if (typeof selectedSubAreaId === "number") {
+        payload.subAreaId = selectedSubAreaId;
+      }
+
+      if (showMotorForm) {
+        payload.motor = motorForm;
+      }
+
+      if (showEvaporatorForm) {
+        payload.evaporator = evaporatorForm;
+      }
+
+      if (showCondenserForm) {
+        payload.condenser = condenserForm;
+      }
+
+      if (showCompressorForm) {
+        payload.compressor = compressorForm;
+      }
 
       await createEquipmentRequest(payload);
 
-      // Recargar lista de equipos
-      const equipments = await getEquipmentByClientRequest(
-        selectedClientId,
-        search || undefined
-      );
-      setEquipmentList(equipments);
+      const equipments = await getEquipmentByClientRequest(selectedClientId);
+      setAllEquipments(equipments);
 
       setShowCreateForm(false);
     } catch (err: any) {
       console.error("Error creando equipo:", err);
       setCreateError(
         err.response?.data?.error ||
+          err.response?.data?.message ||
           "Error al crear la hoja de vida del equipo."
       );
     } finally {
       setCreateLoading(false);
     }
   };
+
+  // Obtener tipo de AC seleccionado
+  const selectedAcType = airConditionerTypes.find(
+    (type) => type.id === Number.parseInt(createForm.airConditionerTypeId)
+  );
 
   return (
     <DashboardLayout>
@@ -388,7 +744,7 @@ export default function EquipmentListPage() {
               type="button"
               className={listStyles.createButton}
               onClick={handleOpenCreateForm}
-              disabled={!selectedClientId}
+              disabled={!selectedClientId || createLoading}
             >
               + Crear equipo
             </button>
@@ -399,51 +755,19 @@ export default function EquipmentListPage() {
 
         {!error && (
           <>
-            {/* Filtros */}
-            <div className={listStyles.filters}>
-              <div className={listStyles.filterGroup}>
-                <label>Empresa</label>
-                {loadingClients ? (
-                  <p>Cargando empresas...</p>
-                ) : hasFixedClientFromRoute ? (
-                  // Cliente fijo (viene desde la orden)
-                  <p className={listStyles.fixedClientText}>
-                    {clients[0]
-                      ? `${clients[0].nombre} (${clients[0].nit})`
-                      : routeState.clientName
-                      ? `${routeState.clientName} (${
-                          routeState.clientNit || ""
-                        })`
-                      : "Cliente seleccionado"}
-                  </p>
-                ) : (
-                  // Modo general: combo de empresas
-                  <select
-                    value={selectedClientId || 0}
-                    onChange={handleClientChange}
-                  >
-                    <option value={0}>Seleccionar empresa...</option>
-                    {clients.map((c) => (
-                      <option key={c.idCliente} value={c.idCliente}>
-                        {c.nombre} ({c.nit})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+            <EquipmentFilters
+              clients={clients}
+              selectedClientId={selectedClientId}
+              search={search}
+              loadingClients={loadingClients}
+              loadingEquipment={loadingEquipment}
+              hasFixedClientFromRoute={hasFixedClientFromRoute}
+              fixedClientName={routeState.clientName}
+              fixedClientNit={routeState.clientNit}
+              onClientChange={handleClientChange}
+              onSearchChange={handleSearchChange}
+            />
 
-              <div className={listStyles.filterGroup}>
-                <label>Búsqueda</label>
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o código de equipo..."
-                  value={search}
-                  onChange={handleSearchChange}
-                />
-              </div>
-            </div>
-
-            {/* Lista de equipos */}
             {equipmentError && (
               <div className={styles.error}>{equipmentError}</div>
             )}
@@ -451,266 +775,78 @@ export default function EquipmentListPage() {
             {loadingEquipment ? (
               <p className={styles.loading}>Cargando equipos...</p>
             ) : (
-              <div className={listStyles.grid}>
-                {equipmentList.map((eq) => (
-                  <div
-                    key={eq.equipmentId}
-                    className={listStyles.card}
-                    onClick={() => handleOpenEquipment(eq.equipmentId)}
-                  >
-                    <div className={listStyles.cardHeader}>
-                      <h3>{eq.name}</h3>
-                      <span className={listStyles.status}>{eq.status}</span>
-                    </div>
-
-                    <div className={listStyles.cardBody}>
-                      {eq.code && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Código:</span>
-                          <span className={listStyles.value}>{eq.code}</span>
-                        </div>
-                      )}
-                      {eq.orderId && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Orden ID:</span>
-                          <span
-                            className={listStyles.value}
-                          >{`#${eq.orderId}`}</span>
-                        </div>
-                      )}
-                      <div className={listStyles.row}>
-                        <span className={listStyles.label}>Categoría:</span>
-                        <span className={listStyles.value}>{eq.category}</span>
-                      </div>
-                      {eq.brand && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Marca:</span>
-                          <span className={listStyles.value}>{eq.brand}</span>
-                        </div>
-                      )}
-                      {eq.model && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Modelo:</span>
-                          <span className={listStyles.value}>{eq.model}</span>
-                        </div>
-                      )}
-                      {eq.physicalLocation && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Ubicación:</span>
-                          <span className={listStyles.value}>
-                            {eq.physicalLocation}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className={listStyles.cardFooter}>
-                      <span className={listStyles.footerText}>
-                        ID #{eq.equipmentId}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <EquipmentGrid
+                equipmentList={equipmentList}
+                onOpenEquipment={handleOpenEquipment}
+              />
             )}
 
             {!loadingEquipment &&
               equipmentList.length === 0 &&
               selectedClientId &&
               !equipmentError && (
-                <div className={listStyles.empty}>
-                  <p>No se encontraron equipos para esta empresa.</p>
-                </div>
+                <EmptyState message="No se encontraron equipos para esta empresa." />
               )}
           </>
         )}
 
-        {/* Modal de creación de equipo */}
-        {showCreateForm && (
-          <div className={listStyles.modal}>
-            <div className={listStyles.modalContent}>
-              <h3>Crear Hoja de Vida del Equipo</h3>
+        <CreateEquipmentModal
+          isOpen={showCreateForm}
+          loading={createLoading}
+          error={createError}
+          createForm={createForm}
+          onCreateFormChange={handleCreateFormChange}
+          airConditionerTypes={airConditionerTypes}
+          selectedAcType={selectedAcType}
+          onOpenNewAcTypeForm={() => {
+            setShowNewAcTypeForm(true);
+            setNewAcTypeForm({
+              name: "",
+              hasEvaporator: true,
+              hasCondenser: true,
+            });
+          }}
+          areas={areas}
+          selectedAreaId={selectedAreaId}
+          selectedSubAreaId={selectedSubAreaId}
+          selectedSubSubAreaId={selectedSubSubAreaId}
+          selectedSubAreaWithChildren={selectedSubAreaWithChildren}
+          onAreaChange={handleAreaChange}
+          onSubAreaChange={handleSubAreaChange}
+          onSubSubAreaChange={handleSubSubAreaChange}
+          showMotorForm={showMotorForm}
+          showEvaporatorForm={showEvaporatorForm}
+          showCondenserForm={showCondenserForm}
+          showCompressorForm={showCompressorForm}
+          onToggleMotorForm={() => setShowMotorForm(!showMotorForm)}
+          onToggleEvaporatorForm={() =>
+            setShowEvaporatorForm(!showEvaporatorForm)
+          }
+          onToggleCondenserForm={() => setShowCondenserForm(!showCondenserForm)}
+          onToggleCompressorForm={() =>
+            setShowCompressorForm(!showCompressorForm)
+          }
+          motorForm={motorForm}
+          evaporatorForm={evaporatorForm}
+          condenserForm={condenserForm}
+          compressorForm={compressorForm}
+          onMotorFormChange={handleMotorFormChange}
+          onEvaporatorFormChange={handleEvaporatorFormChange}
+          onCondenserFormChange={handleCondenserFormChange}
+          onCompressorFormChange={handleCompressorFormChange}
+          onSubmit={handleSubmitCreate}
+          onClose={() => setShowCreateForm(false)}
+        />
 
-              {createError && <div className={styles.error}>{createError}</div>}
-
-              <form onSubmit={handleSubmitCreate}>
-                <div className={listStyles.formRow}>
-                  <label>Categoría del equipo *</label>
-                  <select
-                    name="category"
-                    value={createForm.category}
-                    onChange={handleCreateFormChange}
-                    required
-                  >
-                    <option value="Aires Acondicionados">
-                      Aires Acondicionados
-                    </option>
-                    <option value="Redes Eléctricas">Redes Eléctricas</option>
-                    <option value="Redes Contra Incendios">
-                      Redes Contra Incendios
-                    </option>
-                    <option value="Obras Civiles">Obras Civiles</option>
-                  </select>
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Nombre del equipo *</label>
-                  <input
-                    name="name"
-                    value={createForm.name}
-                    onChange={handleCreateFormChange}
-                    required
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Marca</label>
-                  <input
-                    name="brand"
-                    value={createForm.brand}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Modelo</label>
-                  <input
-                    name="model"
-                    value={createForm.model}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Número de serie</label>
-                  <input
-                    name="serialNumber"
-                    value={createForm.serialNumber}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Capacidad</label>
-                  <input
-                    name="capacity"
-                    value={createForm.capacity}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Tipo de refrigerante</label>
-                  <input
-                    name="refrigerantType"
-                    value={createForm.refrigerantType}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Voltaje</label>
-                  <input
-                    name="voltage"
-                    value={createForm.voltage}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Ubicación física</label>
-                  <input
-                    name="physicalLocation"
-                    value={createForm.physicalLocation}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Área (opcional)</label>
-                  <select
-                    value={selectedAreaId || ""}
-                    onChange={handleAreaChange}
-                  >
-                    <option value="">Sin área</option>
-                    {areas.map((a) => (
-                      <option key={a.idArea} value={a.idArea}>
-                        {a.nombreArea}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedAreaId && subAreas.length > 0 && (
-                  <div className={listStyles.formRow}>
-                    <label>Subárea (opcional)</label>
-                    <select
-                      value={selectedSubAreaId || ""}
-                      onChange={(e) =>
-                        setSelectedSubAreaId(
-                          e.target.value ? parseInt(e.target.value, 10) : ""
-                        )
-                      }
-                    >
-                      <option value="">Sin subárea</option>
-                      {subAreas.map((s) => (
-                        <option key={s.idSubArea} value={s.idSubArea}>
-                          {s.nombreSubArea}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className={listStyles.formRow}>
-                  <label>Fecha de instalación</label>
-                  <input
-                    type="date"
-                    name="installationDate"
-                    value={createForm.installationDate}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Observaciones</label>
-                  <textarea
-                    name="notes"
-                    value={createForm.notes}
-                    onChange={handleCreateFormChange}
-                    rows={3}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Código interno (se generará automáticamente)</label>
-                  <input
-                    name="code"
-                    value={createForm.code}
-                    readOnly
-                    placeholder="Se generará al guardar (ej: AACI001)"
-                  />
-                  <span className={listStyles.helperText}>
-                    El sistema generará el código interno según la categoría y
-                    la empresa.
-                  </span>
-                </div>
-
-                <div className={listStyles.formActions}>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={createLoading}>
-                    {createLoading ? "Guardando..." : "Crear equipo"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <CreateAcTypeModal
+          isOpen={showNewAcTypeForm}
+          form={newAcTypeForm}
+          loading={creatingAcType}
+          error={acTypeError}
+          onChange={handleNewAcTypeFormChange}
+          onSubmit={handleCreateNewAcType}
+          onClose={() => setShowNewAcTypeForm(false)}
+        />
       </div>
     </DashboardLayout>
   );

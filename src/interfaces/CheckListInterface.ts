@@ -1,7 +1,4 @@
-/**
- * Tipos para el sistema de checklists preoperacionales
- */
-
+// src/interfaces/CheckListInterface.ts
 import type { CheckValue } from './SgSstInterface';
 
 // Parámetro del checklist

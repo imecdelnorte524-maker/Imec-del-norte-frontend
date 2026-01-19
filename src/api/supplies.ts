@@ -1,3 +1,4 @@
+// src/api/supplies.ts
 import api from "./axios";
 
 export interface SupplyUpdateData {

@@ -1,22 +1,86 @@
-// src/api/equipment.ts
 import api from "./axios";
 import type {
   Equipment,
   EquipmentPhoto,
   CreateEquipmentData,
+  MotorData,
+  EvaporatorData,
+  CondenserData,
+  CompressorData,
 } from "../interfaces/EquipmentInterfaces";
 
-// Mapear foto - CORREGIR
+// Mapear foto del backend
 const mapPhotoFromBackend = (p: any): EquipmentPhoto => ({
-  photoId: p.id || p.photoId, // El backend devuelve 'id'
+  photoId: p.id || p.photoId,
   equipmentId: p.equipmentId,
   url: p.url,
   description: p.description ?? null,
-  createdAt: p.created_at || p.createdAt, // El backend devuelve 'created_at'
+  createdAt: p.created_at || p.createdAt,
 });
 
+// Mapear componentes del backend al frontend
+const mapMotorFromBackend = (motor: any): MotorData | null => {
+  if (!motor) return null;
+  return {
+    amperaje: motor.amperaje,
+    voltaje: motor.voltaje,
+    rpm: motor.rpm,
+    serialMotor: motor.serialMotor,
+    modeloMotor: motor.modeloMotor,
+    diametroEje: motor.diametroEje,
+    tipoEje: motor.tipoEje,
+  };
+};
+
+const mapEvaporatorFromBackend = (evaporator: any): EvaporatorData | null => {
+  if (!evaporator) return null;
+  return {
+    marca: evaporator.marca,
+    modelo: evaporator.modelo,
+    serial: evaporator.serial,
+    capacidad: evaporator.capacidad,
+    amperaje: evaporator.amperaje,
+    tipoRefrigerante: evaporator.tipoRefrigerante,
+    voltaje: evaporator.voltaje,
+    numeroFases: evaporator.numeroFases,
+  };
+};
+
+const mapCondenserFromBackend = (condenser: any): CondenserData | null => {
+  if (!condenser) return null;
+  return {
+    marca: condenser.marca,
+    modelo: condenser.modelo,
+    serial: condenser.serial,
+    capacidad: condenser.capacidad,
+    amperaje: condenser.amperaje,
+    voltaje: condenser.voltaje,
+    tipoRefrigerante: condenser.tipoRefrigerante,
+    numeroFases: condenser.numeroFases,
+    presionAlta: condenser.presionAlta,
+    presionBaja: condenser.presionBaja,
+    hp: condenser.hp,
+  };
+};
+
+const mapCompressorFromBackend = (compressor: any): CompressorData | null => {
+  if (!compressor) return null;
+  return {
+    marca: compressor.marca,
+    modelo: compressor.modelo,
+    serial: compressor.serial,
+    capacidad: compressor.capacidad,
+    amperaje: compressor.amperaje,
+    tipoRefrigerante: compressor.tipoRefrigerante,
+    voltaje: compressor.voltaje,
+    numeroFases: compressor.numeroFases,
+    tipoAceite: compressor.tipoAceite,
+    cantidadAceite: compressor.cantidadAceite,
+  };
+};
+
 // Mapear equipment del backend al frontend
-const mapEquipmentFromBackend = (data: any): Equipment => ({
+export const mapEquipmentFromBackend = (data: any): Equipment => ({
   equipmentId: data.equipmentId,
   clientId: data.clientId ?? data.client?.idCliente,
   client: data.client
@@ -40,21 +104,30 @@ const mapEquipmentFromBackend = (data: any): Equipment => ({
         nombreSubArea: data.subArea.nombreSubArea,
       }
     : null,
-  orderId: data.orderId, 
+  workOrderId: data.workOrderId ?? data.orderId ?? null,
   category: data.category,
+  airConditionerTypeId: data.airConditionerTypeId ?? null,
+  airConditionerType: data.airConditionerType
+    ? {
+        id: data.airConditionerType.id,
+        name: data.airConditionerType.name,
+        hasEvaporator: data.airConditionerType.hasEvaporator,
+        hasCondenser: data.airConditionerType.hasCondenser,
+      }
+    : null,
   name: data.name,
   code: data.code ?? null,
-  brand: data.brand ?? null,
-  model: data.model ?? null,
-  serialNumber: data.serialNumber ?? null,
-  capacity: data.capacity ?? null,
-  refrigerantType: data.refrigerantType ?? null,
-  voltage: data.voltage ?? null,
   physicalLocation: data.physicalLocation ?? null,
-  manufacturer: data.manufacturer ?? null,
   status: data.status,
   installationDate: data.installationDate ?? null,
   notes: data.notes ?? null,
+
+  // Componentes
+  motor: mapMotorFromBackend(data.motor),
+  evaporator: mapEvaporatorFromBackend(data.evaporator),
+  condenser: mapCondenserFromBackend(data.condenser),
+  compressor: mapCompressorFromBackend(data.compressor),
+
   photos: Array.isArray(data.photos)
     ? data.photos.map(mapPhotoFromBackend)
     : [],
@@ -64,8 +137,8 @@ const mapEquipmentFromBackend = (data: any): Equipment => ({
 
 export const getEquipmentByClientRequest = async (
   clientId: number,
-  search?: string
-) => {
+  search?: string,
+): Promise<Equipment[]> => {
   const params = new URLSearchParams();
   params.append("clientId", clientId.toString());
   if (search) params.append("search", search);
@@ -76,32 +149,33 @@ export const getEquipmentByClientRequest = async (
 };
 
 export const getEquipmentByIdRequest = async (
-  equipmentId: number
+  equipmentId: number,
 ): Promise<Equipment> => {
   const response = await api.get(`/equipment/${equipmentId}`);
   return mapEquipmentFromBackend(response.data?.data);
 };
 
 export const createEquipmentRequest = async (
-  data: CreateEquipmentData
+  data: CreateEquipmentData,
 ): Promise<Equipment> => {
+  // En creación sí mapeamos manualmente porque CreateEquipmentData puede venir plano
+  // y queremos estructurarlo bien para el backend
   const payload = {
     clientId: data.clientId,
     areaId: data.areaId ?? null,
     subAreaId: data.subAreaId ?? null,
     category: data.category,
+    airConditionerTypeId: data.airConditionerTypeId ?? null,
     name: data.name,
-    code: data.code ?? null,
-    brand: data.brand ?? null,
-    model: data.model ?? null,
-    serialNumber: data.serialNumber ?? null,
-    capacity: data.capacity ?? null,
-    refrigerantType: data.refrigerantType ?? null,
-    voltage: data.voltage ?? null,
     physicalLocation: data.physicalLocation ?? null,
-    manufacturer: data.manufacturer ?? null,
     installationDate: data.installationDate ?? null,
     notes: data.notes ?? null,
+    workOrderId: data.workOrderId ?? null,
+    // Componentes: solo si existen
+    motor: data.motor || undefined,
+    evaporator: data.evaporator || undefined,
+    condenser: data.condenser || undefined,
+    compressor: data.compressor || undefined,
   };
 
   const response = await api.post("/equipment", payload);
@@ -110,37 +184,19 @@ export const createEquipmentRequest = async (
 
 export const updateEquipmentRequest = async (
   equipmentId: number,
-  data: Partial<CreateEquipmentData>
+  data: any, // Usamos any para permitir enviar la estructura exacta que queramos (incluso nulls)
 ): Promise<Equipment> => {
-  const payload: any = {};
+  // En update, confiamos en que el consumidor ya estructuró el payload correctamente
+  // (incluyendo nulls para borrar, o objetos completos para actualizar).
+  // Solo pasamos la data tal cual al backend.
 
-  if (data.name !== undefined) payload.name = data.name;
-  if (data.code !== undefined) payload.code = data.code;
-  if (data.brand !== undefined) payload.brand = data.brand;
-  if (data.model !== undefined) payload.model = data.model;
-  if (data.serialNumber !== undefined) payload.serialNumber = data.serialNumber;
-  if (data.capacity !== undefined) payload.capacity = data.capacity;
-  if (data.refrigerantType !== undefined)
-    payload.refrigerantType = data.refrigerantType;
-  if (data.voltage !== undefined) payload.voltage = data.voltage;
-  if (data.physicalLocation !== undefined)
-    payload.physicalLocation = data.physicalLocation;
-  if (data.manufacturer !== undefined) payload.manufacturer = data.manufacturer;
-  if (data.installationDate !== undefined)
-    payload.installationDate = data.installationDate;
-  if (data.notes !== undefined) payload.notes = data.notes;
-
-  if (data.areaId !== undefined) payload.areaId = data.areaId;
-  if (data.subAreaId !== undefined) payload.subAreaId = data.subAreaId;
-  if (data.category !== undefined) payload.category = data.category;
-
-  const response = await api.patch(`/equipment/${equipmentId}`, payload);
+  const response = await api.patch(`/equipment/${equipmentId}`, data);
   return mapEquipmentFromBackend(response.data?.data);
 };
 
 export const addEquipmentPhotoRequest = async (
   equipmentId: number,
-  file: File
+  file: File,
 ): Promise<EquipmentPhoto> => {
   const formData = new FormData();
   formData.append("file", file);
@@ -152,7 +208,7 @@ export const addEquipmentPhotoRequest = async (
       headers: {
         "Content-Type": "multipart/form-data",
       },
-    }
+    },
   );
 
   const photoData = response.data;
@@ -160,7 +216,7 @@ export const addEquipmentPhotoRequest = async (
 };
 
 export const deleteEquipmentPhotoRequest = async (
-  photoId: number
+  photoId: number,
 ): Promise<void> => {
   await api.delete(`/images/${photoId}`);
 };

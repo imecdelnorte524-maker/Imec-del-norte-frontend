@@ -187,7 +187,6 @@ export const usersApi = {
   createUser: async (data: CreateUsuarioDto): Promise<Usuario> => {
     try {
       const backendData = mapCreateUserToBackend(data);
-      console.log("Enviando datos al backend para usuario:", backendData);
 
       const response = await api.post("/users", backendData);
       return parseUserResponse(response.data);
@@ -206,7 +205,6 @@ export const usersApi = {
   updateUser: async (id: number, data: UpdateUsuarioDto): Promise<Usuario> => {
     try {
       const backendData = mapUpdateUserToBackend(data);
-      console.log("Actualizando usuario:", id, backendData);
 
       const response = await api.patch(`/users/${id}`, backendData);
       return parseUserResponse(response.data);

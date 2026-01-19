@@ -3,72 +3,82 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import {
-  getEquipmentByIdRequest,
-  updateEquipmentRequest,
   addEquipmentPhotoRequest,
   deleteEquipmentPhotoRequest,
 } from "../api/equipment";
 import type {
   Equipment,
   EquipmentPhoto,
+  MotorData,
+  EvaporatorData,
+  CondenserData,
+  CompressorData,
+  AirConditionerTypeOption,
 } from "../interfaces/EquipmentInterfaces";
 import { useAuth } from "../hooks/useAuth";
 import api from "../api/axios";
-import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import { playErrorSound } from "../utils/sounds";
+import {
+  DetailHeader,
+  PhotoCarousel,
+  EquipmentInfoSection,
+  EquipmentEditForm,
+  ComponentsReadOnly,
+  LocationSection,
+  DatesNotesSection,
+  AddPhotoModal,
+  PhotoViewModal,
+} from "../components/equipment/equipment-details";
+import styles from "../styles/pages/EquipmentDetailPage.module.css";
+import type { AreaSimple } from "../interfaces/AreaInterfaces";
 
-interface SimpleArea {
-  idArea: number;
-  nombreArea: string;
-}
-
-interface SimpleSubArea {
-  idSubArea: number;
-  nombreSubArea: string;
-}
+// Importamos el nuevo hook
+import { useEquipmentDetail } from "../hooks/useEquipmentDetail";
 
 export default function EquipmentDetailPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [equipment, setEquipment] = useState<Equipment | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const idNum = equipmentId ? Number.parseInt(equipmentId, 10) : null;
+
+  // Usamos el hook para manejar estado del equipo
+  const { equipment, loading, saving, error, updateEquipment } =
+    useEquipmentDetail(idNum);
 
   const [editing, setEditing] = useState(false);
+
+  // Estados locales para el formulario de edición
   const [editForm, setEditForm] = useState({
     name: "",
-    code: "",
-    brand: "",
-    model: "",
-    serialNumber: "",
-    capacity: "",
-    refrigerantType: "",
-    voltage: "",
     physicalLocation: "",
-    manufacturer: "",
     installationDate: "",
     notes: "",
   });
+  const [motorForm, setMotorForm] = useState<MotorData>({});
+  const [evaporatorForm, setEvaporatorForm] = useState<EvaporatorData>({});
+  const [condenserForm, setCondenserForm] = useState<CondenserData>({});
+  const [compressorForm, setCompressorForm] = useState<CompressorData>({});
 
-  // Áreas / Subáreas para edición
-  const [areas, setAreas] = useState<SimpleArea[]>([]);
-  const [subAreas, setSubAreas] = useState<SimpleSubArea[]>([]);
+  // Áreas jerárquicas
+  const [areas, setAreas] = useState<AreaSimple[]>([]);
   const [selectedAreaId, setSelectedAreaId] = useState<number | "">("");
   const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | "">("");
+
+  // Tipos de aire
+  const [airConditionerTypes, setAirConditionerTypes] = useState<
+    AirConditionerTypeOption[]
+  >([]);
+  const [selectedAcTypeId, setSelectedAcTypeId] = useState<number | "">("");
+
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [loadingLocations, setLoadingLocations] = useState(false);
 
-  // Estado para fotos / carrusel
+  // Fotos
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoDescription, setPhotoDescription] = useState("");
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-
-  // Modales
   const [showAddPhotoModal, setShowAddPhotoModal] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<EquipmentPhoto | null>(
@@ -78,752 +88,290 @@ export default function EquipmentDetailPage() {
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
 
-  const loadAreasAndSubareasForEquipment = async (equip: Equipment) => {
+  // Cargar áreas jerárquicas (árbol completo)
+  const loadHierarchicalAreas = async (eq: Equipment) => {
     try {
+      if (!eq.client?.idCliente) return;
       setLoadingLocations(true);
       setLocationsError(null);
 
-      // Cargar áreas del cliente del equipo
-      const resAreas = await api.get("/areas", {
-        params: { clienteId: equip.clientId },
+      const areasRes = await api.get("/areas", {
+        params: { clienteId: eq.client.idCliente },
       });
-      const dataAreas = resAreas.data?.data || [];
-      const mappedAreas: SimpleArea[] = dataAreas.map((a: any) => ({
-        idArea: a.idArea,
-        nombreArea: a.nombreArea,
-      }));
-      setAreas(mappedAreas);
+      const areasData = areasRes.data?.data || [];
 
-      const areaId = equip.areaId ?? null;
-      const subAreaId = equip.subAreaId ?? null;
-
-      setSelectedAreaId(areaId ?? "");
-      setSelectedSubAreaId(subAreaId ?? "");
-
-      // Si el equipo ya tiene área, cargar sus subáreas
-      if (areaId) {
-        const resSub = await api.get("/sub-areas", {
-          params: { areaId },
-        });
-        const dataSub = resSub.data?.data || [];
-        const mappedSub: SimpleSubArea[] = dataSub.map((s: any) => ({
-          idSubArea: s.idSubArea,
-          nombreSubArea: s.nombreSubArea,
-        }));
-        setSubAreas(mappedSub);
-      } else {
-        setSubAreas([]);
-      }
-    } catch (err: any) {
-      console.error("Error cargando áreas/subáreas:", err);
-      setLocationsError(
-        err.response?.data?.error ||
-          "Error al cargar las áreas y subáreas del cliente."
+      const areasWithTrees: AreaSimple[] = await Promise.all(
+        areasData.map(async (a: any) => {
+          try {
+            const treeRes = await api.get(`/sub-areas/tree/${a.idArea}`);
+            return {
+              idArea: a.idArea,
+              nombreArea: a.nombreArea,
+              treeData: treeRes.data?.data,
+              subAreas: [],
+            } as AreaSimple;
+          } catch {
+            return {
+              idArea: a.idArea,
+              nombreArea: a.nombreArea,
+              treeData: null,
+              subAreas: [],
+            } as AreaSimple;
+          }
+        })
       );
+
+      setAreas(areasWithTrees);
+    } catch (err: any) {
+      console.error("Error cargando áreas:", err);
+      setLocationsError("Error al cargar áreas.");
     } finally {
       setLoadingLocations(false);
     }
   };
 
-  // Cargar equipo
+  const loadAirConditionerTypes = async () => {
+    try {
+      const res = await api.get("/air-conditioner-types");
+      setAirConditionerTypes(res.data?.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Sincronizar formulario cuando carga/cambia el equipo
   useEffect(() => {
-    const loadEquipment = async () => {
-      if (!equipmentId) {
-        setError("ID de equipo inválido");
-        playErrorSound();
-        setLoading(false);
-        return;
-      }
+    if (equipment) {
+      setEditForm({
+        name: equipment.name || "",
+        physicalLocation: equipment.physicalLocation || "",
+        installationDate: equipment.installationDate || "",
+        notes: equipment.notes || "",
+      });
+      setMotorForm(equipment.motor || {});
+      setEvaporatorForm(equipment.evaporator || {});
+      setCondenserForm(equipment.condenser || {});
+      setCompressorForm(equipment.compressor || {});
 
-      const idNum = parseInt(equipmentId, 10);
-      if (isNaN(idNum)) {
-        setError("ID de equipo inválido");
-        playErrorSound();
-        setLoading(false);
-        return;
-      }
+      setSelectedAcTypeId(equipment.airConditionerTypeId || "");
+      setSelectedAreaId(equipment.area?.idArea ?? "");
+      setSelectedSubAreaId(equipment.subArea?.idSubArea ?? "");
 
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getEquipmentByIdRequest(idNum);
-        setEquipment(data);
-        setEditForm({
-          name: data.name || "",
-          code: data.code || "",
-          brand: data.brand || "",
-          model: data.model || "",
-          serialNumber: data.serialNumber || "",
-          capacity: data.capacity || "",
-          refrigerantType: data.refrigerantType || "",
-          voltage: data.voltage || "",
-          physicalLocation: data.physicalLocation || "",
-          manufacturer: data.manufacturer || "",
-          installationDate: data.installationDate || "",
-          notes: data.notes || "",
-        });
-        setCurrentPhotoIndex(0);
+      loadHierarchicalAreas(equipment);
+      loadAirConditionerTypes();
+    }
+  }, [equipment]);
 
-        // Cargar áreas y subáreas según el cliente y área del equipo
-        await loadAreasAndSubareasForEquipment(data);
-      } catch (err: any) {
-        console.error("Error obteniendo equipo:", err);
-        setError(
-          err.response?.data?.error ||
-            err.response?.data?.message ||
-            "Error al obtener la hoja de vida del equipo"
-        );
-        playErrorSound();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadEquipment();
-  }, [equipmentId]);
-
+  // Handlers de formulario
   const handleEditChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
-    setEditForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setEditForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+  const handleMotorFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setMotorForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleEvaporatorFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setEvaporatorForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleCondenserFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setCondenserForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleCompressorFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setCompressorForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleEditAreaChange = async (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const value = e.target.value;
-    const areaId = value ? parseInt(value, 10) : "";
-    setSelectedAreaId(areaId);
+  // Handlers de selectores
+  const handleEditAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedAreaId(e.target.value ? Number(e.target.value) : "");
     setSelectedSubAreaId("");
-    setSubAreas([]);
-
-    if (!areaId) return;
-
-    try {
-      setLoadingLocations(true);
-      setLocationsError(null);
-      const res = await api.get("/sub-areas", {
-        params: { areaId },
-      });
-      const data = res.data?.data || [];
-      const mappedSub: SimpleSubArea[] = data.map((s: any) => ({
-        idSubArea: s.idSubArea,
-        nombreSubArea: s.nombreSubArea,
-      }));
-      setSubAreas(mappedSub);
-    } catch (err: any) {
-      console.error("Error cargando subáreas:", err);
-      setLocationsError(
-        err.response?.data?.error ||
-          "Error al cargar las subáreas del área seleccionada."
-      );
-    } finally {
-      setLoadingLocations(false);
-    }
   };
-
   const handleEditSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const subId = value ? parseInt(value, 10) : "";
-    setSelectedSubAreaId(subId);
+    setSelectedSubAreaId(e.target.value ? Number(e.target.value) : "");
+  };
+  const handleAcTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedAcTypeId(e.target.value ? Number(e.target.value) : "");
   };
 
+  // GUARDAR (Usando el hook para actualizar y recargar)
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!equipment) return;
 
-    setSaving(true);
-    setError(null);
+    const payload: any = {
+      name: editForm.name,
+      physicalLocation: editForm.physicalLocation || null,
+      installationDate: editForm.installationDate || null,
+      notes: editForm.notes || null,
+    };
 
-    try {
-      const payload: any = {
-        name: editForm.name,
-        code: editForm.code || undefined,
-        brand: editForm.brand || undefined,
-        model: editForm.model || undefined,
-        serialNumber: editForm.serialNumber || undefined,
-        capacity: editForm.capacity || undefined,
-        refrigerantType: editForm.refrigerantType || undefined,
-        voltage: editForm.voltage || undefined,
-        physicalLocation: editForm.physicalLocation || undefined,
-        manufacturer: editForm.manufacturer || undefined,
-        installationDate: editForm.installationDate || undefined,
-        notes: editForm.notes || undefined,
-        // Área y subárea (opcionales)
-        areaId: typeof selectedAreaId === "number" ? selectedAreaId : null,
-        subAreaId:
-          typeof selectedSubAreaId === "number" ? selectedSubAreaId : null,
-      };
+    if (typeof selectedAreaId === "number") {
+      payload.areaId = selectedAreaId;
+    } else {
+      payload.areaId = null; // Borrar área si se deseleccionó
+    }
 
-      const updated = await updateEquipmentRequest(
-        equipment.equipmentId,
-        payload
-      );
-      setEquipment(updated);
+    if (typeof selectedSubAreaId === "number") {
+      payload.subAreaId = selectedSubAreaId;
+    } else {
+      payload.subAreaId = null; // Borrar subárea si se deseleccionó
+    }
+
+    if (equipment.category === "Aires Acondicionados") {
+      payload.airConditionerTypeId =
+        typeof selectedAcTypeId === "number" ? selectedAcTypeId : null;
+    }
+
+    // Componentes: enviar objeto si tiene datos, null si no
+    const hasData = (obj: any) =>
+      Object.keys(obj).some((k) => obj[k] !== "" && obj[k] !== undefined);
+
+    payload.motor = hasData(motorForm) ? motorForm : null;
+    payload.evaporator = hasData(evaporatorForm) ? evaporatorForm : null;
+    payload.condenser = hasData(condenserForm) ? condenserForm : null;
+    payload.compressor = hasData(compressorForm) ? compressorForm : null;
+
+    const success = await updateEquipment(payload); // <--- AQUÍ LA MAGIA
+    if (success) {
       setEditing(false);
-    } catch (err: any) {
-      console.error("Error actualizando equipo:", err);
-      setError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error al actualizar la hoja de vida del equipo"
-      );
+    } else {
       playErrorSound();
-    } finally {
-      setSaving(false);
     }
   };
 
-  // ---- Carrusel de fotos ----
+  // --- Fotos (igual que antes) ---
   const photos = equipment?.photos || [];
-  const photosCount = photos.length;
-  const safeIndex =
-    photosCount > 0 ? Math.min(currentPhotoIndex, photosCount - 1) : 0;
-  const currentPhoto = photosCount > 0 ? photos[safeIndex] : null;
+  const handlePrevPhoto = () =>
+    setCurrentPhotoIndex((p) => (p === 0 ? photos.length - 1 : p - 1));
+  const handleNextPhoto = () =>
+    setCurrentPhotoIndex((p) => (p === photos.length - 1 ? 0 : p + 1));
 
-  const handlePrevPhoto = () => {
-    if (!photosCount) return;
-    setCurrentPhotoIndex((prev) => (prev === 0 ? photosCount - 1 : prev - 1));
-  };
-
-  const handleNextPhoto = () => {
-    if (!photosCount) return;
-    setCurrentPhotoIndex((prev) => (prev === photosCount - 1 ? 0 : prev + 1));
-  };
-
-  const openPhotoModal = (photo: EquipmentPhoto) => {
-    setSelectedPhoto(photo);
-    setShowPhotoModal(true);
-  };
-
-  const closePhotoModal = () => {
-    setShowPhotoModal(false);
-    setSelectedPhoto(null);
-  };
-
-  const handleAddPhoto = async (e: React.FormEvent) => {
+  const handleAddPhotos = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!equipment) return;
-    if (!photoFile) {
-      setPhotoError("Debe seleccionar un archivo de imagen");
-      return;
-    }
-
+    if (!equipment || photoFiles.length === 0) return;
     setPhotoLoading(true);
-    setPhotoError(null);
-
     try {
-      const newPhoto = await addEquipmentPhotoRequest(
-        equipment.equipmentId,
-        photoFile
+      await Promise.all(
+        photoFiles.map((f) =>
+          addEquipmentPhotoRequest(equipment.equipmentId, f)
+        )
       );
-
-      // Actualizar estado localmente sin recargar todo el equipo
-      setEquipment((prev) =>
-        prev
-          ? {
-              ...prev,
-              photos: [...prev.photos, newPhoto],
-            }
-          : prev
-      );
-
-      setPhotoFile(null);
-      setPhotoDescription("");
+      updateEquipment({}); // Recargar equipo para ver fotos nuevas
       setShowAddPhotoModal(false);
-      setCurrentPhotoIndex(photosCount); // ir a la última añadida
-    } catch (err: any) {
-      console.error("Error agregando foto:", err);
-      setPhotoError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error al agregar la foto del equipo"
-      );
+      setPhotoFiles([]);
+    } catch (err) {
+      setPhotoError("Error al subir fotos");
     } finally {
       setPhotoLoading(false);
     }
   };
 
   const handleDeletePhoto = async (photoId: number) => {
-    if (!equipment) return;
-    if (!window.confirm("¿Está seguro de que desea eliminar esta foto?"))
-      return;
-
+    if (!window.confirm("¿Eliminar foto?")) return;
     setPhotoLoading(true);
-    setPhotoError(null);
-
     try {
       await deleteEquipmentPhotoRequest(photoId);
-
-      // Actualizar estado localmente sin recargar todo el equipo
-      setEquipment((prev) => {
-        if (!prev) return prev;
-        const newPhotos = prev.photos.filter((p) => p.photoId !== photoId);
-        let newIndex = currentPhotoIndex;
-        if (newIndex >= newPhotos.length) {
-          newIndex = newPhotos.length - 1;
-        }
-        setCurrentPhotoIndex(Math.max(newIndex, 0));
-        return {
-          ...prev,
-          photos: newPhotos,
-        };
-      });
-
-      closePhotoModal();
-    } catch (err: any) {
-      console.error("Error eliminando foto:", err);
-      setPhotoError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error al eliminar la foto del equipo"
-      );
+      updateEquipment({}); // Recargar equipo
+      setShowPhotoModal(false);
+    } catch {
+      setPhotoError("Error al eliminar foto");
     } finally {
       setPhotoLoading(false);
     }
   };
 
-  const handleOpenHistory = () => {
-    console.log("Historial de equipo - pendiente de implementación");
-  };
+  const selectedAcType = airConditionerTypes.find(
+    (t) => t.id === Number(selectedAcTypeId)
+  );
 
   return (
     <DashboardLayout>
       <div className={styles.container}>
-        <div className={styles.header}>
-          <button className={styles.backButton} onClick={() => navigate(-1)}>
-            ← Volver
-          </button>
-          <h1>Hoja de Vida del Equipo</h1>
-
-          {canEdit && equipment && (
-            <div className={styles.headerActions}>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={handleOpenHistory}
-              >
-                Historial
-              </button>
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => {
-                  setPhotoError(null);
-                  setPhotoFile(null);
-                  setPhotoDescription("");
-                  setShowAddPhotoModal(true);
-                }}
-              >
-                Agregar imagen
-              </button>
-              <button
-                className={styles.editButton}
-                type="button"
-                onClick={() => setEditing((prev) => !prev)}
-              >
-                {editing ? "Cancelar edición" : "Editar"}
-              </button>
-            </div>
-          )}
-        </div>
+        <DetailHeader
+          canEdit={canEdit && !!equipment}
+          editing={editing}
+          onBack={() => navigate(-1)}
+          onHistory={() =>
+            navigate(`/equipment/${equipment?.equipmentId}/history`)
+          }
+          onAddPhotos={() => setShowAddPhotoModal(true)}
+          onToggleEdit={() => setEditing((prev) => !prev)}
+        />
 
         {loading && <p className={styles.loading}>Cargando equipo...</p>}
         {error && !loading && <div className={styles.error}>{error}</div>}
 
         {!loading && !error && equipment && (
           <>
-            {/* Carrusel */}
-            <div className={styles.section}>
-              <h3>Fotos del Equipo</h3>
+            <PhotoCarousel
+              photos={photos}
+              currentIndex={currentPhotoIndex}
+              photoLoading={photoLoading}
+              photoError={photoError}
+              onPrev={handlePrevPhoto}
+              onNext={handleNextPhoto}
+              onPhotoClick={(p) => {
+                setSelectedPhoto(p);
+                setShowPhotoModal(true);
+              }}
+            />
 
-              {photoError && <div className={styles.error}>{photoError}</div>}
-
-              <div className={styles.carouselWrapper}>
-                <div className={styles.carouselMain}>
-                  {currentPhoto ? (
-                    <>
-                      {photosCount > 1 && (
-                        <button
-                          type="button"
-                          className={`${styles.carouselNavButton} ${styles.carouselNavLeft}`}
-                          onClick={handlePrevPhoto}
-                          disabled={photoLoading}
-                        >
-                          ‹
-                        </button>
-                      )}
-
-                      <img
-                        src={currentPhoto.url}
-                        alt={currentPhoto.description || "Foto del equipo"}
-                        className={styles.carouselImage}
-                        onClick={() => openPhotoModal(currentPhoto)}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-
-                      {photosCount > 1 && (
-                        <button
-                          type="button"
-                          className={`${styles.carouselNavButton} ${styles.carouselNavRight}`}
-                          onClick={handleNextPhoto}
-                          disabled={photoLoading}
-                        >
-                          ›
-                        </button>
-                      )}
-
-                      <div className={styles.carouselInfo}>
-                        Foto {safeIndex + 1} de {photosCount}
-                      </div>
-                    </>
-                  ) : (
-                    <p className={styles.emptyPhotos}>
-                      No hay fotos registradas para este equipo.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Información general */}
-            <div className={styles.section}>
-              <h3>Información General</h3>
-
-              {!editing ? (
-                <>
-                  <div className={styles.detailItem}>
-                    <strong>Nombre del equipo:</strong>
-                    <span>{equipment.name}</span>
-                  </div>
-                  {equipment.code && (
-                    <div className={styles.detailItem}>
-                      <strong>Código interno:</strong>
-                      <span>{equipment.code}</span>
-                    </div>
-                  )}
-                  {equipment.orderId && (
-                    <div className={styles.detailItem}>
-                      <strong>Orden Id:</strong>
-                      <span>{`#${equipment.orderId}`}</span>
-                    </div>
-                  )}
-                  <div className={styles.detailItem}>
-                    <strong>Categoría:</strong>
-                    <span>{equipment.category}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <strong>Estado:</strong>
-                    <span>{equipment.status}</span>
-                  </div>
-                </>
-              ) : (
-                <form onSubmit={handleSave} className={styles.editForm}>
-                  <div className={styles.formRow}>
-                    <label>Nombre del equipo *</label>
-                    <input
-                      name="name"
-                      value={editForm.name}
-                      onChange={handleEditChange}
-                      required
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Código interno (generado automáticamente)</label>
-                    <input
-                      disabled
-                      name="code"
-                      value={editForm.code}
-                      readOnly
-                    />
-                    <span className={styles.helperText}>
-                      Este código es generado por el sistema (ej: AACI001,
-                      RCICI001) y no se puede editar manualmente.
-                    </span>
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Marca</label>
-                    <input
-                      name="brand"
-                      value={editForm.brand}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Modelo</label>
-                    <input
-                      name="model"
-                      value={editForm.model}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Número de serie</label>
-                    <input
-                      name="serialNumber"
-                      value={editForm.serialNumber}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Capacidad</label>
-                    <input
-                      name="capacity"
-                      value={editForm.capacity}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Tipo de refrigerante</label>
-                    <input
-                      name="refrigerantType"
-                      value={editForm.refrigerantType}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Voltaje</label>
-                    <input
-                      name="voltage"
-                      value={editForm.voltage}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Ubicación física</label>
-                    <input
-                      name="physicalLocation"
-                      value={editForm.physicalLocation}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-
-                  {/* Área y Subárea en edición */}
-                  <div className={styles.formRow}>
-                    <label>Área (opcional)</label>
-                    <select
-                      value={selectedAreaId || ""}
-                      onChange={handleEditAreaChange}
-                      disabled={loadingLocations}
-                    >
-                      <option value="">Sin área</option>
-                      {areas.map((a) => (
-                        <option key={a.idArea} value={a.idArea}>
-                          {a.nombreArea}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {selectedAreaId && subAreas.length > 0 && (
-                    <div className={styles.formRow}>
-                      <label>Subárea (opcional)</label>
-                      <select
-                        value={selectedSubAreaId || ""}
-                        onChange={handleEditSubAreaChange}
-                        disabled={loadingLocations}
-                      >
-                        <option value="">Sin subárea</option>
-                        {subAreas.map((s) => (
-                          <option key={s.idSubArea} value={s.idSubArea}>
-                            {s.nombreSubArea}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {locationsError && (
-                    <div className={styles.error}>{locationsError}</div>
-                  )}
-
-                  <div className={styles.formRow}>
-                    <label>Fecha de instalación</label>
-                    <input
-                      type="date"
-                      name="installationDate"
-                      value={editForm.installationDate}
-                      onChange={handleEditChange}
-                    />
-                  </div>
-                  <div className={styles.formRow}>
-                    <label>Observaciones</label>
-                    <textarea
-                      name="notes"
-                      value={editForm.notes}
-                      onChange={handleEditChange}
-                      rows={3}
-                    />
-                  </div>
-                  <div className={styles.formActions}>
-                    <button type="button" onClick={() => setEditing(false)}>
-                      Cancelar
-                    </button>
-                    <button type="submit" disabled={saving}>
-                      {saving ? "Guardando..." : "Guardar cambios"}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Ubicación (solo lectura cuando no está editando) */}
-            <div className={styles.section}>
-              <h3>Ubicación</h3>
-              <div className={styles.detailItem}>
-                <strong>Cliente (empresa):</strong>
-                <span>
-                  {equipment.client
-                    ? `${equipment.client.nombre} (NIT: ${equipment.client.nit})`
-                    : equipment.clientId}
-                </span>
-              </div>
-              {equipment.area && (
-                <div className={styles.detailItem}>
-                  <strong>Área:</strong>
-                  <span>{equipment.area.nombreArea}</span>
-                </div>
-              )}
-              {equipment.subArea && (
-                <div className={styles.detailItem}>
-                  <strong>Subárea:</strong>
-                  <span>{equipment.subArea.nombreSubArea}</span>
-                </div>
-              )}
-              {equipment.physicalLocation && !editing && (
-                <div className={styles.detailItem}>
-                  <strong>Ubicación física:</strong>
-                  <span>{equipment.physicalLocation}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Fechas y observaciones (modo solo lectura cuando no edita) */}
-            {!editing && (
-              <div className={styles.section}>
-                <h3>Fechas y Observaciones</h3>
-                {equipment.installationDate && (
-                  <div className={styles.detailItem}>
-                    <strong>Fecha de instalación:</strong>
-                    <span>
-                      {new Date(
-                        equipment.installationDate
-                      ).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                <div className={styles.detailItem}>
-                  <strong>Creado en el sistema:</strong>
-                  <span>{new Date(equipment.createdAt).toLocaleString()}</span>
-                </div>
-                {equipment.notes && (
-                  <div className={styles.notes}>
-                    <strong>Observaciones:</strong>
-                    <p>{equipment.notes}</p>
-                  </div>
-                )}
-              </div>
+            {!editing ? (
+              <EquipmentInfoSection equipment={equipment} />
+            ) : (
+              <EquipmentEditForm
+                equipment={equipment}
+                editForm={editForm}
+                motorForm={motorForm}
+                evaporatorForm={evaporatorForm}
+                condenserForm={condenserForm}
+                compressorForm={compressorForm}
+                areas={areas}
+                selectedAreaId={selectedAreaId}
+                selectedSubAreaId={selectedSubAreaId}
+                airConditionerTypes={airConditionerTypes}
+                selectedAcTypeId={selectedAcTypeId}
+                selectedAcType={selectedAcType}
+                saving={saving}
+                loadingLocations={loadingLocations}
+                locationsError={locationsError}
+                onEditChange={handleEditChange}
+                onMotorFormChange={handleMotorFormChange}
+                onEvaporatorFormChange={handleEvaporatorFormChange}
+                onCondenserFormChange={handleCondenserFormChange}
+                onCompressorFormChange={handleCompressorFormChange}
+                onAreaChange={handleEditAreaChange}
+                onSubAreaChange={handleEditSubAreaChange}
+                onAcTypeChange={handleAcTypeChange}
+                onSubmit={handleSave}
+                onCancel={() => setEditing(false)}
+              />
             )}
 
-            {/* MODAL: Agregar imagen */}
+            {!editing && <ComponentsReadOnly equipment={equipment} />}
+            <LocationSection
+              equipment={equipment}
+              editing={editing}
+              areasWithTree={areas}
+            />
+            {!editing && <DatesNotesSection equipment={equipment} />}
+
+            {/* Modales de fotos... */}
             {showAddPhotoModal && (
-              <div className={styles.modalOverlay}>
-                <div className={styles.addPhotoModal}>
-                  <div className={styles.modalHeaderRow}>
-                    <h4>Agregar nueva foto</h4>
-                    <button
-                      type="button"
-                      className={styles.modalCloseButton}
-                      onClick={() => setShowAddPhotoModal(false)}
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  {photoError && (
-                    <div className={styles.error}>{photoError}</div>
-                  )}
-
-                  <form onSubmit={handleAddPhoto}>
-                    <div className={styles.formRow}>
-                      <label>Archivo de imagen *</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) =>
-                          setPhotoFile(e.target.files?.[0] || null)
-                        }
-                        required
-                      />
-                    </div>
-                    <div className={styles.formRow}>
-                      <label>Descripción (opcional)</label>
-                      <textarea
-                        value={photoDescription}
-                        onChange={(e) => setPhotoDescription(e.target.value)}
-                        rows={2}
-                      />
-                    </div>
-                    <div className={styles.formActions}>
-                      <button
-                        type="button"
-                        onClick={() => setShowAddPhotoModal(false)}
-                      >
-                        Cancelar
-                      </button>
-                      <button type="submit" disabled={photoLoading}>
-                        {photoLoading ? "Guardando..." : "Agregar foto"}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
+              <AddPhotoModal
+                photoFiles={photoFiles}
+                photoLoading={photoLoading}
+                photoError={photoError}
+                onFileSelection={(e) =>
+                  e.target.files && setPhotoFiles(Array.from(e.target.files))
+                }
+                onSubmit={handleAddPhotos}
+                onClose={() => setShowAddPhotoModal(false)}
+              />
             )}
-
-            {/* Modal: Ver imagen grande */}
             {showPhotoModal && selectedPhoto && (
-              <div className={styles.modalOverlay}>
-                <div className={styles.imageModal}>
-                  <div className={styles.modalHeaderRow}>
-                    <h4>Detalle de la foto</h4>
-                    <button
-                      type="button"
-                      className={styles.modalCloseButton}
-                      onClick={closePhotoModal}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className={styles.imageModalBody}>
-                    <img
-                      src={selectedPhoto.url}
-                      alt={selectedPhoto.description || "Foto del equipo"}
-                      className={styles.imageModalImage}
-                    />
-                    {selectedPhoto.description && (
-                      <p className={styles.imageModalDescription}>
-                        {selectedPhoto.description}
-                      </p>
-                    )}
-                    <span className={styles.imageModalDate}>
-                      {new Date(selectedPhoto.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleDeletePhoto(selectedPhoto.photoId)}
-                    className={styles.deletePhotoButton}
-                    disabled={photoLoading}
-                  >
-                    {photoLoading ? "Eliminando..." : "Eliminar foto"}
-                  </button>
-                </div>
-              </div>
+              <PhotoViewModal
+                photo={selectedPhoto}
+                photoLoading={photoLoading}
+                onClose={() => setShowPhotoModal(false)}
+                onDelete={handleDeletePhoto}
+              />
             )}
           </>
         )}

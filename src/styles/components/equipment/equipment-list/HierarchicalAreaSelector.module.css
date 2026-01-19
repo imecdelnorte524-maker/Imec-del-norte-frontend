@@ -1,0 +1,138 @@
+.hierarchicalSelector {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-md) 0 var(--spacing-lg) 0;
+}
+
+.hierarchicalSelector h4 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-md);
+  color: var(--gray-800);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.hierarchicalLevel {
+  margin-bottom: var(--spacing-md);
+  position: relative;
+  padding-left: 24px;
+}
+
+.hierarchicalLevel:last-child {
+  margin-bottom: 0;
+}
+
+.hierarchicalLevel label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.levelIndicator {
+  display: inline-block;
+  margin-right: var(--spacing-xs);
+  color: var(--gray-500);
+  font-weight: bold;
+  min-width: 20px;
+}
+
+.hierarchicalLevel select {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  background-color: var(--white);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  color: var(--gray-800);
+}
+
+.hierarchicalLevel select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.hierarchicalLevel select:disabled {
+  background-color: var(--gray-100);
+  color: var(--gray-500);
+  cursor: not-allowed;
+  border-color: var(--gray-200);
+}
+
+.hierarchicalLevel:nth-child(2) {
+  border-left: 2px solid var(--gray-300);
+  padding-left: 32px;
+  margin-left: -8px;
+}
+
+.hierarchicalLevel:nth-child(3) {
+  border-left: 2px solid var(--gray-400);
+  padding-left: 40px;
+  margin-left: -16px;
+}
+
+.hierarchicalLevel:hover {
+  background-color: var(--gray-25);
+  border-radius: var(--border-radius);
+  padding-left: 24px;
+  margin-left: -8px;
+  transition: background-color 0.2s;
+}
+
+.hierarchicalLevel:nth-child(2):hover {
+  padding-left: 32px;
+}
+
+.hierarchicalLevel:nth-child(3):hover {
+  padding-left: 40px;
+}
+
+@media (max-width: 768px) {
+  .hierarchicalSelector {
+    padding: var(--spacing-md);
+    margin: var(--spacing-sm) 0 var(--spacing-md) 0;
+  }
+
+  .hierarchicalLevel {
+    padding-left: 16px;
+  }
+
+  .hierarchicalLevel:nth-child(2) {
+    padding-left: 24px;
+    margin-left: -4px;
+  }
+
+  .hierarchicalLevel:nth-child(3) {
+    padding-left: 32px;
+    margin-left: -8px;
+  }
+
+  .hierarchicalLevel:hover {
+    padding-left: 16px;
+    margin-left: -4px;
+  }
+
+  .hierarchicalLevel:nth-child(2):hover {
+    padding-left: 24px;
+  }
+
+  .hierarchicalLevel:nth-child(3):hover {
+    padding-left: 32px;
+  }
+
+  .levelIndicator {
+    min-width: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hierarchicalSelector {
+    padding: var(--spacing-sm);
+  }
+}

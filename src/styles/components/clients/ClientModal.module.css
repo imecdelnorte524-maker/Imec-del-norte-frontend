@@ -571,6 +571,31 @@
   font-weight: bold;
 }
 
+/* Botón + pequeño reutilizable */
+.addButtonSmall {
+  background: #dcfce7;
+  color: #166534;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.addButtonSmall:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
+.addButtonSmall:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Areas List */
 .areasList {
   display: flex;
@@ -632,6 +657,12 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.areaActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .removeButton {
@@ -716,6 +747,12 @@
   font-size: 0.9rem;
 }
 
+.subareaActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* Contenedor de hijos de una subárea (indentado) */
 .subareaChildren {
   margin-left: 16px;
@@ -752,7 +789,7 @@
   font-size: 0.875rem;
 }
 
-/* Subareas Section */
+/* Subareas Section (ya no se usa para el input, queda por si acaso) */
 .subareasSection {
   background: white;
   border-radius: 12px;
@@ -773,10 +810,10 @@
   gap: 16px;
 }
 
-/* 4 columnas: Área, Subárea padre, nombre, botón */
+/* 2 columnas: nombre, botón (ya no se usa en el cuerpo, pero se deja por si) */
 .subareaControls {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr auto;
+  grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
 }
@@ -803,6 +840,84 @@
 }
 
 .addSubareaButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mini-modal para subárea */
+.subareaModalOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1100;
+}
+
+.subareaModal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.subareaModalTitle {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.subareaModalContext {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.subareaModalContext strong {
+  color: #374151;
+}
+
+.subareaModalActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.subareaModalCancel,
+.subareaModalConfirm {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.subareaModalCancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.subareaModalCancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.subareaModalConfirm {
+  background: #10b981;
+  color: white;
+}
+
+.subareaModalConfirm:hover:not(:disabled) {
+  background: #0da271;
+}
+
+.subareaModalCancel:disabled,
+.subareaModalConfirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

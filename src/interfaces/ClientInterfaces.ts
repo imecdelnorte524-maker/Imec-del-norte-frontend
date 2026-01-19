@@ -1,3 +1,5 @@
+// src/interfaces/ClientInterfaces.ts
+import type { Area, AreaFormData } from './AreaInterfaces';
 import type { Usuario as UserUsuario } from './UserInterfaces';
 
 export interface UsuarioContacto {
@@ -21,40 +23,20 @@ export interface ClientImage {
   created_at: string;
 }
 
-export interface SubArea {
-  idSubArea: number;
-  nombreSubArea: string;
-  areaId: number;
-  parentSubAreaId?: number;
-  area?: Area;
-  parentSubArea?: SubArea;
-  children?: SubArea[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Area {
-  idArea: number;
-  nombreArea: string;
-  clienteId: number;
-  cliente?: Client;
-  subAreas?: SubArea[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface Client {
   idCliente: number;
   nombre: string;
   nit: string;
+
   // Campos desglosados para edición
   direccionBase: string;
   barrio: string;
   ciudad: string;
   departamento: string;
   pais: string;
+
   // Campo completo para visualización
-  direccionCompleta: string; 
+  direccionCompleta: string;
   contacto: string;
   email: string;
   telefono: string;
@@ -72,13 +54,14 @@ export interface Client {
 export interface CreateClientDto {
   nombre: string;
   nit: string;
+
   // Nuevos campos obligatorios
   direccionBase: string;
   barrio: string;
   ciudad: string;
   departamento: string;
   pais: string;
-  
+
   contacto: string;
   email: string;
   telefono: string;
@@ -89,25 +72,11 @@ export interface CreateClientDto {
 
 export interface UpdateClientDto extends Partial<CreateClientDto> {}
 
-export interface CreateAreaDto {
-  nombreArea: string;
-  clienteId: number;
-}
-
-export interface UpdateAreaDto extends Partial<CreateAreaDto> {}
-
-export interface CreateSubAreaDto {
-  nombreSubArea: string;
-  areaId: number;
-  parentSubAreaId?: number;
-}
-
-export interface UpdateSubAreaDto extends Partial<CreateSubAreaDto> {}
-
 // Para formularios paso a paso
 export interface ClientFormData {
   nombre: string;
   nit: string;
+
   // Campos de formulario separados
   direccionBase: string;
   barrio: string;
@@ -122,19 +91,6 @@ export interface ClientFormData {
   idUsuarioContacto: number | null;
   fecha_creacion: string;
   areas: AreaFormData[];
-}
-
-export interface AreaFormData {
-  id?: number;
-  nombreArea: string;
-  subAreas: SubAreaFormData[];
-}
-
-export interface SubAreaFormData {
-  id?: number;
-  nombreSubArea: string;
-  areaId?: number;
-  parentSubAreaId?: number;
 }
 
 // Alias para evitar conflictos
