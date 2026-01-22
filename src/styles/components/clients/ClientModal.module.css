@@ -1096,3 +1096,36 @@
     gap: 8px;
   }
 }
+
+.readonlyInput {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+  color: #6b7280 !important;
+  font-style: italic !important;
+  cursor: not-allowed !important;
+  opacity: 0.9;
+}
+
+/* Nota del campo */
+.readonlyField .fieldNote {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.5rem;
+  display: block;
+  line-height: 1.4;
+}
+
+/* Si quieres un ícono para indicar que es generado automáticamente */
+.readonlyField::before {
+  content: "🔗";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.readonlyField input {
+  padding-left: 40px !important;
+}

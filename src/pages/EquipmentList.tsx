@@ -1,4 +1,3 @@
-// src/pages/EquipmentListPage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -8,17 +7,23 @@ import {
   getEquipmentByClientRequest,
   createEquipmentRequest,
 } from "../api/equipment";
+import {
+  addEquipmentToOrderRequest,
+  getOrdersByClientAndCategoryRequest,
+} from "../api/orders";
 import type {
   AirConditionerTypeOption,
   ClientOption,
   Equipment,
-  RouteState,
+  CreateEquipmentData,
+  EvaporatorData,
+  CondenserData,
+  PlanMantenimientoData,
 } from "../interfaces/EquipmentInterfaces";
+import type { Order } from "../interfaces/OrderInterfaces";
 import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import listStyles from "../styles/pages/EquipmentListPage.module.css";
 import { playErrorSound } from "../utils/sounds";
-
-// Importar componentes separados
 import {
   EquipmentFilters,
   EquipmentGrid,
@@ -27,17 +32,30 @@ import {
   EmptyState,
 } from "../components/equipment/equipment-list";
 import type { AreaSimple } from "../interfaces/AreaInterfaces";
-import type { SubAreaSimple } from "../interfaces/SubAreaInterfaces";
 
 export default function EquipmentListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const routeState = (location.state || {}) as RouteState;
+
+  // Interface para el estado de la ruta
+  interface RouteStateType {
+    clientId?: number;
+    clientName?: string;
+    clientNit?: string;
+    workOrderId?: number;
+  }
+
+  const routeState = (location.state || {}) as RouteStateType;
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<number | 0>(
-    routeState.clientId ?? 0
+    routeState.clientId ?? 0,
+  );
+
+  // 🔧 NUEVO: Estado para el cliente seleccionado (objeto completo)
+  const [selectedClient, setSelectedClient] = useState<ClientOption | null>(
+    null,
   );
 
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -57,18 +75,16 @@ export default function EquipmentListPage() {
   const [airConditionerTypes, setAirConditionerTypes] = useState<
     AirConditionerTypeOption[]
   >([]);
-  const [selectedAreaId, setSelectedAreaId] = useState<number | "">("");
-  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | "">("");
-  const [selectedSubSubAreaId, setSelectedSubSubAreaId] = useState<number | "">(
-    ""
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | null>(
+    null,
   );
-  const [selectedSubAreaWithChildren, setSelectedSubAreaWithChildren] =
-    useState<any>(null);
 
-  const [showMotorForm, setShowMotorForm] = useState(false);
-  const [showEvaporatorForm, setShowEvaporatorForm] = useState(false);
-  const [showCondenserForm, setShowCondenserForm] = useState(false);
-  const [showCompressorForm, setShowCompressorForm] = useState(false);
+  // Arrays de componentes
+  const [evaporators, setEvaporators] = useState<EvaporatorData[]>([]);
+  const [condensers, setCondensers] = useState<CondenserData[]>([]);
+  const [planMantenimiento, setPlanMantenimiento] =
+    useState<PlanMantenimientoData>({});
 
   // Estados para crear tipo de aire acondicionado
   const [showNewAcTypeForm, setShowNewAcTypeForm] = useState(false);
@@ -80,61 +96,22 @@ export default function EquipmentListPage() {
   const [creatingAcType, setCreatingAcType] = useState(false);
   const [acTypeError, setAcTypeError] = useState<string | null>(null);
 
+  // Estados para órdenes del cliente
+  const [ordersForClient, setOrdersForClient] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  // Estados para órdenes seleccionadas (múltiples)
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+
   const [createForm, setCreateForm] = useState({
+    clientId: selectedClientId,
     category: "Aires Acondicionados",
     airConditionerTypeId: "",
-    name: "",
-    physicalLocation: "",
+    code: "",
+    status: "Activo",
     installationDate: "",
     notes: "",
-  });
-
-  const [motorForm, setMotorForm] = useState({
-    amperaje: "",
-    voltaje: "",
-    rpm: "",
-    serialMotor: "",
-    modeloMotor: "",
-    diametroEje: "",
-    tipoEje: "",
-  });
-
-  const [evaporatorForm, setEvaporatorForm] = useState({
-    marca: "",
-    modelo: "",
-    serial: "",
-    capacidad: "",
-    amperaje: "",
-    tipoRefrigerante: "",
-    voltaje: "",
-    numeroFases: "",
-  });
-
-  const [condenserForm, setCondenserForm] = useState({
-    marca: "",
-    modelo: "",
-    serial: "",
-    capacidad: "",
-    amperaje: "",
-    voltaje: "",
-    tipoRefrigerante: "",
-    numeroFases: "",
-    presionAlta: "",
-    presionBaja: "",
-    hp: "",
-  });
-
-  const [compressorForm, setCompressorForm] = useState({
-    marca: "",
-    modelo: "",
-    serial: "",
-    capacidad: "",
-    amperaje: "",
-    tipoRefrigerante: "",
-    voltaje: "",
-    numeroFases: "",
-    tipoAceite: "",
-    cantidadAceite: "",
   });
 
   const roleName = user?.role?.nombreRol;
@@ -146,35 +123,17 @@ export default function EquipmentListPage() {
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
-  // Funciones auxiliares
-  const findSubAreaInTree = (tree: any[], subAreaId: number): any | null => {
-    for (const node of tree) {
-      if (node.id === subAreaId) {
-        return node;
+  // 🔧 NUEVO: Actualizar selectedClient cuando cambia selectedClientId
+  useEffect(() => {
+    if (selectedClientId && clients.length > 0) {
+      const client = clients.find((c) => c.idCliente === selectedClientId);
+      if (client) {
+        setSelectedClient(client);
       }
-      if (node.children && node.children.length > 0) {
-        const found = findSubAreaInTree(node.children, subAreaId);
-        if (found) return found;
-      }
+    } else {
+      setSelectedClient(null);
     }
-    return null;
-  };
-
-  const convertSubAreasTree = (
-    tree: any[],
-    areaId: number,
-    parentId: number | null = null
-  ): SubAreaSimple[] => {
-    return tree.map((node: any) => ({
-      idSubArea: node.id,
-      nombreSubArea: node.nombre,
-      idAreaPadre: areaId,
-      parentSubAreaId: parentId,
-      subAreas: node.children
-        ? convertSubAreasTree(node.children, areaId, node.id)
-        : [],
-    }));
-  };
+  }, [selectedClientId, clients]);
 
   // Cargar clientes
   useEffect(() => {
@@ -191,32 +150,32 @@ export default function EquipmentListPage() {
         setError(null);
 
         if (routeState.clientName) {
-          setClients([
-            {
-              idCliente: id,
-              nombre: routeState.clientName,
-              nit: routeState.clientNit || "",
-            },
-          ]);
+          const clientData = {
+            idCliente: id,
+            nombre: routeState.clientName,
+            nit: routeState.clientNit || "",
+          };
+          setClients([clientData]);
+          setSelectedClient(clientData);
           return;
         }
 
         const res = await api.get(`/clients/${id}`);
         const c = res.data?.data;
         if (c) {
-          setClients([
-            {
-              idCliente: c.idCliente,
-              nombre: c.nombre,
-              nit: c.nit,
-            },
-          ]);
+          const clientData = {
+            idCliente: c.idCliente,
+            nombre: c.nombre,
+            nit: c.nit,
+          };
+          setClients([clientData]);
+          setSelectedClient(clientData);
         }
       } catch (err: any) {
         console.error("Error cargando cliente para equipos:", err);
         setError(
           err.response?.data?.error ||
-            "Error al cargar la información del cliente."
+            "Error al cargar la información del cliente.",
         );
         playErrorSound();
       } finally {
@@ -240,11 +199,12 @@ export default function EquipmentListPage() {
         setClients(mapped);
         if (mapped.length > 0 && !selectedClientId) {
           setSelectedClientId(mapped[0].idCliente);
+          setSelectedClient(mapped[0]);
         }
       } catch (err: any) {
         console.error("Error cargando clientes para equipos:", err);
         setError(
-          err.response?.data?.error || "Error al cargar la lista de clientes."
+          err.response?.data?.error || "Error al cargar la lista de clientes.",
         );
         playErrorSound();
       } finally {
@@ -278,6 +238,28 @@ export default function EquipmentListPage() {
     }
   };
 
+  const handleLoadOrders = async (
+    clienteEmpresaId: number,
+    category: string,
+  ) => {
+    setLoadingOrders(true);
+    setOrdersError(null);
+
+    try {
+      const orders = await getOrdersByClientAndCategoryRequest(
+        clienteEmpresaId,
+        category,
+      );
+      setOrdersForClient(orders);
+    } catch (error: any) {
+      console.error("Error cargando órdenes:", error);
+      setOrdersError("No se pudieron cargar las órdenes disponibles");
+      setOrdersForClient([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
   // Cargar equipos
   useEffect(() => {
     const loadEquipment = async () => {
@@ -294,7 +276,7 @@ export default function EquipmentListPage() {
         console.error("Error cargando equipos:", err);
         setEquipmentError(
           err.response?.data?.error ||
-            "Error al cargar los equipos de la empresa."
+            "Error al cargar los equipos de la empresa.",
         );
       } finally {
         setLoadingEquipment(false);
@@ -314,16 +296,12 @@ export default function EquipmentListPage() {
     }
 
     const filtered = allEquipments.filter((eq) => {
-      const name = eq.name?.toLowerCase() ?? "";
       const code = eq.code?.toLowerCase() ?? "";
-      const location = eq.physicalLocation?.toLowerCase() ?? "";
+      const clientName = eq.client?.nombre?.toLowerCase() ?? "";
       const idStr = String(eq.equipmentId);
 
       return (
-        name.includes(term) ||
-        code.includes(term) ||
-        location.includes(term) ||
-        idStr.includes(term)
+        code.includes(term) || clientName.includes(term) || idStr.includes(term)
       );
     });
 
@@ -348,14 +326,12 @@ export default function EquipmentListPage() {
               idArea: area.idArea,
               nombreArea: area.nombreArea,
               treeData: treeData,
-              subAreas: treeData?.subAreas
-                ? convertSubAreasTree(treeData.subAreas, area.idArea)
-                : [],
+              subAreas: [],
             };
           } catch (err) {
             console.error(
               `Error cargando árbol para área ${area.idArea}:`,
-              err
+              err,
             );
             return {
               idArea: area.idArea,
@@ -364,7 +340,7 @@ export default function EquipmentListPage() {
               subAreas: [],
             };
           }
-        })
+        }),
       );
 
       setAreas(areasWithTrees);
@@ -374,11 +350,51 @@ export default function EquipmentListPage() {
     }
   };
 
+  // Cargar órdenes del cliente por categoría
+  const loadOrdersForClient = async (clientId: number, category: string) => {
+    if (!clientId || !category) {
+      setOrdersForClient([]);
+      return;
+    }
+
+    setLoadingOrders(true);
+    setOrdersError(null);
+
+    try {
+      const orders = await getOrdersByClientAndCategoryRequest(
+        clientId,
+        category,
+      );
+      setOrdersForClient(orders);
+    } catch (err: any) {
+      console.error("Error cargando órdenes del cliente:", err);
+      setOrdersError("Error al cargar órdenes disponibles");
+      setOrdersForClient([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Cargar órdenes cuando cambia la categoría en el modal
+  useEffect(() => {
+    if (showCreateForm && selectedClientId && createForm.category) {
+      loadOrdersForClient(selectedClientId, createForm.category);
+      // Resetear selección de órdenes cuando cambia la categoría
+      setSelectedOrderIds([]);
+    }
+  }, [showCreateForm, createForm.category, selectedClientId]);
+
   // Handlers
   const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = Number.parseInt(e.target.value, 10);
-    setSelectedClientId(isNaN(value) ? 0 : value);
+    const newClientId = isNaN(value) ? 0 : value;
+
+    setSelectedClientId(newClientId);
     setSearch("");
+
+    // 🔧 ACTUALIZAR selectedClient
+    const client = clients.find((c) => c.idCliente === newClientId);
+    setSelectedClient(client || null);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -390,95 +406,86 @@ export default function EquipmentListPage() {
   };
 
   const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const areaId = value ? Number.parseInt(value, 10) : "";
-    setSelectedAreaId(areaId);
-    setSelectedSubAreaId("");
-    setSelectedSubSubAreaId("");
-    setSelectedSubAreaWithChildren(null);
+    const value = e.target.value ? Number.parseInt(e.target.value, 10) : null;
+    setSelectedAreaId(value);
+    setSelectedSubAreaId(null); // Resetear subárea
   };
 
   const handleSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const subAreaId = value ? Number.parseInt(value, 10) : "";
-    setSelectedSubAreaId(subAreaId);
-    setSelectedSubSubAreaId("");
-
-    if (!subAreaId) {
-      setSelectedSubAreaWithChildren(null);
-      return;
-    }
-
-    const selectedArea = areas.find((a) => a.idArea === selectedAreaId);
-    if (selectedArea?.treeData?.subAreas) {
-      const foundSubArea = findSubAreaInTree(
-        selectedArea.treeData.subAreas,
-        subAreaId
-      );
-      setSelectedSubAreaWithChildren(foundSubArea || null);
-    } else {
-      setSelectedSubAreaWithChildren(null);
-    }
+    const value = e.target.value ? Number.parseInt(e.target.value, 10) : null;
+    setSelectedSubAreaId(value);
   };
 
-  const handleSubSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const subSubAreaId = value ? Number.parseInt(value, 10) : "";
-    setSelectedSubSubAreaId(subSubAreaId);
+  // Handlers para arrays de componentes
+  const handleAddEvaporator = () => {
+    setEvaporators([...evaporators, {}]);
+  };
+
+  const handleAddCondenser = () => {
+    setCondensers([...condensers, {}]);
+  };
+
+  const handleRemoveEvaporator = (index: number) => {
+    setEvaporators(evaporators.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveCondenser = (index: number) => {
+    setCondensers(condensers.filter((_, i) => i !== index));
+  };
+
+  const handleEvaporatorChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newEvaporators = [...evaporators];
+    newEvaporators[index] = {
+      ...newEvaporators[index],
+      [e.target.name]: e.target.value,
+    };
+    setEvaporators(newEvaporators);
+  };
+
+  const handleCondenserChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newCondensers = [...condensers];
+    newCondensers[index] = {
+      ...newCondensers[index],
+      [e.target.name]: e.target.value,
+    };
+    setCondensers(newCondensers);
+  };
+
+  const handlePlanMantenimientoChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setPlanMantenimiento((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleCreateFormChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
     setCreateForm((prev) => ({
       ...prev,
       [name]: value,
     }));
-  };
 
-  const handleMotorFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setMotorForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleEvaporatorFormChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { name, value } = e.target;
-    setEvaporatorForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleCondenserFormChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { name, value } = e.target;
-    setCondenserForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleCompressorFormChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { name, value } = e.target;
-    setCompressorForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    // Si cambia la categoría, recargar órdenes
+    if (name === "category" && showCreateForm && selectedClientId) {
+      loadOrdersForClient(selectedClientId, value);
+    }
   };
 
   const handleNewAcTypeFormChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value, type } = e.target;
 
@@ -496,9 +503,18 @@ export default function EquipmentListPage() {
     }
   };
 
+  // Handler para selección múltiple de órdenes
+  const handleOrderSelectionChange = (orderId: number, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedOrderIds([...selectedOrderIds, orderId]);
+    } else {
+      setSelectedOrderIds(selectedOrderIds.filter((id) => id !== orderId));
+    }
+  };
+
   // Abrir formulario de creación
   const handleOpenCreateForm = async () => {
-    if (!selectedClientId) {
+    if (!selectedClientId || !selectedClient) {
       setCreateError("Debe seleccionar una empresa primero.");
       return;
     }
@@ -507,83 +523,33 @@ export default function EquipmentListPage() {
       setCreateError(null);
       setCreateLoading(true);
 
+      // Actualizar clientId en el form
+      setCreateForm((prev) => ({
+        ...prev,
+        clientId: selectedClientId,
+      }));
+
       await loadHierarchicalAreas();
       await loadAirConditionerTypes();
 
+      // CARGAR ÓRDENES DEL CLIENTE CON LA CATEGORÍA ACTUAL
+      await loadOrdersForClient(selectedClientId, createForm.category);
+
       // Resetear selecciones
-      setSelectedAreaId("");
-      setSelectedSubAreaId("");
-      setSelectedSubSubAreaId("");
-      setSelectedSubAreaWithChildren(null);
+      setSelectedAreaId(null);
+      setSelectedSubAreaId(null);
+      setSelectedOrderIds([]);
 
-      // Resetear formularios
-      setCreateForm({
-        category: "Aires Acondicionados",
-        airConditionerTypeId: "",
-        name: "",
-        physicalLocation: "",
-        installationDate: "",
-        notes: "",
-      });
-
-      setMotorForm({
-        amperaje: "",
-        voltaje: "",
-        rpm: "",
-        serialMotor: "",
-        modeloMotor: "",
-        diametroEje: "",
-        tipoEje: "",
-      });
-
-      setEvaporatorForm({
-        marca: "",
-        modelo: "",
-        serial: "",
-        capacidad: "",
-        amperaje: "",
-        tipoRefrigerante: "",
-        voltaje: "",
-        numeroFases: "",
-      });
-
-      setCondenserForm({
-        marca: "",
-        modelo: "",
-        serial: "",
-        capacidad: "",
-        amperaje: "",
-        voltaje: "",
-        tipoRefrigerante: "",
-        numeroFases: "",
-        presionAlta: "",
-        presionBaja: "",
-        hp: "",
-      });
-
-      setCompressorForm({
-        marca: "",
-        modelo: "",
-        serial: "",
-        capacidad: "",
-        amperaje: "",
-        tipoRefrigerante: "",
-        voltaje: "",
-        numeroFases: "",
-        tipoAceite: "",
-        cantidadAceite: "",
-      });
-
-      setShowMotorForm(false);
-      setShowEvaporatorForm(false);
-      setShowCondenserForm(false);
-      setShowCompressorForm(false);
+      // Resetear arrays de componentes
+      setEvaporators([]);
+      setCondensers([]);
+      setPlanMantenimiento({});
 
       setShowCreateForm(true);
     } catch (err: any) {
       console.error("Error cargando áreas para crear equipo:", err);
       setCreateError(
-        err.response?.data?.error || "Error al cargar las áreas de la empresa."
+        err.response?.data?.error || "Error al cargar las áreas de la empresa.",
       );
     } finally {
       setCreateLoading(false);
@@ -624,7 +590,6 @@ export default function EquipmentListPage() {
       });
     } catch (err: any) {
       console.error("Error creando tipo de aire acondicionado:", err);
-
       let errorMessage = "Error al crear el tipo de aire acondicionado.";
 
       if (err.response?.data?.message) {
@@ -643,15 +608,12 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Crear equipo
+  // Crear equipo con asociación a órdenes
   const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClientId) {
+
+    if (!selectedClientId || !selectedClient) {
       setCreateError("Debe seleccionar una empresa.");
-      return;
-    }
-    if (!createForm.name.trim()) {
-      setCreateError("El nombre del equipo es obligatorio.");
       return;
     }
 
@@ -667,58 +629,69 @@ export default function EquipmentListPage() {
     setCreateError(null);
 
     try {
-      const airConditionerTypeId =
-        createForm.airConditionerTypeId !== ""
-          ? Number(createForm.airConditionerTypeId)
-          : undefined;
-
-      const payload: any = {
+      const payload: CreateEquipmentData = {
         clientId: selectedClientId,
         category: createForm.category,
-        airConditionerTypeId,
-        name: createForm.name,
-        physicalLocation: createForm.physicalLocation || null,
+        status: createForm.status,
         installationDate: createForm.installationDate || null,
         notes: createForm.notes || null,
-        workOrderId: routeState.workOrderId || null,
+        areaId: selectedAreaId || null,
+        subAreaId: selectedSubAreaId || null,
+        code: createForm.code || null,
+        evaporators: evaporators,
+        condensers: condensers,
+        planMantenimiento:
+          Object.keys(planMantenimiento).length > 0 ? planMantenimiento : null,
       };
 
-      if (typeof selectedAreaId === "number") {
-        payload.areaId = selectedAreaId;
+      if (createForm.airConditionerTypeId) {
+        payload.airConditionerTypeId = Number(createForm.airConditionerTypeId);
       }
 
-      if (typeof selectedSubAreaId === "number") {
-        payload.subAreaId = selectedSubAreaId;
+      // 1. Crear el equipo
+      const newEquipment = await createEquipmentRequest(payload);
+
+      // 2. Asociar a órdenes seleccionadas (si hay)
+      if (selectedOrderIds.length > 0) {
+        try {
+          await Promise.all(
+            selectedOrderIds.map((orderId) =>
+              addEquipmentToOrderRequest(orderId, newEquipment.equipmentId),
+            ),
+          );
+        } catch (associationError) {
+          console.error("Error asociando órdenes:", associationError);
+          // Continuar aunque falle la asociación, el equipo ya está creado
+        }
       }
 
-      if (showMotorForm) {
-        payload.motor = motorForm;
-      }
-
-      if (showEvaporatorForm) {
-        payload.evaporator = evaporatorForm;
-      }
-
-      if (showCondenserForm) {
-        payload.condenser = condenserForm;
-      }
-
-      if (showCompressorForm) {
-        payload.compressor = compressorForm;
-      }
-
-      await createEquipmentRequest(payload);
-
+      // 3. Recargar equipos
       const equipments = await getEquipmentByClientRequest(selectedClientId);
       setAllEquipments(equipments);
+      setEquipmentList(equipments);
 
+      // 4. Resetear todo
       setShowCreateForm(false);
+      setSelectedOrderIds([]);
+      setCreateForm({
+        clientId: selectedClientId,
+        category: "Aires Acondicionados",
+        airConditionerTypeId: "",
+        code: "",
+        status: "Activo",
+        installationDate: "",
+        notes: "",
+      });
+      setEvaporators([]);
+      setCondensers([]);
+      setPlanMantenimiento({});
+      setOrdersForClient([]);
     } catch (err: any) {
       console.error("Error creando equipo:", err);
       setCreateError(
         err.response?.data?.error ||
           err.response?.data?.message ||
-          "Error al crear la hoja de vida del equipo."
+          "Error al crear la hoja de vida del equipo.",
       );
     } finally {
       setCreateLoading(false);
@@ -727,8 +700,62 @@ export default function EquipmentListPage() {
 
   // Obtener tipo de AC seleccionado
   const selectedAcType = airConditionerTypes.find(
-    (type) => type.id === Number.parseInt(createForm.airConditionerTypeId)
+    (type) => type.id === Number.parseInt(createForm.airConditionerTypeId),
   );
+
+  // Función para renderizar el estado adecuado
+  const renderContent = () => {
+    // Caso 1: Sin permisos
+    if (error) {
+      return <div className={styles.error}>{error}</div>;
+    }
+
+    // Caso 2: Cargando clientes
+    if (loadingClients) {
+      return <p className={styles.loading}>Cargando clientes...</p>;
+    }
+
+    // Caso 3: No hay clientes disponibles
+    if (clients.length === 0 && !loadingClients && !hasFixedClientFromRoute) {
+      return (
+        <EmptyState message="No hay clientes registrados en el sistema. Para gestionar equipos, primero debe crear un cliente." />
+      );
+    }
+
+    // Caso 4: No hay cliente seleccionado
+    if (!selectedClientId || selectedClientId === 0) {
+      return (
+        <EmptyState message="Seleccione un cliente de la lista para ver sus equipos." />
+      );
+    }
+
+    // Caso 5: Cargando equipos
+    if (loadingEquipment) {
+      return <p className={styles.loading}>Cargando equipos...</p>;
+    }
+
+    // Caso 6: Error al cargar equipos
+    if (equipmentError) {
+      return <div className={styles.error}>{equipmentError}</div>;
+    }
+
+    // Caso 7: No hay equipos para el cliente seleccionado
+    if (equipmentList.length === 0 && !loadingEquipment) {
+      return (
+        <EmptyState
+          message={`${selectedClient?.nombre || "Este cliente"} no tiene equipos registrados. ${canCreate ? "¡Crea el primero!" : ""}`}
+        />
+      );
+    }
+
+    // Caso 8: Mostrar equipos
+    return (
+      <EquipmentGrid
+        equipmentList={equipmentList}
+        onOpenEquipment={handleOpenEquipment}
+      />
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -739,7 +766,7 @@ export default function EquipmentListPage() {
           </button>
           <h1>Equipos por Empresa</h1>
 
-          {canCreate && (
+          {canCreate && selectedClientId && selectedClientId !== 0 && (
             <button
               type="button"
               className={listStyles.createButton}
@@ -755,38 +782,24 @@ export default function EquipmentListPage() {
 
         {!error && (
           <>
-            <EquipmentFilters
-              clients={clients}
-              selectedClientId={selectedClientId}
-              search={search}
-              loadingClients={loadingClients}
-              loadingEquipment={loadingEquipment}
-              hasFixedClientFromRoute={hasFixedClientFromRoute}
-              fixedClientName={routeState.clientName}
-              fixedClientNit={routeState.clientNit}
-              onClientChange={handleClientChange}
-              onSearchChange={handleSearchChange}
-            />
-
-            {equipmentError && (
-              <div className={styles.error}>{equipmentError}</div>
-            )}
-
-            {loadingEquipment ? (
-              <p className={styles.loading}>Cargando equipos...</p>
-            ) : (
-              <EquipmentGrid
-                equipmentList={equipmentList}
-                onOpenEquipment={handleOpenEquipment}
+            {/* Solo mostrar filtros si hay clientes */}
+            {clients.length > 0 && (
+              <EquipmentFilters
+                clients={clients}
+                selectedClientId={selectedClientId}
+                search={search}
+                loadingClients={loadingClients}
+                loadingEquipment={loadingEquipment}
+                hasFixedClientFromRoute={hasFixedClientFromRoute}
+                fixedClientName={routeState.clientName}
+                fixedClientNit={routeState.clientNit}
+                onClientChange={handleClientChange}
+                onSearchChange={handleSearchChange}
               />
             )}
 
-            {!loadingEquipment &&
-              equipmentList.length === 0 &&
-              selectedClientId &&
-              !equipmentError && (
-                <EmptyState message="No se encontraron equipos para esta empresa." />
-              )}
+            {/* Mostrar contenido principal */}
+            {renderContent()}
           </>
         )}
 
@@ -809,33 +822,27 @@ export default function EquipmentListPage() {
           areas={areas}
           selectedAreaId={selectedAreaId}
           selectedSubAreaId={selectedSubAreaId}
-          selectedSubSubAreaId={selectedSubSubAreaId}
-          selectedSubAreaWithChildren={selectedSubAreaWithChildren}
           onAreaChange={handleAreaChange}
           onSubAreaChange={handleSubAreaChange}
-          onSubSubAreaChange={handleSubSubAreaChange}
-          showMotorForm={showMotorForm}
-          showEvaporatorForm={showEvaporatorForm}
-          showCondenserForm={showCondenserForm}
-          showCompressorForm={showCompressorForm}
-          onToggleMotorForm={() => setShowMotorForm(!showMotorForm)}
-          onToggleEvaporatorForm={() =>
-            setShowEvaporatorForm(!showEvaporatorForm)
-          }
-          onToggleCondenserForm={() => setShowCondenserForm(!showCondenserForm)}
-          onToggleCompressorForm={() =>
-            setShowCompressorForm(!showCompressorForm)
-          }
-          motorForm={motorForm}
-          evaporatorForm={evaporatorForm}
-          condenserForm={condenserForm}
-          compressorForm={compressorForm}
-          onMotorFormChange={handleMotorFormChange}
-          onEvaporatorFormChange={handleEvaporatorFormChange}
-          onCondenserFormChange={handleCondenserFormChange}
-          onCompressorFormChange={handleCompressorFormChange}
+          evaporators={evaporators}
+          condensers={condensers}
+          onAddEvaporator={handleAddEvaporator}
+          onAddCondenser={handleAddCondenser}
+          onRemoveEvaporator={handleRemoveEvaporator}
+          onRemoveCondenser={handleRemoveCondenser}
+          onEvaporatorChange={handleEvaporatorChange}
+          onCondenserChange={handleCondenserChange}
+          planMantenimiento={planMantenimiento}
+          onPlanMantenimientoChange={handlePlanMantenimientoChange}
+          ordersForClient={ordersForClient}
+          loadingOrders={loadingOrders}
+          ordersError={ordersError}
+          selectedOrderIds={selectedOrderIds}
+          onOrderSelectionChange={handleOrderSelectionChange}
           onSubmit={handleSubmitCreate}
           onClose={() => setShowCreateForm(false)}
+          client={selectedClient}
+          onLoadOrders={handleLoadOrders}
         />
 
         <CreateAcTypeModal

@@ -6,15 +6,82 @@
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius);
   background: var(--gray-50);
+  position: relative;
 }
 
-.componentSection h5 {
-  margin: 0 0 var(--spacing-md) 0;
+.componentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.componentHeader h5 {
+  margin: 0;
   font-size: var(--font-size-sm);
   color: var(--gray-800);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.componentActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.removeButton {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--error-50);
+  color: var(--error-600);
+  border: 1px solid var(--error-200);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.removeButton:hover:not(:disabled) {
+  background-color: var(--error-100);
+  border-color: var(--error-300);
+}
+
+.removeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.addButton {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--primary-50);
+  color: var(--primary-600);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.addButton:hover:not(:disabled) {
+  background-color: var(--primary-100);
+  border-color: var(--primary-300);
+}
+
+.addButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .formGrid {
@@ -59,9 +126,22 @@
   color: var(--gray-500);
 }
 
+/* Responsive Styles */
 @media (max-width: 1024px) {
   .formGrid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  
+  .componentHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  
+  .removeButton,
+  .addButton {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -69,4 +149,55 @@
   .formGrid {
     grid-template-columns: 1fr;
   }
+  
+  .componentSection {
+    padding: var(--spacing-sm);
+  }
+  
+  .componentActions {
+    flex-direction: column;
+  }
+  
+  .addButton,
+  .removeButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .componentHeader h5 {
+    font-size: var(--font-size-xs);
+  }
+  
+  .formField input {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+  }
+  
+  .removeButton,
+  .addButton {
+    font-size: var(--font-size-xxs);
+    padding: var(--spacing-xs);
+  }
+}
+
+/* Clases adicionales para mejor organización */
+.componentNested {
+  margin-top: var(--spacing-md);
+  padding-left: var(--spacing-md);
+  border-left: 2px solid var(--primary-200);
+  background-color: var(--white);
+}
+
+.componentSeparator {
+  height: 1px;
+  background-color: var(--gray-200);
+  margin: var(--spacing-md) 0;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
 }

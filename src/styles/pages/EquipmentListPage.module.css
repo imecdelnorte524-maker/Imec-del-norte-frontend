@@ -1,3 +1,4 @@
+/* /src/styles/pages/EquipmentListPage.module.css */
 .container {
   padding: var(--spacing-lg);
   max-width: 1200px;
@@ -45,4 +46,62 @@
   .container {
     padding: var(--spacing-sm);
   }
+}
+/* Agrega estos estilos al archivo existente */
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #dee2e6;
+  margin-top: 30px;
+  color: #6c757d;
+}
+
+.emptyState p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.emptyState .hint {
+  font-size: 0.9rem;
+  color: #adb5bd;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+.createClientButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+  margin-top: 10px;
+}
+
+.createClientButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: center;
 }

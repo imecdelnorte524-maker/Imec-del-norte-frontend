@@ -20,8 +20,6 @@ export interface ServiceFromAPI {
     servicio_id: number;
     nombre_servicio: string;
     descripcion: string | null;
-    precio_base: number;
-    duracion_estimada: string | null;
   };
   cliente: {
     usuario_id: number;
@@ -82,8 +80,6 @@ export interface Service {
   orden_id: number;
   servicio: {
     nombre_servicio: string;
-    precio_base: number;
-    duracion_estimada?: string;
   };
   cliente: {
     nombre: string;

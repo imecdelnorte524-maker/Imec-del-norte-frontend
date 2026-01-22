@@ -24,6 +24,20 @@ export interface ToolDetail {
   marca: string;
 }
 
+export interface MaintenanceType {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+}
+
+// ⚠️ NUEVO: Interface para información de equipos asociados
+export interface AssociatedEquipment {
+  equipmentId: number;
+  code?: string;
+  category: string;
+  description?: string;
+}
+
 export interface Order {
   orden_id: number;
   servicio_id: number;
@@ -34,8 +48,8 @@ export interface Order {
   fecha_finalizacion: string | null;
   estado: OrderEstado;
   comentarios: string | null;
-
-  // Facturación
+  tipo_servicio?: string | null;
+  maintenance_type?: MaintenanceType | null;
   estado_facturacion: BillingEstado;
   factura_pdf_url?: string | null;
 
@@ -43,7 +57,6 @@ export interface Order {
     servicio_id: number;
     nombre_servicio: string;
     descripcion: string | null;
-    precio_base: number;
     duracion_estimada: string | null;
     categoria_servicio?: string | null;
     tipo_trabajo?: string | null;
@@ -65,7 +78,6 @@ export interface Order {
     email: string;
   } | null;
 
-  // Cliente empresa asociado a la orden
   cliente_empresa?: {
     id_cliente: number;
     nombre: string;
@@ -73,21 +85,14 @@ export interface Order {
     email: string;
     telefono: string;
     localizacion: string;
-
-    // Campos adicionales que sí vienen del backend
     direccion?: string | null;
     contacto?: string | null;
     id_usuario_contacto?: number | null;
   } | null;
 
-  equipo?: {
-    equipo_id: number;
-    nombre: string;
-    codigo?: string | null;
-    categoria?: string | null;
-  } | null;
+  // ⚠️ CAMBIO: De 'equipo' (singular) a 'equipos' (plural)
+  equipos?: AssociatedEquipment[];
 
-  // Detalles de insumos y herramientas asignados/registrados en la orden
   supplyDetails?: SupplyDetail[];
   toolDetails?: ToolDetail[];
 
@@ -100,7 +105,10 @@ export interface CreateOrderData {
   comentarios?: string;
   cliente_empresa_id: number;
   tecnico_id?: number;
-  equipo_id?: number;
+  // ⚠️ CAMBIO: De 'equipo_id' (singular) a 'equipmentIds' (array)
+  equipmentIds?: number[];
+  tipo_servicio?: string;
+  maintenance_type_id?: number;
 }
 
 export interface UpdateOrderData {
@@ -109,7 +117,8 @@ export interface UpdateOrderData {
   comentarios?: string;
   fecha_inicio?: string | null;
   fecha_finalizacion?: string | null;
-  equipo_id?: number | null;
+  // ⚠️ CAMBIO: De 'equipo_id' a 'equipmentIds'
+  equipmentIds?: number[] | null;
 }
 
 export interface OrdersResponse {

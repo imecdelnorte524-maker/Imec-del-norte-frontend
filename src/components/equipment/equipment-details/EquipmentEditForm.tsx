@@ -1,46 +1,27 @@
-// src/components/equipment/equipment-details/EquipmentEditForm.tsx
 import type {
   Equipment,
-  MotorData,
   EvaporatorData,
   CondenserData,
-  CompressorData,
-  AirConditionerTypeOption,
 } from "../../../interfaces/EquipmentInterfaces";
 import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
 import HierarchicalAreaSelectorDetail from "./HierarchicalAreaSelectorDetail";
-import {
-  MotorEditForm,
-  EvaporatorEditForm,
-  CondenserEditForm,
-  CompressorEditForm,
-} from "./forms";
+import ComponentsEditForms from "./ComponentsEditForms";
 import styles from "../../../styles/components/equipment/equipment-details/EquipmentEditForm.module.css";
-
-interface EditFormData {
-  name: string;
-  physicalLocation: string;
-  installationDate: string;
-  notes: string;
-}
 
 interface EquipmentEditFormProps {
   equipment: Equipment;
-  editForm: EditFormData;
-  motorForm: MotorData;
-  evaporatorForm: EvaporatorData;
-  condenserForm: CondenserData;
-  compressorForm: CompressorData;
+  editForm: {
+    code?: string | null;
+    installationDate: string;
+    notes: string;
+  };
+  evaporators: EvaporatorData[];
+  condensers: CondenserData[];
 
   // Áreas jerárquicas
   areas: AreaSimple[];
-  selectedAreaId: number | "";
-  selectedSubAreaId: number | "";
-
-  // Tipos de AC
-  airConditionerTypes: AirConditionerTypeOption[];
-  selectedAcTypeId: number | "";
-  selectedAcType: AirConditionerTypeOption | undefined;
+  selectedAreaId: number | null;
+  selectedSubAreaId: number | null;
 
   // Estado
   saving: boolean;
@@ -51,13 +32,10 @@ interface EquipmentEditFormProps {
   onEditChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
-  onMotorFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onEvaporatorFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCondenserFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCompressorFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  onAcTypeChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onEvaporatorsChange: (evaporators: EvaporatorData[]) => void;
+  onCondensersChange: (condensers: CondenserData[]) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
@@ -65,27 +43,19 @@ interface EquipmentEditFormProps {
 export default function EquipmentEditForm({
   equipment,
   editForm,
-  motorForm,
-  evaporatorForm,
-  condenserForm,
-  compressorForm,
+  evaporators,
+  condensers,
   areas,
   selectedAreaId,
   selectedSubAreaId,
-  airConditionerTypes,
-  selectedAcTypeId,
-  selectedAcType,
   saving,
   loadingLocations,
   locationsError,
   onEditChange,
-  onMotorFormChange,
-  onEvaporatorFormChange,
-  onCondenserFormChange,
-  onCompressorFormChange,
   onAreaChange,
   onSubAreaChange,
-  onAcTypeChange,
+  onEvaporatorsChange,
+  onCondensersChange,
   onSubmit,
   onCancel,
 }: EquipmentEditFormProps) {
@@ -95,60 +65,24 @@ export default function EquipmentEditForm({
 
       <form onSubmit={onSubmit} className={styles.editForm}>
         <div className={styles.formRow}>
-          <label>Nombre del equipo *</label>
+          <label>Código interno</label>
           <input
-            name="name"
-            value={editForm.name}
+            name="code"
+            value={editForm.code || equipment.code || ""}
             onChange={onEditChange}
-            required
-            disabled={saving}
+            disabled
+            placeholder="Código generado automáticamente"
           />
-        </div>
-
-        {equipment.code && (
-          <div className={styles.formRow}>
-            <label>Código interno (generado automáticamente)</label>
-            <input disabled value={equipment.code} readOnly />
-            <span className={styles.helperText}>
-              Este código es generado por el sistema y no se puede editar.
-            </span>
-          </div>
-        )}
-
-        {equipment.category === "Aires Acondicionados" && (
-          <div className={styles.formRow}>
-            <label>Tipo de Aire Acondicionado</label>
-            <select
-              value={selectedAcTypeId || ""}
-              onChange={onAcTypeChange}
-              disabled={saving || loadingLocations}
-            >
-              <option value="">Seleccionar tipo...</option>
-              {airConditionerTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        <div className={styles.formRow}>
-          <label>Ubicación física</label>
-          <input
-            name="physicalLocation"
-            value={editForm.physicalLocation}
-            onChange={onEditChange}
-            disabled={saving}
-            placeholder="Ej: Techo bodega 1"
-          />
+          <span className={styles.helperText}>
+            {equipment.code ? "Se generará automáticamente" : ""}
+          </span>
         </div>
 
         {/* Selector jerárquico Área/Subárea */}
         <HierarchicalAreaSelectorDetail
           areas={areas}
-          selectedAreaId={selectedAreaId}
-          selectedSubAreaId={selectedSubAreaId}
+          selectedAreaId={selectedAreaId || ""}
+          selectedSubAreaId={selectedSubAreaId || ""}
           saving={saving}
           loadingLocations={loadingLocations}
           locationsError={locationsError}
@@ -179,40 +113,23 @@ export default function EquipmentEditForm({
         </div>
 
         {/* Sección de Componentes en Edición */}
-        <div className={styles.componentsSection}>
-          <h4>Componentes del Equipo</h4>
-
-          <MotorEditForm
-            motorForm={motorForm}
+        {equipment.category === "Aires Acondicionados" && (
+          <ComponentsEditForms
             saving={saving}
-            onChange={onMotorFormChange}
+            evaporators={evaporators}
+            condensers={condensers}
+            onEvaporatorsChange={onEvaporatorsChange}
+            onCondensersChange={onCondensersChange}
           />
-
-          {(!selectedAcType || selectedAcType.hasEvaporator) && (
-            <EvaporatorEditForm
-              evaporatorForm={evaporatorForm}
-              saving={saving}
-              onChange={onEvaporatorFormChange}
-            />
-          )}
-
-          {(!selectedAcType || selectedAcType.hasCondenser) && (
-            <CondenserEditForm
-              condenserForm={condenserForm}
-              saving={saving}
-              onChange={onCondenserFormChange}
-            />
-          )}
-
-          <CompressorEditForm
-            compressorForm={compressorForm}
-            saving={saving}
-            onChange={onCompressorFormChange}
-          />
-        </div>
+        )}
 
         <div className={styles.formActions}>
-          <button type="button" onClick={onCancel} disabled={saving}>
+          <button
+            type="button"
+            className={saving ? styles.savingButton : styles.saveButton}
+            onClick={onCancel}
+            disabled={saving}
+          >
             Cancelar
           </button>
           <button type="submit" disabled={saving}>

@@ -1,20 +1,26 @@
 // src/pages/EquipmentDetailPage.tsx
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import {
   addEquipmentPhotoRequest,
   deleteEquipmentPhotoRequest,
+  getEquipmentWorkOrdersRequest,
 } from "../api/equipment";
+import { 
+  getOrdersByClientAndCategoryRequest,
+  addEquipmentToOrderRequest,
+  removeEquipmentFromOrderRequest 
+} from "../api/orders";
 import type {
   Equipment,
   EquipmentPhoto,
-  MotorData,
   EvaporatorData,
   CondenserData,
-  CompressorData,
   AirConditionerTypeOption,
+  WorkOrderInfo,
 } from "../interfaces/EquipmentInterfaces";
+import type { Order } from "../interfaces/OrderInterfaces";
 import { useAuth } from "../hooks/useAuth";
 import api from "../api/axios";
 import { playErrorSound } from "../utils/sounds";
@@ -29,10 +35,9 @@ import {
   AddPhotoModal,
   PhotoViewModal,
 } from "../components/equipment/equipment-details";
+import AssociateOrderModal from "../components/equipment/equipment-details/AssociateOrderModal";
 import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import type { AreaSimple } from "../interfaces/AreaInterfaces";
-
-// Importamos el nuevo hook
 import { useEquipmentDetail } from "../hooks/useEquipmentDetail";
 
 export default function EquipmentDetailPage() {
@@ -50,26 +55,26 @@ export default function EquipmentDetailPage() {
 
   // Estados locales para el formulario de edición
   const [editForm, setEditForm] = useState({
-    name: "",
-    physicalLocation: "",
+    code: "",
     installationDate: "",
     notes: "",
+    status: "",
   });
-  const [motorForm, setMotorForm] = useState<MotorData>({});
-  const [evaporatorForm, setEvaporatorForm] = useState<EvaporatorData>({});
-  const [condenserForm, setCondenserForm] = useState<CondenserData>({});
-  const [compressorForm, setCompressorForm] = useState<CompressorData>({});
+
+  // Arrays de componentes (nueva estructura)
+  const [evaporators, setEvaporators] = useState<EvaporatorData[]>([]);
+  const [condensers, setCondensers] = useState<CondenserData[]>([]);
 
   // Áreas jerárquicas
   const [areas, setAreas] = useState<AreaSimple[]>([]);
-  const [selectedAreaId, setSelectedAreaId] = useState<number | "">("");
-  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | "">("");
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | null>(null);
 
   // Tipos de aire
-  const [airConditionerTypes, setAirConditionerTypes] = useState<
+  const [, setAirConditionerTypes] = useState<
     AirConditionerTypeOption[]
   >([]);
-  const [selectedAcTypeId, setSelectedAcTypeId] = useState<number | "">("");
+  const [selectedAcTypeId, setSelectedAcTypeId] = useState<number | null>(null);
 
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -84,6 +89,14 @@ export default function EquipmentDetailPage() {
   const [selectedPhoto, setSelectedPhoto] = useState<EquipmentPhoto | null>(
     null
   );
+
+  // Estados para órdenes asociadas
+  const [workOrders, setWorkOrders] = useState<WorkOrderInfo[]>([]);
+  const [loadingWorkOrders, setLoadingWorkOrders] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
+  const [loadingAvailableOrders, setLoadingAvailableOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
@@ -139,95 +152,125 @@ export default function EquipmentDetailPage() {
     }
   };
 
+  // Cargar órdenes asociadas al equipo
+  const loadWorkOrders = async () => {
+    if (!equipment) return;
+    try {
+      setLoadingWorkOrders(true);
+      const orders = await getEquipmentWorkOrdersRequest(equipment.equipmentId);
+      setWorkOrders(orders);
+    } catch (error) {
+      console.error("Error cargando órdenes del equipo:", error);
+    } finally {
+      setLoadingWorkOrders(false);
+    }
+  };
+
+  // Cargar órdenes disponibles para asociar
+  const loadAvailableOrders = async () => {
+    if (!equipment) return;
+    try {
+      setLoadingAvailableOrders(true);
+      setOrdersError(null);
+      
+      const orders = await getOrdersByClientAndCategoryRequest(
+        equipment.client.idCliente,
+        equipment.category
+      );
+      
+      // Filtrar órdenes que no están ya asociadas
+      const currentOrderIds = workOrders.map(order => order.workOrderId);
+      const filtered = orders.filter(
+        order => !currentOrderIds.includes(order.orden_id)
+      );
+      
+      setAvailableOrders(filtered);
+    } catch (error) {
+      console.error("Error cargando órdenes disponibles:", error);
+      setOrdersError("Error cargando órdenes disponibles");
+    } finally {
+      setLoadingAvailableOrders(false);
+    }
+  };
+
   // Sincronizar formulario cuando carga/cambia el equipo
   useEffect(() => {
     if (equipment) {
       setEditForm({
-        name: equipment.name || "",
-        physicalLocation: equipment.physicalLocation || "",
+        code: equipment.code || "",
         installationDate: equipment.installationDate || "",
         notes: equipment.notes || "",
+        status: equipment.status || "Activo",
       });
-      setMotorForm(equipment.motor || {});
-      setEvaporatorForm(equipment.evaporator || {});
-      setCondenserForm(equipment.condenser || {});
-      setCompressorForm(equipment.compressor || {});
 
-      setSelectedAcTypeId(equipment.airConditionerTypeId || "");
-      setSelectedAreaId(equipment.area?.idArea ?? "");
-      setSelectedSubAreaId(equipment.subArea?.idSubArea ?? "");
+      // Inicializar arrays de componentes
+      setEvaporators(equipment.evaporators || []);
+      setCondensers(equipment.condensers || []);
+
+      setSelectedAcTypeId(equipment.airConditionerTypeId || null);
+      setSelectedAreaId(equipment.area?.idArea || null);
+      setSelectedSubAreaId(equipment.subArea?.idSubArea || null);
 
       loadHierarchicalAreas(equipment);
       loadAirConditionerTypes();
+      loadWorkOrders();
     }
   }, [equipment]);
 
+  // Cargar órdenes disponibles cuando se abre el modal
+  useEffect(() => {
+    if (showOrderModal && equipment) {
+      loadAvailableOrders();
+    }
+  }, [showOrderModal, equipment]);
+
   // Handlers de formulario
   const handleEditChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    setEditForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setEditForm((prev) => ({ ...prev, [name]: value }));
   };
-  const handleMotorFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setMotorForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  const handleEvaporatorFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setEvaporatorForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  const handleCondenserFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setCondenserForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  const handleCompressorFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setCompressorForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  // Handlers para arrays de componentes
+  const handleEvaporatorsChange = (newEvaporators: EvaporatorData[]) => {
+    setEvaporators(newEvaporators);
+  };
+
+  const handleCondensersChange = (newCondensers: CondenserData[]) => {
+    setCondensers(newCondensers);
+  };
 
   // Handlers de selectores
   const handleEditAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedAreaId(e.target.value ? Number(e.target.value) : "");
-    setSelectedSubAreaId("");
-  };
-  const handleEditSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedSubAreaId(e.target.value ? Number(e.target.value) : "");
-  };
-  const handleAcTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedAcTypeId(e.target.value ? Number(e.target.value) : "");
+    const value = e.target.value ? Number(e.target.value) : null;
+    setSelectedAreaId(value);
+    setSelectedSubAreaId(null); // Resetear subárea cuando cambia área
   };
 
-  // GUARDAR (Usando el hook para actualizar y recargar)
+  const handleEditSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? Number(e.target.value) : null;
+    setSelectedSubAreaId(value);
+  };
+
+  // GUARDAR
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!equipment) return;
 
-    const payload: any = {
-      name: editForm.name,
-      physicalLocation: editForm.physicalLocation || null,
+    const payload = {
+      code: editForm.code || null,
+      status: editForm.status,
       installationDate: editForm.installationDate || null,
       notes: editForm.notes || null,
+      areaId: selectedAreaId,
+      subAreaId: selectedSubAreaId,
+      airConditionerTypeId: selectedAcTypeId,
+      evaporators: evaporators,
+      condensers: condensers,
     };
 
-    if (typeof selectedAreaId === "number") {
-      payload.areaId = selectedAreaId;
-    } else {
-      payload.areaId = null; // Borrar área si se deseleccionó
-    }
-
-    if (typeof selectedSubAreaId === "number") {
-      payload.subAreaId = selectedSubAreaId;
-    } else {
-      payload.subAreaId = null; // Borrar subárea si se deseleccionó
-    }
-
-    if (equipment.category === "Aires Acondicionados") {
-      payload.airConditionerTypeId =
-        typeof selectedAcTypeId === "number" ? selectedAcTypeId : null;
-    }
-
-    // Componentes: enviar objeto si tiene datos, null si no
-    const hasData = (obj: any) =>
-      Object.keys(obj).some((k) => obj[k] !== "" && obj[k] !== undefined);
-
-    payload.motor = hasData(motorForm) ? motorForm : null;
-    payload.evaporator = hasData(evaporatorForm) ? evaporatorForm : null;
-    payload.condenser = hasData(condenserForm) ? condenserForm : null;
-    payload.compressor = hasData(compressorForm) ? compressorForm : null;
-
-    const success = await updateEquipment(payload); // <--- AQUÍ LA MAGIA
+    const success = await updateEquipment(payload);
     if (success) {
       setEditing(false);
     } else {
@@ -235,7 +278,7 @@ export default function EquipmentDetailPage() {
     }
   };
 
-  // --- Fotos (igual que antes) ---
+  // --- Fotos ---
   const photos = equipment?.photos || [];
   const handlePrevPhoto = () =>
     setCurrentPhotoIndex((p) => (p === 0 ? photos.length - 1 : p - 1));
@@ -276,9 +319,35 @@ export default function EquipmentDetailPage() {
     }
   };
 
-  const selectedAcType = airConditionerTypes.find(
-    (t) => t.id === Number(selectedAcTypeId)
-  );
+  // --- Handlers para órdenes ---
+  const handleAssociateOrder = async (orderId: number) => {
+    if (!equipment) return;
+    
+    try {
+      await addEquipmentToOrderRequest(orderId, equipment.equipmentId);
+      // Recargar órdenes asociadas
+      await loadWorkOrders();
+      // Cerrar modal
+      setShowOrderModal(false);
+    } catch (error) {
+      console.error("Error asociando orden:", error);
+      alert("Error al asociar la orden");
+    }
+  };
+
+  const handleRemoveOrder = async (orderId: number) => {
+    if (!equipment) return;
+    if (!window.confirm("¿Desasociar esta orden del equipo?")) return;
+    
+    try {
+      await removeEquipmentFromOrderRequest(orderId, equipment.equipmentId);
+      // Recargar órdenes asociadas
+      await loadWorkOrders();
+    } catch (error) {
+      console.error("Error desasociando orden:", error);
+      alert("Error al desasociar la orden");
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -318,27 +387,19 @@ export default function EquipmentDetailPage() {
               <EquipmentEditForm
                 equipment={equipment}
                 editForm={editForm}
-                motorForm={motorForm}
-                evaporatorForm={evaporatorForm}
-                condenserForm={condenserForm}
-                compressorForm={compressorForm}
+                evaporators={evaporators}
+                condensers={condensers}
                 areas={areas}
                 selectedAreaId={selectedAreaId}
                 selectedSubAreaId={selectedSubAreaId}
-                airConditionerTypes={airConditionerTypes}
-                selectedAcTypeId={selectedAcTypeId}
-                selectedAcType={selectedAcType}
                 saving={saving}
                 loadingLocations={loadingLocations}
                 locationsError={locationsError}
                 onEditChange={handleEditChange}
-                onMotorFormChange={handleMotorFormChange}
-                onEvaporatorFormChange={handleEvaporatorFormChange}
-                onCondenserFormChange={handleCondenserFormChange}
-                onCompressorFormChange={handleCompressorFormChange}
                 onAreaChange={handleEditAreaChange}
                 onSubAreaChange={handleEditSubAreaChange}
-                onAcTypeChange={handleAcTypeChange}
+                onEvaporatorsChange={handleEvaporatorsChange}
+                onCondensersChange={handleCondensersChange}
                 onSubmit={handleSave}
                 onCancel={() => setEditing(false)}
               />
@@ -351,6 +412,71 @@ export default function EquipmentDetailPage() {
               areasWithTree={areas}
             />
             {!editing && <DatesNotesSection equipment={equipment} />}
+
+            {/* Sección de Órdenes Asociadas */}
+            {!editing && (
+              <div className={styles.section}>
+                <h3>Órdenes de Servicio Asociadas</h3>
+                
+                {loadingWorkOrders ? (
+                  <p className={styles.loading}>Cargando órdenes...</p>
+                ) : workOrders.length > 0 ? (
+                  <div className={styles.workOrdersList}>
+                    {workOrders.map((order) => (
+                      <div key={order.workOrderId} className={styles.orderItem}>
+                        <div className={styles.orderInfo}>
+                          <strong>Orden #{order.workOrderId}</strong>
+                          <span className={styles.orderDescription}>
+                            {order.description || "Sin descripción"}
+                          </span>
+                          <small className={styles.orderDate}>
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </small>
+                          {order.workOrderDetails && (
+                            <div className={styles.orderDetails}>
+                              <span className={styles.orderStatus}>
+                                {order.workOrderDetails.estado}
+                              </span>
+                              <span className={styles.orderType}>
+                                {order.workOrderDetails.tipoServicio}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className={styles.orderActions}>
+                          <Link 
+                            to={`/orders/${order.workOrderId}`}
+                            className={styles.viewOrderButton}
+                          >
+                            Ver Orden
+                          </Link>
+                          {canEdit && (
+                            <button
+                              onClick={() => handleRemoveOrder(order.workOrderId)}
+                              className={styles.removeOrderButton}
+                              disabled={saving}
+                            >
+                              Quitar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.noOrders}>No hay órdenes asociadas a este equipo.</p>
+                )}
+                
+                {canEdit && (
+                  <button
+                    onClick={() => setShowOrderModal(true)}
+                    className={styles.associateOrderButton}
+                  >
+                    + Asociar Nueva Orden
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Modales de fotos... */}
             {showAddPhotoModal && (
@@ -371,6 +497,22 @@ export default function EquipmentDetailPage() {
                 photoLoading={photoLoading}
                 onClose={() => setShowPhotoModal(false)}
                 onDelete={handleDeletePhoto}
+              />
+            )}
+
+            {/* Modal para asociar órdenes */}
+            {showOrderModal && equipment && (
+              <AssociateOrderModal
+                isOpen={showOrderModal}
+                equipmentId={equipment.equipmentId}
+                clientId={equipment.client.idCliente}
+                category={equipment.category}
+                existingOrderIds={workOrders.map(order => order.workOrderId)}
+                availableOrders={availableOrders}
+                loading={loadingAvailableOrders}
+                error={ordersError}
+                onClose={() => setShowOrderModal(false)}
+                onAssociate={handleAssociateOrder}
               />
             )}
           </>

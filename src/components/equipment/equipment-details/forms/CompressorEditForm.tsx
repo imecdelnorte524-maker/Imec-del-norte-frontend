@@ -1,120 +1,195 @@
-// src/components/equipment-details/forms/CompressorEditForm.tsx
 import type { CompressorData } from "../../../../interfaces/EquipmentInterfaces";
 import styles from "../../../../styles/components/equipment/equipment-details/forms/ComponentEditForms.module.css";
 
 interface CompressorEditFormProps {
-  compressorForm: CompressorData;
+  compressor: CompressorData;
+  index: number;
   saving: boolean;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove?: () => void;
 }
 
 export default function CompressorEditForm({
-  compressorForm,
+  compressor,
+  index,
   saving,
   onChange,
+  onRemove,
 }: CompressorEditFormProps) {
   return (
     <div className={styles.componentSection}>
-      <h5>Compresor</h5>
+      <div className={styles.componentHeader}>
+        <h5>Compresor {index + 1}</h5>
+        {onRemove && (
+          <button 
+            type="button" 
+            className={styles.removeButton}
+            onClick={onRemove}
+            disabled={saving}
+          >
+            ✕ Eliminar
+          </button>
+        )}
+      </div>
       <div className={styles.formGrid}>
         <div className={styles.formField}>
           <label>Marca</label>
           <input
             name="marca"
-            value={compressorForm.marca || ""}
-            onChange={onChange}
+            value={compressor.marca || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: Samsung"
+            placeholder="Ej: Copeland"
           />
         </div>
         <div className={styles.formField}>
           <label>Modelo</label>
           <input
             name="modelo"
-            value={compressorForm.modelo || ""}
-            onChange={onChange}
+            value={compressor.modelo || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: AEV12"
+            placeholder="Ej: ZR48K5E"
           />
         </div>
         <div className={styles.formField}>
           <label>Serial</label>
           <input
             name="serial"
-            value={compressorForm.serial || ""}
-            onChange={onChange}
+            value={compressor.serial || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: EV123456"
+            placeholder="Ej: CMP-1122334455"
           />
         </div>
         <div className={styles.formField}>
           <label>Capacidad</label>
           <input
             name="capacidad"
-            value={compressorForm.capacidad || ""}
-            onChange={onChange}
+            value={compressor.capacidad || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 12000 BTU"
-          />
-        </div>
-        <div className={styles.formField}>
-          <label>Amperaje</label>
-          <input
-            name="amperaje"
-            value={compressorForm.amperaje || ""}
-            onChange={onChange}
-            disabled={saving}
-            placeholder="Ej: 8A"
-          />
-        </div>
-        <div className={styles.formField}>
-          <label>Tipo Refrigerante</label>
-          <input
-            name="tipoRefrigerante"
-            value={compressorForm.tipoRefrigerante || ""}
-            onChange={onChange}
-            disabled={saving}
-            placeholder="Ej: R410A"
+            placeholder="Ej: 48000 BTU"
           />
         </div>
         <div className={styles.formField}>
           <label>Voltaje</label>
           <input
             name="voltaje"
-            value={compressorForm.voltaje || ""}
-            onChange={onChange}
+            value={compressor.voltaje || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 220V"
+            placeholder="Ej: 380V"
           />
         </div>
         <div className={styles.formField}>
-          <label>Número de Fases</label>
+          <label>Frecuencia</label>
           <input
-            name="numeroFases"
-            value={compressorForm.numeroFases || ""}
-            onChange={onChange}
+            name="frecuencia"
+            value={compressor.frecuencia || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 1"
+            placeholder="Ej: 60 Hz"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>Tipo Refrigerante</label>
+          <input
+            name="tipoRefrigerante"
+            value={compressor.tipoRefrigerante || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: R-410A"
           />
         </div>
         <div className={styles.formField}>
           <label>Tipo de Aceite</label>
           <input
             name="tipoAceite"
-            value={compressorForm.tipoAceite || ""}
-            onChange={onChange}
+            value={compressor.tipoAceite || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 15W"
+            placeholder="Ej: POE"
           />
         </div>
         <div className={styles.formField}>
           <label>Cantidad de Aceite</label>
           <input
             name="cantidadAceite"
-            value={compressorForm.cantidadAceite || ""}
-            onChange={onChange}
+            value={compressor.cantidadAceite || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 2L"
+            placeholder="Ej: 1.8 L"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>Capacitor</label>
+          <input
+            name="capacitor"
+            value={compressor.capacitor || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 45/5 µF"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>LRA</label>
+          <input
+            name="lra"
+            value={compressor.lra || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 120A"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>FLA</label>
+          <input
+            name="fla"
+            value={compressor.fla || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 18A"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>Cantidad de Polos</label>
+          <input
+            name="cantidadPolos"
+            value={compressor.cantidadPolos || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 4"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>Amperaje</label>
+          <input
+            name="amperaje"
+            value={compressor.amperaje || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 16A"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>Voltaje de Bobina</label>
+          <input
+            name="voltajeBobina"
+            value={compressor.voltajeBobina || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 24V"
+          />
+        </div>
+        <div className={styles.formField}>
+          <label>VAC</label>
+          <input
+            name="vac"
+            value={compressor.vac || ""}
+            onChange={(e) => onChange(index, e)}
+            disabled={saving}
+            placeholder="Ej: 230V"
           />
         </div>
       </div>

@@ -1,44 +1,14 @@
 // src/components/equipment/equipment-list/HierarchicalAreaSelector.tsx
 import styles from "../../../styles/components/equipment/equipment-list/HierarchicalAreaSelector.module.css";
-import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
-import type { SubAreaWithChildren } from "../../../interfaces/SubAreaInterfaces";
 
 interface HierarchicalAreaSelectorProps {
-  areas: AreaSimple[];
-  selectedAreaId: number | "";
-  selectedSubAreaId: number | "";
+  areas: any[];
+  selectedAreaId: number | string | null;
+  selectedSubAreaId: number | string | null;
   disabled?: boolean;
   error?: string | null;
   onAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-}
-
-// Opción plana de subárea, con profundidad
-interface FlatSubAreaOption {
-  id: number;
-  label: string; // ruta completa: "Línea 1 / Máquina A / Sector 3"
-  depth: number; // nivel de profundidad (0 = raíz)
-}
-
-// Función recursiva para aplanar el árbol de subáreas
-function flattenSubAreas(
-  nodes: SubAreaWithChildren[],
-  parentPath: string[] = [],
-  depth = 0,
-): FlatSubAreaOption[] {
-  const result: FlatSubAreaOption[] = [];
-
-  for (const node of nodes) {
-    const path = [...parentPath, node.nombre];
-    const label = path.join(" / ");
-    result.push({ id: node.id, label, depth });
-
-    if (node.children && node.children.length > 0) {
-      result.push(...flattenSubAreas(node.children, path, depth + 1));
-    }
-  }
-
-  return result;
 }
 
 export default function HierarchicalAreaSelector({
@@ -52,22 +22,51 @@ export default function HierarchicalAreaSelector({
 }: HierarchicalAreaSelectorProps) {
   const isDisabled = Boolean(disabled);
 
-  const selectedArea =
-    typeof selectedAreaId === "number"
-      ? areas.find((a) => a.idArea === selectedAreaId)
-      : undefined;
+  // Encontrar área seleccionada
+  const selectedArea = areas.find((a) => 
+    a.idArea === selectedAreaId || a.id === selectedAreaId
+  );
 
-  // Obtenemos el árbol de subáreas desde treeData.subAreas
-  const rootSubAreas: SubAreaWithChildren[] =
-    (selectedArea?.treeData?.subAreas as SubAreaWithChildren[]) || [];
+  // Obtener subáreas
+  let subAreas: any[] = [];
+  
+  if (selectedArea) {
+    if (selectedArea.treeData?.subAreas) {
+      subAreas = selectedArea.treeData.subAreas;
+    } else if (selectedArea.subAreas) {
+      subAreas = selectedArea.subAreas;
+    } else if (selectedArea.children) {
+      subAreas = selectedArea.children;
+    }
+  }
 
-  const flatSubAreas = flattenSubAreas(rootSubAreas);
+  // Función para aplanar subáreas recursivamente
+  const flattenSubAreas = (nodes: any[], depth = 0): any[] => {
+    const result: any[] = [];
+    
+    for (const node of nodes) {
+      const label = "  ".repeat(depth) + "↳ " + (node.nombre || node.nombreSubArea || node.name);
+      result.push({
+        id: node.id || node.idSubArea,
+        label,
+        depth
+      });
+
+      if (node.children && node.children.length > 0) {
+        result.push(...flattenSubAreas(node.children, depth + 1));
+      }
+    }
+    
+    return result;
+  };
+
+  const flatSubAreas = flattenSubAreas(subAreas);
 
   return (
     <div className={styles.hierarchicalSelector}>
-      <h4>Ubicación Jerárquica (Opcional)</h4>
+      <h4>Ubicación Jerárquica</h4>
 
-      {/* NIVEL 1: ÁREA PRINCIPAL */}
+      {/* ÁREA PRINCIPAL */}
       <div className={styles.hierarchicalLevel}>
         <label>Área Principal</label>
         <select
@@ -75,32 +74,27 @@ export default function HierarchicalAreaSelector({
           onChange={onAreaChange}
           disabled={isDisabled || areas.length === 0}
         >
-          <option value="">Sin área principal</option>
+          <option value="">Seleccionar área...</option>
           {areas.map((area) => (
-            <option key={area.idArea} value={area.idArea}>
-              {area.nombreArea}
+            <option key={area.idArea || area.id} value={area.idArea || area.id}>
+              {area.nombreArea || area.nombre || area.name}
             </option>
           ))}
         </select>
       </div>
 
-      {/* NIVEL 2: SUBÁREA (cualquier nivel, representado en un solo select) */}
+      {/* SUBÁREA */}
       {selectedArea && flatSubAreas.length > 0 && (
         <div className={styles.hierarchicalLevel}>
-          <label>
-            <span className={styles.levelIndicator}>↳</span>
-            Subárea (jerárquica)
-          </label>
+          <label>Subárea</label>
           <select
             value={selectedSubAreaId || ""}
             onChange={onSubAreaChange}
             disabled={isDisabled}
           >
-            <option value="">Sin subárea</option>
+            <option value="">Seleccionar subárea...</option>
             {flatSubAreas.map((opt) => (
               <option key={opt.id} value={opt.id}>
-                {/* Indent visual según profundidad */}
-                {"↳ ".repeat(opt.depth)}
                 {opt.label}
               </option>
             ))}

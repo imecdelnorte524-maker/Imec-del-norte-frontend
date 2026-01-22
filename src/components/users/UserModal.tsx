@@ -89,10 +89,29 @@ export default function UserModal({
         let month = "";
         if (editingUser.fechaNacimiento) {
           try {
-            const date = new Date(editingUser.fechaNacimiento);
-            if (!isNaN(date.getTime())) {
-              day = date.getDate().toString();
-              month = (date.getMonth() + 1).toString();
+            // SOLUCIÓN: Manejo correcto de zona horaria
+            const dateString = editingUser.fechaNacimiento;
+            
+            // Si la fecha ya tiene timestamp (viene con T)
+            if (dateString.includes('T')) {
+              const date = new Date(dateString);
+              // Usar getUTCDate() para evitar problemas de zona horaria
+              day = date.getUTCDate().toString();
+              month = (date.getUTCMonth() + 1).toString();
+            } else {
+              // Si viene solo como fecha "2000-01-15"
+              // Opción 1: Parsear directamente de la cadena (RECOMENDADO)
+              const parts = dateString.split('-');
+              if (parts.length === 3) {
+                // parts[0] = año, parts[1] = mes, parts[2] = día
+                day = parseInt(parts[2], 10).toString();
+                month = parseInt(parts[1], 10).toString();
+              } else {
+                // Opción 2: Usar Date con tiempo local
+                const date = new Date(dateString + 'T12:00:00');
+                day = date.getDate().toString();
+                month = (date.getMonth() + 1).toString();
+              }
             }
           } catch (error) {
             console.error("Error al parsear fecha:", error);
@@ -149,7 +168,8 @@ export default function UserModal({
       const year = 2000;
       const formattedMonth = birthMonth.padStart(2, "0");
       const formattedDay = birthDay.padStart(2, "0");
-      const fechaNacimiento = `${year}-${formattedMonth}-${formattedDay}`;
+      // Enviar al backend con timestamp para evitar problemas de zona horaria
+      const fechaNacimiento = `${year}-${formattedMonth}-${formattedDay}T00:00:00.000Z`;
       
       setFormData(prev => ({
         ...prev,

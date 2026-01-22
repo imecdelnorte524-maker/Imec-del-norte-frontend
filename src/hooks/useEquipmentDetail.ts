@@ -1,10 +1,9 @@
-// src/hooks/useEquipmentDetail.ts
 import { useState, useEffect, useCallback } from "react";
 import {
   getEquipmentByIdRequest,
   updateEquipmentRequest,
 } from "../api/equipment";
-import type { Equipment } from "../interfaces/EquipmentInterfaces";
+import type { Equipment, UpdateEquipmentData } from "../interfaces/EquipmentInterfaces";
 
 export function useEquipmentDetail(equipmentId: number | null) {
   const [equipment, setEquipment] = useState<Equipment | null>(null);
@@ -12,56 +11,83 @@ export function useEquipmentDetail(equipmentId: number | null) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para cargar/recargar datos frescos
   const loadEquipment = useCallback(async () => {
-    if (!equipmentId) return;
+    if (!equipmentId) {
+      setEquipment(null);
+      setLoading(false);
+      return;
+    }
+    
     try {
-      // No ponemos loading=true aquí para evitar parpadeos si es una recarga silenciosa
-      // o puedes manejar un estado 'reloading' si prefieres.
+      setLoading(true);
       const data = await getEquipmentByIdRequest(equipmentId);
       setEquipment(data);
       setError(null);
     } catch (err: any) {
       console.error("Error cargando equipo:", err);
       setError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error al cargar el equipo",
+        err.response?.data?.message ||
+        err.message ||
+        "Error al cargar el equipo"
       );
+      setEquipment(null);
     } finally {
       setLoading(false);
     }
   }, [equipmentId]);
 
-  // Efecto para cargar al inicio
   useEffect(() => {
     loadEquipment();
   }, [loadEquipment]);
 
-  // Función para actualizar y recargar automáticamente
-  const updateEquipment = async (payload: any) => {
-    if (!equipmentId) return;
+  const updateEquipment = async (
+    updateData: UpdateEquipmentData
+  ): Promise<boolean> => {
+    if (!equipmentId || !equipment) return false;
+    
     setSaving(true);
     setError(null);
+    
     try {
-      // 1. Enviar PATCH
-      await updateEquipmentRequest(equipmentId, payload);
-
-      // 2. Recargar datos frescos del backend (GET)
-      await loadEquipment();
-
-      return true; // Éxito
+      // Solo enviar los campos que queremos actualizar
+      // No es necesario enviar todo el equipo, solo los cambios
+      const updated = await updateEquipmentRequest(equipmentId, updateData);
+      setEquipment(updated);
+      return true;
     } catch (err: any) {
       console.error("Error actualizando equipo:", err);
       setError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Error al actualizar el equipo",
+        err.response?.data?.message ||
+        err.message ||
+        "Error al actualizar el equipo"
       );
-      return false; // Error
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  // Funciones específicas para actualizar campos comunes
+  const updateBasicInfo = async (data: {
+    areaId?: number | null;
+    subAreaId?: number | null;
+    status?: string;
+    installationDate?: string | null;
+    notes?: string | null;
+  }): Promise<boolean> => {
+    return updateEquipment(data);
+  };
+
+  const updateComponents = async (data: {
+    evaporators?: any[];
+    condensers?: any[];
+    planMantenimiento?: any | null;
+  }): Promise<boolean> => {
+    return updateEquipment(data);
+  };
+
+  const updateACType = async (airConditionerTypeId: number | null): Promise<boolean> => {
+    return updateEquipment({ airConditionerTypeId });
   };
 
   return {
@@ -72,6 +98,9 @@ export function useEquipmentDetail(equipmentId: number | null) {
     setError,
     reload: loadEquipment,
     updateEquipment,
-    setEquipment, // Por si necesitas actualizar optimísticamente algo local
+    updateBasicInfo,
+    updateComponents,
+    updateACType,
+    setEquipment,
   };
 }

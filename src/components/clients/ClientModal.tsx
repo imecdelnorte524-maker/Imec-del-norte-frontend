@@ -74,6 +74,73 @@ export default function ClientModal({
     areas: [],
   });
 
+  // Función para generar URL de Google Maps
+  const generateGoogleMapsURL = (addressData: {
+    nombre: string;
+    direccionBase: string;
+    barrio: string;
+    ciudad: string;
+    departamento: string;
+    pais: string;
+  }): string => {
+    const { nombre, direccionBase, barrio, ciudad, departamento, pais } = addressData;
+
+    // Verificar campos mínimos requeridos
+    if ( !nombre || !direccionBase || !ciudad) {
+      return "";
+    }
+
+    // Construir dirección de forma inteligente
+    const parts = [];
+
+    if (nombre.trim()) parts.push(nombre.trim());
+    if (direccionBase.trim()) parts.push(direccionBase.trim());
+    if (barrio.trim()) parts.push(barrio.trim());
+    if (ciudad.trim()) parts.push(ciudad.trim());
+    if (departamento.trim()) parts.push(departamento.trim());
+    if (pais.trim()) parts.push(pais.trim());
+
+    // Eliminar duplicados consecutivos
+    const cleanParts = parts.filter((part, index, arr) => {
+      return index === 0 || part !== arr[index - 1];
+    });
+
+    const fullAddress = cleanParts.join(", ");
+
+    if (!fullAddress) return "";
+
+    // Codificar para URL
+    const encodedAddress = encodeURIComponent(fullAddress);
+
+    // Retornar URL de Google Maps
+    return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+  };
+
+  // Efecto para generar automáticamente la URL de Google Maps
+  useEffect(() => {
+    const url = generateGoogleMapsURL({
+      nombre: formData.nombre,
+      direccionBase: formData.direccionBase,
+      barrio: formData.barrio,
+      ciudad: formData.ciudad,
+      departamento: formData.departamento,
+      pais: formData.pais,
+    });
+
+    if (url) {
+      setFormData((prev) => ({
+        ...prev,
+        localizacion: url,
+      }));
+    }
+  }, [
+    formData.direccionBase,
+    formData.barrio,
+    formData.ciudad,
+    formData.departamento,
+    formData.pais,
+  ]);
+
   const resetForm = () => {
     setFormData({
       nombre: "",
@@ -128,11 +195,20 @@ export default function ClientModal({
         ciudad: editingClient.ciudad || "",
         departamento: editingClient.departamento || "",
         pais: editingClient.pais || "Colombia",
-
         contacto: editingClient.contacto,
         email: editingClient.email,
         telefono: editingClient.telefono,
-        localizacion: editingClient.localizacion,
+        // Generar URL inicial o usar la existente
+        localizacion:
+          editingClient.localizacion ||
+          generateGoogleMapsURL({
+            nombre: editingClient.nombre || "",
+            direccionBase: editingClient.direccionBase || "",
+            barrio: editingClient.barrio || "",
+            ciudad: editingClient.ciudad || "",
+            departamento: editingClient.departamento || "",
+            pais: editingClient.pais || "Colombia",
+          }),
         fecha_creacion: editingClient.fechaCreacionEmpresa || "",
         idUsuarioContacto: editingClient.idUsuarioContacto,
         areas:
@@ -193,13 +269,13 @@ export default function ClientModal({
           .toLowerCase()
           .includes(userSearch.toLowerCase()) ||
         u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.username.toLowerCase().includes(userSearch.toLowerCase())
+        u.username.toLowerCase().includes(userSearch.toLowerCase()),
     );
     setFilteredUsers(filtered.slice(0, 10));
   }, [userSearch, users, isCliente]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -334,7 +410,7 @@ export default function ClientModal({
           return {
             ...area,
             subAreas: area.subAreas.filter(
-              (s) => !(s.id !== undefined && idsToRemove.has(s.id))
+              (s) => !(s.id !== undefined && idsToRemove.has(s.id)),
             ),
           };
         }
@@ -354,7 +430,7 @@ export default function ClientModal({
   // Iniciar creación de subárea hija de otra subárea (nivel N)
   const startAddSubareaForSubarea = (
     areaId: number,
-    parentSubareaId: number
+    parentSubareaId: number,
   ) => {
     setSelectedAreaForSubarea(areaId);
     setSelectedParentSubarea(parentSubareaId);
@@ -397,16 +473,21 @@ export default function ClientModal({
       const value = formData[field];
       if (!value || (typeof value === "string" && value.trim() === "")) {
         setError(
-          `El campo ${fieldLabels[field] ?? String(field)} es requerido`
+          `El campo ${fieldLabels[field] ?? String(field)} es requerido`,
         );
         playErrorSound();
         return false;
       }
     }
 
-    // Validar ubicación (mapa)
-    if (!formData.localizacion || formData.localizacion.trim() === "") {
-      setError("Debes seleccionar una ubicación en el mapa");
+    // Validar que la URL de Google Maps se haya generado
+    if (
+      !formData.localizacion ||
+      !formData.localizacion.startsWith("https://www.google.com/maps/")
+    ) {
+      setError(
+        "Por favor, complete todos los campos de dirección para generar la ubicación",
+      );
       playErrorSound();
       return false;
     }
@@ -468,10 +549,10 @@ export default function ClientModal({
   // Crear subáreas en el backend respetando la jerarquía
   const createSubareasForArea = async (
     area: AreaFormData,
-    dbAreaId: number
+    dbAreaId: number,
   ) => {
     const newSubs = area.subAreas.filter(
-      (s) => s.id === undefined || (s.id as number) < 0
+      (s) => s.id === undefined || (s.id as number) < 0,
     );
     if (newSubs.length === 0) return;
 
@@ -512,7 +593,7 @@ export default function ClientModal({
 
       if (!createdSomething) {
         console.warn(
-          "No se pudieron resolver algunas subáreas por referencias de padre inválidas."
+          "No se pudieron resolver algunas subáreas por referencias de padre inválidas.",
         );
         break;
       }
@@ -537,7 +618,6 @@ export default function ClientModal({
         ciudad: formData.ciudad,
         departamento: formData.departamento,
         pais: formData.pais,
-
         contacto: formData.contacto,
         email: formData.email,
         telefono: formData.telefono,
@@ -582,7 +662,7 @@ export default function ClientModal({
           } else if (area.id !== undefined && area.id > 0) {
             // Área existente: eliminar subáreas quitadas y crear nuevas
             const existingArea = editingClient.areas?.find(
-              (a) => a.idArea === area.id
+              (a) => a.idArea === area.id,
             );
             const existingSubareaIds =
               existingArea?.subAreas?.map((s) => s.idSubArea) || [];
@@ -628,7 +708,7 @@ export default function ClientModal({
           console.error("Error subiendo logo:", uploadError);
           // No detenemos el flujo si falla la subida del logo
           setError(
-            `Cliente guardado, pero error al subir logo: ${uploadError.message}`
+            `Cliente guardado, pero error al subir logo: ${uploadError.message}`,
           );
         }
       }
@@ -648,27 +728,27 @@ export default function ClientModal({
 
   // Área actualmente seleccionada para agregar subárea
   const currentAreaForSubarea = formData.areas.find(
-    (a) => a.id === selectedAreaForSubarea
+    (a) => a.id === selectedAreaForSubarea,
   );
 
   // Subárea padre actualmente seleccionada (si hay)
   const currentParentSubarea =
     currentAreaForSubarea && selectedParentSubarea != null
       ? currentAreaForSubarea.subAreas.find(
-          (s) => s.id === selectedParentSubarea
+          (s) => s.id === selectedParentSubarea,
         ) || null
       : null;
 
   // Render recursivo de subáreas como árbol
   const renderSubareasTree = (
     area: AreaFormData,
-    parentId: number | null = null
+    parentId: number | null = null,
   ): React.ReactNode[] => {
     const children = area.subAreas.filter(
       (s) =>
         (s.parentSubAreaId ?? null) === parentId &&
         s.id !== undefined &&
-        s.id !== null
+        s.id !== null,
     );
 
     if (!children.length) return [];
@@ -906,7 +986,6 @@ export default function ClientModal({
                   >
                     Dirección de la Empresa *
                   </label>
-
                   <div
                     style={{
                       display: "grid",
@@ -979,6 +1058,28 @@ export default function ClientModal({
                       />
                     </div>
                   </div>
+                  {/* URL de Google Maps generada automáticamente */}
+                  {formData.localizacion && (
+                    <div style={{ marginTop: "1rem" }}>
+                      <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>
+                          URL de Google Maps (generada automáticamente)
+                        </label>
+                        <div className={styles.readonlyField}>
+                          <input
+                            type="text"
+                            value={formData.localizacion}
+                            readOnly
+                            className={`${styles.formInput} ${styles.readonlyInput}`}
+                          />
+                          <small className={styles.fieldNote}>
+                            Esta URL se guardará automáticamente con los datos
+                            de dirección
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Usuario contacto (solo Admin/Secretaria) */}
@@ -1013,7 +1114,7 @@ export default function ClientModal({
                               onClick={() =>
                                 handleUserSelect(
                                   u.usuarioId,
-                                  `${u.nombre} ${u.apellido || ""}`
+                                  `${u.nombre} ${u.apellido || ""}`,
                                 )
                               }
                             >

@@ -213,6 +213,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  background: rgba(47, 46, 46, 0.548);
 }
 
 .currencySymbol {
@@ -227,6 +228,8 @@
 
 .currencyInput .input {
   padding-left: 30px;
+  background: rgba(47, 46, 46, 0.548);
+  margin: 0;
 }
 
 /* Grid de formulario */
@@ -511,6 +514,7 @@
     background-color: #374151;
     border-color: #4b5563;
     color: #f9fafb;
+    margin: 0;
   }
   
   .input:disabled,
@@ -545,6 +549,7 @@
   
   .currencySymbol {
     color: #9ca3af;
+    top: 15px;
   }
   
   .loadingSmall {

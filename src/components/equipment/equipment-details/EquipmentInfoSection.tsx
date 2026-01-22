@@ -1,4 +1,3 @@
-// src/components/equipment-detail/EquipmentInfoSection.tsx
 import type { Equipment } from "../../../interfaces/EquipmentInterfaces";
 import styles from "../../../styles/components/equipment/equipment-details/EquipmentInfoSection.module.css";
 
@@ -14,8 +13,8 @@ export default function EquipmentInfoSection({
       <h3>Información General</h3>
 
       <div className={styles.detailItem}>
-        <strong>Nombre del equipo:</strong>
-        <span>{equipment.name}</span>
+        <strong>Cliente:</strong>
+        <span>{equipment.client.nombre}</span>
       </div>
 
       {equipment.code && (
@@ -25,10 +24,10 @@ export default function EquipmentInfoSection({
         </div>
       )}
 
-      {equipment.workOrderId && (
+      {equipment.workOrders && equipment.workOrders.length > 0 && (
         <div className={styles.detailItem}>
-          <strong>Orden ID:</strong>
-          <span>{`#${equipment.workOrderId}`}</span>
+          <strong>Órdenes asociadas:</strong>
+          <span>{equipment.workOrders.length} órdenes</span>
         </div>
       )}
 
@@ -37,18 +36,31 @@ export default function EquipmentInfoSection({
         <span>{equipment.category}</span>
       </div>
 
-      {equipment.category === "Aires Acondicionados" &&
-        equipment.airConditionerType && (
-          <div className={styles.detailItem}>
-            <strong>Tipo de Aire Acondicionado:</strong>
-            <span>{equipment.airConditionerType.name}</span>
-          </div>
-        )}
+      {equipment.airConditionerType && (
+        <div className={styles.detailItem}>
+          <strong>Tipo de Aire Acondicionado:</strong>
+          <span>{equipment.airConditionerType.name}</span>
+        </div>
+      )}
 
       <div className={styles.detailItem}>
         <strong>Estado:</strong>
         <span>{equipment.status}</span>
       </div>
+
+      {equipment.area && (
+        <div className={styles.detailItem}>
+          <strong>Área:</strong>
+          <span>{equipment.area.nombreArea}</span>
+        </div>
+      )}
+
+      {equipment.subArea && (
+        <div className={styles.detailItem}>
+          <strong>Subárea:</strong>
+          <span>{equipment.subArea.nombreSubArea}</span>
+        </div>
+      )}
     </div>
   );
 }

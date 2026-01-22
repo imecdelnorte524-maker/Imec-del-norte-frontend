@@ -58,7 +58,7 @@ export default function CreateAcTypeModal({
               />
             </div>
 
-            <div className={styles.formRow}>
+            {/* <div className={styles.formRow}>
               <div className={styles.checkboxGroup}>
                 <label>
                   <input
@@ -83,7 +83,7 @@ export default function CreateAcTypeModal({
                   Tiene Condensador
                 </label>
               </div>
-            </div>
+            </div> */}
 
             <div className={styles.formActions}>
               <button type="button" onClick={onClose} disabled={loading}>

@@ -18,7 +18,7 @@ export const suppliesApi = {
     } catch (error: any) {
       console.error("Error obteniendo insumos:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener insumos"
+        error.response?.data?.message || "Error al obtener insumos",
       );
     }
   },
@@ -29,7 +29,8 @@ export const suppliesApi = {
       const stockMin = parseFloat(insumoData.stockMin) || 0;
       const cantidadInicial = parseFloat(insumoData.cantidadInicial) || 0;
 
-      const datosParaEnviar = {
+      // ⚠️ CORREGIDO: SOLO campos permitidos por el backend
+      const datosParaEnviar: any = {
         nombre: insumoData.nombre || "",
         categoria: insumoData.categoria || "General",
         unidadMedida: insumoData.unidadMedida || "Unidad",
@@ -37,10 +38,14 @@ export const suppliesApi = {
         valorUnitario,
         estado: insumoData.estado || "Disponible",
         cantidadInicial,
-        ubicacion: insumoData.ubicacion || "",
       };
 
-      // 1. Crear insumo (inventario se crea con cantidadInicial)
+      // Solo incluir bodegaId si tiene valor (es opcional)
+      if (insumoData.bodegaId !== undefined && insumoData.bodegaId !== null) {
+        datosParaEnviar.bodegaId = insumoData.bodegaId;
+      }
+
+      // 1. Crear insumo
       const response = await api.post("/supplies", datosParaEnviar);
 
       const insumoCreado = response.data.data;
@@ -77,7 +82,7 @@ export const suppliesApi = {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Error al crear insumo"
+          "Error al crear insumo",
       );
     }
   },
@@ -107,7 +112,7 @@ export const suppliesApi = {
     } catch (error: any) {
       console.error("❌ Error eliminando insumo:", error);
       throw new Error(
-        error.response?.data?.message || "Error al eliminar insumo"
+        error.response?.data?.message || "Error al eliminar insumo",
       );
     }
   },
@@ -119,7 +124,7 @@ export const suppliesApi = {
     } catch (error: any) {
       console.error("Error actualizando insumo:", error);
       throw new Error(
-        error.response?.data?.message || "Error al actualizar insumo"
+        error.response?.data?.message || "Error al actualizar insumo",
       );
     }
   },

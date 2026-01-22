@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllOrdersRequest } from "../api/orders";
+import { getAllOrdersRequest, getOrderByIdRequest } from "../api/orders"; // <--- Asegúrate de importar getOrderByIdRequest
 import { QUERY_KEYS } from "../api/keys";
+import type { Order } from "../interfaces/OrderInterfaces";
 
+// Hook para la LISTA de órdenes
 export const useOrders = (
   userRole: "cliente" | "tecnico" | "admin",
   filter?: string
@@ -9,13 +11,10 @@ export const useOrders = (
   const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading, error } = useQuery({
-    // La clave incluye el rol y el filtro, así React Query sabe que son listas distintas
     queryKey: [QUERY_KEYS.orders, userRole, filter],
     queryFn: async () => {
-      // 1. Obtenemos TODAS las órdenes del backend (que ya filtra por seguridad/rol)
       const response = await getAllOrdersRequest();
 
-      // 2. Aplicamos filtros de UI (pestañas del frontend)
       if (userRole === "admin" && filter && filter !== "all") {
         const filterMap: Record<string, string> = {
           pending: "Pendiente",
@@ -28,12 +27,9 @@ export const useOrders = (
         if (targetEstado) {
           let filtered = response.filter((o) => o.estado === targetEstado);
           
-          if (filter === "pending") {
-            filtered = filtered.filter((o) => !o.tecnico_id);
-          }
-          if (filter === "assigned") {
-            filtered = filtered.filter((o) => o.tecnico_id);
-          }
+          if (filter === "pending") filtered = filtered.filter((o) => !o.tecnico_id);
+          if (filter === "assigned") filtered = filtered.filter((o) => o.tecnico_id);
+          
           return filtered;
         }
       }
@@ -46,5 +42,33 @@ export const useOrders = (
     loading: isLoading, 
     error: error ? (error as Error).message : null,
     refreshOrders: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] })
+  };
+};
+
+// --- NUEVO HOOK ESPECÍFICO PARA DETALLE ---
+export const useOrderDetail = (orderId: number, initialData?: Order) => {
+  const queryClient = useQueryClient();
+
+  const { data: order, isLoading, error, refetch } = useQuery({
+    queryKey: ["orderDetail", orderId], // Clave única por orden
+    queryFn: () => getOrderByIdRequest(orderId),
+    initialData: initialData, // Muestra datos inmediatos mientras carga
+    
+    // AQUÍ ESTÁ LA MAGIA DEL "TIEMPO REAL" (POLLING)
+    // Consulta al servidor cada 4 segundos si hay cambios (sin sockets)
+    refetchInterval: 4000, 
+    refetchIntervalInBackground: true, // Sigue actualizando si cambias de pestaña
+  });
+
+  return {
+    order: order || initialData, // Fallback a datos iniciales si no ha cargado
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    // Esta función la llamaremos después de añadir/quitar insumos para actualizar YA
+    refreshOrder: async () => {
+      await refetch();
+      // Opcional: Actualizar también la lista general para que los estados coincidan
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+    }
   };
 };

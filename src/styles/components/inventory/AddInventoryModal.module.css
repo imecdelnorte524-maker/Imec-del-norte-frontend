@@ -87,7 +87,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
   flex-shrink: 0;
   touch-action: manipulation;
   min-width: 44px;
@@ -179,6 +181,7 @@
 }
 
 .input,
+input[type="number"],
 .select,
 .textarea {
   width: 100%;
@@ -187,9 +190,10 @@
   border-radius: 6px;
   font-size: clamp(0.9rem, 2vw, 0.95rem);
   transition: all 0.2s;
-  background-color: white;
+  background: rgba(47, 46, 46, 0.548);
   box-sizing: border-box;
   line-height: 1.5;
+  margin: 0;
 }
 
 .input:focus,
@@ -206,6 +210,10 @@
   background-color: #f9fafb;
   color: #6b7280;
   cursor: not-allowed;
+}
+
+.ubicacion { 
+  padding: 0 0 10px 0;
 }
 
 .textarea {
@@ -228,6 +236,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  background: rgba(47, 46, 46, 0.548);
 }
 
 .currencySymbol {
@@ -242,6 +251,8 @@
 
 .currencyInput .input {
   padding-left: 30px;
+  background: rgba(47, 46, 46, 0.548);
+  margin: 0;
 }
 
 /* Mensajes de error */
@@ -635,6 +646,7 @@
 
   .currencySymbol {
     color: #9ca3af;
+    top: 15px;
   }
 
   .loading,

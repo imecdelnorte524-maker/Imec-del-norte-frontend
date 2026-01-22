@@ -88,10 +88,6 @@ export default function Users() {
     }
   };
 
-  // Mostrar contadores de usuarios filtrados
-  const usuariosActivosFiltrados = usuariosFiltrados.filter(u => u.activo === true).length;
-  const usuariosInactivosFiltrados = usuariosFiltrados.filter(u => u.activo === false).length;
-
   if (loading && usuarios.length === 0) {
     return (
       <DashboardLayout>
@@ -107,25 +103,6 @@ export default function Users() {
           <h1>Gestión de Usuarios</h1>
           <p>Administra los usuarios del sistema</p>
         </header>
-
-        <div className={styles.stats}>
-          <div className={styles.statCard}>
-            <h3>Total Usuarios</h3>
-            <span className={styles.statNumber}>{usuariosFiltrados.length}</span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Activos</h3>
-            <span className={styles.statNumber}>
-              {usuariosActivosFiltrados}
-            </span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Inactivos</h3>
-            <span className={styles.statNumber}>
-              {usuariosInactivosFiltrados}
-            </span>
-          </div>
-        </div>
 
         <div className={styles.controls}>
           <div className={styles.filters}>

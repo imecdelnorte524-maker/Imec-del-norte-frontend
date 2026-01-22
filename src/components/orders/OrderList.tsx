@@ -1,5 +1,3 @@
-// src/components/orders/OrderList.tsx
-
 import { useEffect, useRef, useState } from "react";
 import { useOrders } from "../../hooks/useOrders";
 import type { Order } from "../../interfaces/OrderInterfaces";
@@ -11,7 +9,7 @@ interface Props {
   userRole: "cliente" | "tecnico" | "admin";
   onViewOrder: (order: Order) => void;
   filter?: "all" | "pending" | "assigned" | "completed" | "cancelled";
-  initialOrderId?: number; // <- NUEVO
+  initialOrderId?: number;
 }
 
 export default function OrderList({
@@ -21,31 +19,24 @@ export default function OrderList({
   initialOrderId,
 }: Props) {
   const { orders, loading, error } = useOrders(userRole, filter);
-  const ordersPerPage = 8; // Cambiado de servicesPerPage a ordersPerPage
+  const ordersPerPage = 8;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Calcular índices de paginación
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  
-  // Aplicar paginación a las órdenes
   const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
-  
   const totalPages = Math.ceil(orders.length / ordersPerPage);
   const hasAutoSelectedRef = useRef(false);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    // Opcional: hacer scroll al inicio cuando cambia de página
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  
-  // Resetear a página 1 cuando cambie el filtro
+
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
 
-  // Auto‑seleccionar una orden si viene desde notificación (initialOrderId)
   useEffect(() => {
     if (!initialOrderId) return;
     if (!orders || orders.length === 0) return;
@@ -55,9 +46,7 @@ export default function OrderList({
     if (found) {
       onViewOrder(found);
       hasAutoSelectedRef.current = true;
-      
-      // Encontrar la página donde está esta orden para navegar automáticamente
-      const orderIndex = orders.findIndex(o => o.orden_id === initialOrderId);
+      const orderIndex = orders.findIndex((o) => o.orden_id === initialOrderId);
       if (orderIndex !== -1) {
         const pageForOrder = Math.floor(orderIndex / ordersPerPage) + 1;
         setCurrentPage(pageForOrder);
@@ -66,30 +55,22 @@ export default function OrderList({
   }, [initialOrderId, orders, onViewOrder, ordersPerPage]);
 
   const getCardStatusClass = (order: Order): string => {
-    if (order.estado === "Asignada") {
-      return styles.orderCardPendingAssigned;
-    }
-
-    if (order.estado === "Pendiente") {
-      return styles.orderCardPending;
-    }
-
-    if (order.estado === "En Proceso") {
-      return styles.orderCardInProgress;
-    }
-
-    if (order.estado === "Completado") {
-      return styles.orderCardCompleted;
-    }
-
+    if (order.estado === "Asignada") return styles.orderCardPendingAssigned;
+    if (order.estado === "Pendiente") return styles.orderCardPending;
+    if (order.estado === "En Proceso") return styles.orderCardInProgress;
     if (
-      order.estado === "Cancelada" ||
-      order.estado === "Rechazada" ||
-      order.estado === "Cancelado"
-    ) {
+      order.estado === "Completado" &&
+      order.estado_facturacion === "No facturado"
+    )
+      return styles.orderCardCompletedBillingPending;
+    if (
+      order.estado === "Completado" &&
+      order.estado_facturacion === "Facturado"
+    )
+      return styles.orderCardCompleted;
+    if (order.estado === "Cancelada" || order.estado === "Rechazada") {
       return styles.orderCardCancelled;
     }
-
     return "";
   };
 
@@ -104,89 +85,114 @@ export default function OrderList({
     return (
       order.cliente_empresa?.telefono ||
       order.cliente.telefono ||
-      "No proporcionado"
+      "No disponible"
     );
   };
 
-  if (loading) {
-    return <div className={styles.loading}>Cargando órdenes...</div>;
-  }
-
-  if (error) {
-    return <div className={styles.error}>{error}</div>;
-  }
+  if (loading) return <div className={styles.loading}>Cargando órdenes...</div>;
+  if (error) return <div className={styles.error}>{error}</div>;
 
   return (
     <div className={styles.container}>
       <div className={styles.ordersGrid}>
-        {currentOrders.map((order) => (
-          <div
-            key={order.orden_id}
-            className={`${styles.orderCard} ${getCardStatusClass(order)}`}
-            onClick={() => onViewOrder(order)}
-          >
-            <div className={styles.cardHeader}>
-              <h3>Orden #{order.orden_id}</h3>
-              <div className={styles.serviceBadge}>
-                {order.servicio.nombre_servicio}
+        {currentOrders.map((order) => {
+          const hasAssignedItems =
+            (order.supplyDetails && order.supplyDetails.length > 0) ||
+            (order.toolDetails && order.toolDetails.length > 0);
+
+          return (
+            <div
+              key={order.orden_id}
+              className={`${styles.orderCard} ${getCardStatusClass(order)}`}
+              onClick={() => onViewOrder(order)}
+            >
+              <div className={styles.cardHeader}>
+                <h3>#{order.orden_id}</h3>
+                <div className={styles.serviceBadge}>
+                  {order.servicio.nombre_servicio}
+                </div>
+              </div>
+
+              <div className={styles.serviceInfo}>
+                <strong>Cliente: {getDisplayClientName(order)}</strong>
+
+                <div className={styles.tagsRow}>
+                  {order.tipo_servicio && (
+                    <span className={styles.typeTag}>
+                      {order.tipo_servicio}
+                    </span>
+                  )}
+                  {/* NUEVO: Tag para el tipo de mantenimiento (Preventivo/Correctivo) */}
+                  {order.maintenance_type && (
+                    <span
+                      className={styles.typeTag}
+                      style={{
+                        backgroundColor: "#ecfeff",
+                        color: "#0369a1",
+                        borderColor: "#a5f3fc",
+                      }}
+                    >
+                      {order.maintenance_type.nombre}
+                    </span>
+                  )}
+                  {hasAssignedItems && (
+                    <span className={styles.inventoryIndicator}>
+                      H/I Asignado: <strong>Sí</strong>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.clientInfo}>
+                <span>
+                  👤 {order.cliente.nombre} {order.cliente.apellido}
+                </span>
+                <span>📞 {getDisplayPhone(order)}</span>
+                {order.tecnico && (
+                  <span>
+                    🛠️ {order.tecnico.nombre} {order.tecnico.apellido}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.dates}>
+                <span>
+                  📅 Sol.:{" "}
+                  {new Date(order.fecha_solicitud).toLocaleDateString()}
+                </span>
+                {order.fecha_inicio && (
+                  <span>
+                    🚀 Ini.: {new Date(order.fecha_inicio).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.cardFooter}>
+                <div className={styles.statusRow}>
+                  <span
+                    className={`${styles.status} ${
+                      styles[getStatusClass(order.estado, "status")]
+                    }`}
+                  >
+                    {order.estado}
+                  </span>
+                  <span
+                    className={
+                      styles.billingBadge +
+                      " " +
+                      (order.estado_facturacion === "Facturado"
+                        ? styles.billingBilled
+                        : styles.billingNotBilled)
+                    }
+                  >
+                    {order.estado_facturacion}
+                  </span>
+                </div>
+                <button className={styles.viewButton}>Ver Detalles</button>
               </div>
             </div>
-
-            <div className={styles.serviceInfo}>
-              <strong>Cliente: {getDisplayClientName(order)}</strong>
-              <strong>Servicio: {order.servicio.nombre_servicio}</strong>
-            </div>
-
-            <div className={styles.clientInfo}>
-              <span>
-                Contacto: {order.cliente.nombre} {order.cliente.apellido}
-              </span>
-              <span>Teléfono: {getDisplayPhone(order)}</span>
-              <span>Email: {order.cliente.email}</span>
-              {order.tecnico && (
-                <span>
-                  Técnico: {order.tecnico.nombre} {order.tecnico.apellido}
-                </span>
-              )}
-            </div>
-
-            <div className={styles.dates}>
-              <span>
-                Solicitado:{" "}
-                {new Date(order.fecha_solicitud).toLocaleDateString()}
-              </span>
-              {order.fecha_inicio && (
-                <span>
-                  Inicio: {new Date(order.fecha_inicio).toLocaleDateString()}
-                </span>
-              )}
-            </div>
-
-            <div className={styles.cardFooter}>
-              <div className={styles.statusRow}>
-                <span
-                  className={`${styles.status} ${
-                    styles[getStatusClass(order.estado, "status")]
-                  }`}
-                >
-                  {order.estado}
-                </span>
-                <span
-                  className={
-                    styles.billingBadge +
-                    " " +
-                    (order.estado_facturacion === "Facturado"
-                      ? styles.billingBilled
-                      : styles.billingNotBilled)
-                  }
-                >
-                  {order.estado_facturacion}
-                </span>
-              </div>
-              <button className={styles.viewButton}>Ver Detalles</button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {orders.length === 0 && (

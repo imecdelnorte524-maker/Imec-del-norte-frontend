@@ -38,8 +38,6 @@ const mapServiceFromAPI = (service: ServiceFromAPI): Service => ({
   orden_id: service.orden_id,
   servicio: {
     nombre_servicio: service.servicio.nombre_servicio,
-    precio_base: service.servicio.precio_base,
-    duracion_estimada: service.servicio.duracion_estimada || undefined,
   },
   cliente: {
     nombre: service.cliente.nombre,
@@ -130,6 +128,7 @@ export default function Dashboard() {
   // Rol SGSST (ajustar el string "SGSST" si en tu backend se llama distinto)
   const isSgSst = user?.role?.nombreRol === "SGSST";
   const isClient = user?.role?.nombreRol === "Cliente";
+  const isSecretaria = user?.role.nombreRol === "Secretaria";
 
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -243,7 +242,7 @@ export default function Dashboard() {
 
         // Extraer estados únicos para el filtro
         const uniqueStatuses = Array.from(
-          new Set(servicesData.map((service) => service.estado))
+          new Set(servicesData.map((service) => service.estado)),
         );
         setStatusOptions(uniqueStatuses);
       } catch (error) {
@@ -281,14 +280,14 @@ export default function Dashboard() {
 
         // Solo los que NO tienen firma SG-SST
         const unsignedBySst = forms.filter(
-          (form: SgSstForm) => !form.sstSignatureDate
+          (form: SgSstForm) => !form.sstSignatureDate,
         );
 
         setSgSstForms(unsignedBySst);
       } catch (err) {
         console.error("Error cargando formularios SG-SST:", err);
         setSgSstError(
-          "Error al cargar los reportes SG-SST pendientes de firma."
+          "Error al cargar los reportes SG-SST pendientes de firma.",
         );
       } finally {
         setSgSstLoading(false);
@@ -339,7 +338,7 @@ export default function Dashboard() {
   const indexOfFirstService = indexOfLastService - servicesPerPage;
   const currentServices = filteredServices.slice(
     indexOfFirstService,
-    indexOfLastService
+    indexOfLastService,
   );
 
   const clearFilters = () => {
@@ -433,7 +432,12 @@ export default function Dashboard() {
         <div className={styles.pageHeader}>
           <div>
             <h1 className={styles.pageTitle}>
-              {isAdmin ? (
+              {isAdmin && isSecretaria ? (
+                <span className={styles.adminBadge}>
+                  <ShieldCheckIcon className={styles.badgeIcon} />
+                  Vista Secretaria
+                </span>
+              ) : isAdmin ? (
                 <span className={styles.adminBadge}>
                   <ShieldCheckIcon className={styles.badgeIcon} />
                   Vista Administrador
@@ -451,21 +455,27 @@ export default function Dashboard() {
               {isAdmin
                 ? "Resumen general y gestión de Ordenes técnicos"
                 : isSgSst
-                ? "Reportes SG-SST pendientes de firma"
-                : isClient
-                ? `Mis Ordenes - ${user?.nombre} ${user?.apellido || ""}` 
-                : `Mis Ordenes asignados - ${user?.nombre} ${
-                    user?.apellido || ""
-                  }`}
+                  ? "Reportes SG-SST pendientes de firma"
+                  : isClient
+                    ? `Mis Ordenes - ${user?.nombre} ${user?.apellido || ""}`
+                    : `Mis Ordenes asignados - ${user?.nombre} ${
+                        user?.apellido || ""
+                      }`}
             </p>
           </div>
           <div className={styles.userInfo}>
-            {isAdmin ? (
+            {isAdmin && isSecretaria? (
+              <>
+                <ShieldCheckIcon className={styles.userIcon} />
+                <span className={styles.adminRole}>Secretaria</span>
+              </>
+            ) : isAdmin ? (
               <>
                 <ShieldCheckIcon className={styles.userIcon} />
                 <span className={styles.adminRole}>Administrador</span>
               </>
-            ) : isSgSst ? (
+            )
+             : isSgSst ? (
               <>
                 <ShieldCheckIcon className={styles.userIcon} />
                 <span className={styles.sgsstRole}>SG-SST</span>
@@ -565,7 +575,11 @@ export default function Dashboard() {
                   {isAdmin ? metrics.totalServices : metrics.myServices}
                 </div>
                 <div className={styles.metricDescription}>
-                  {isAdmin ? "Ordenes activos" : isClient ? "Mis Ordenes activas" : "Asignados a mí"}
+                  {isAdmin
+                    ? "Ordenes activos"
+                    : isClient
+                      ? "Mis Ordenes activas"
+                      : "Asignados a mí"}
                 </div>
               </div>
 
@@ -672,7 +686,7 @@ export default function Dashboard() {
                   <div className={styles.barChart}>
                     {statusBarData.map((item) => {
                       const widthPercent = Math.round(
-                        (item.value / maxStatusValue) * 100
+                        (item.value / maxStatusValue) * 100,
                       );
                       return (
                         <div className={styles.barChartRow} key={item.key}>

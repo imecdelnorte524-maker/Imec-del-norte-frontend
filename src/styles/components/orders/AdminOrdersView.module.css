@@ -27,7 +27,7 @@
   display: flex;
   gap: var(--spacing-md);
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .filterSelect {
@@ -38,6 +38,7 @@
   color: var(--gray-700);
   font-size: var(--font-size-sm);
   cursor: pointer;
+  margin: 0;
 }
 
 .filterSelect:focus {
@@ -48,6 +49,7 @@
 
 .createButton {
   background: var(--primary-500);
+  width: 250px;
   color: white;
   border: none;
   padding: var(--spacing-md) var(--spacing-lg);

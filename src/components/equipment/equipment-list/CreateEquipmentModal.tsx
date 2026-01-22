@@ -1,71 +1,103 @@
-// src/components/equipment/equipment-list/CreateEquipmentModal.tsx
+import { useEffect, useRef, useCallback } from "react";
 import HierarchicalAreaSelector from "./HierarchicalAreaSelector";
-import {
-  MotorForm,
-  EvaporatorForm,
-  CondenserForm,
-  CompressorForm,
-} from "./forms";
+import { EvaporatorForm, CondenserForm } from "./forms";
 import styles from "../../../styles/components/equipment/equipment-list/CreateEquipmentModal.module.css";
 import detailStyles from "../../../styles/pages/EquipmentDetailPage.module.css";
 import type {
   AirConditionerTypeOption,
-  CompressorFormData,
-  CondenserFormData,
-  CreateEquipmentFormValues,
-  EvaporatorFormData,
-  MotorFormData,
+  EvaporatorData,
+  CondenserData,
+  PlanMantenimientoData,
 } from "../../../interfaces/EquipmentInterfaces";
 import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
-import type { SubAreaWithChildren } from "../../../interfaces/SubAreaInterfaces";
+import type { Order } from "../../../interfaces/OrderInterfaces";
+
+// Tipos de aire acondicionado que permiten múltiples componentes
+const MULTIPLE_COMPONENT_TYPES = [
+  "MultiSplit",
+  "Refrigerante Variable",
+  "VRF",
+  "VRV",
+  "Variable Refrigerant Flow",
+  "Sistema Multi Split",
+];
 
 interface CreateEquipmentModalProps {
   isOpen: boolean;
   loading: boolean;
   error: string | null;
+
   // Formulario principal
-  createForm: CreateEquipmentFormValues;
+  createForm: {
+    clientId: number;
+    category: string;
+    airConditionerTypeId?: string;
+    status?: string;
+    installationDate?: string;
+    notes?: string;
+  };
   onCreateFormChange: (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => void;
+
   // Tipos de aire acondicionado
   airConditionerTypes: AirConditionerTypeOption[];
   selectedAcType: AirConditionerTypeOption | undefined;
   onOpenNewAcTypeForm: () => void;
+
   // Áreas
   areas: AreaSimple[];
-  selectedAreaId: number | "";
-  selectedSubAreaId: number | "";
-  // Estos siguen existiendo en las props para compatibilidad,
-  // pero ya no los usamos en el selector jerárquico
-  selectedSubSubAreaId: number | "";
-  selectedSubAreaWithChildren: SubAreaWithChildren | null;
+  selectedAreaId: number | "" | null;
+  selectedSubAreaId: number | "" | null;
   onAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  onSubSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  // Componentes toggle
-  showMotorForm: boolean;
-  showEvaporatorForm: boolean;
-  showCondenserForm: boolean;
-  showCompressorForm: boolean;
-  onToggleMotorForm: () => void;
-  onToggleEvaporatorForm: () => void;
-  onToggleCondenserForm: () => void;
-  onToggleCompressorForm: () => void;
-  // Formularios de componentes
-  motorForm: MotorFormData;
-  evaporatorForm: EvaporatorFormData;
-  condenserForm: CondenserFormData;
-  compressorForm: CompressorFormData;
-  onMotorFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onEvaporatorFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCondenserFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onCompressorFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+
+  // Componentes (arrays para múltiples)
+  evaporators: EvaporatorData[];
+  condensers: CondenserData[];
+  onAddEvaporator: () => void;
+  onAddCondenser: () => void;
+  onRemoveEvaporator: (index: number) => void;
+  onRemoveCondenser: (index: number) => void;
+  onEvaporatorChange: (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => void;
+  onCondenserChange: (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => void;
+
+  // Plan de mantenimiento
+  planMantenimiento: PlanMantenimientoData;
+  onPlanMantenimientoChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => void;
+
+  // Cliente actual (para obtener órdenes)
+  client: {
+    idCliente: number; // Este es el clienteEmpresaId
+    nombre: string;
+    nit: string;
+  } | null;
+
+  // Órdenes del cliente
+  ordersForClient: Order[];
+  loadingOrders: boolean;
+  ordersError: string | null;
+
+  // Estados para órdenes seleccionadas
+  selectedOrderIds: number[];
+  onOrderSelectionChange: (orderId: number, isSelected: boolean) => void;
+
   // Acciones
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
+  
+  // Nueva prop: función para cargar órdenes
+  onLoadOrders: (clienteEmpresaId: number, category: string) => void;
 }
 
 export default function CreateEquipmentModal({
@@ -82,32 +114,117 @@ export default function CreateEquipmentModal({
   selectedSubAreaId,
   onAreaChange,
   onSubAreaChange,
-  showMotorForm,
-  showEvaporatorForm,
-  showCondenserForm,
-  showCompressorForm,
-  onToggleMotorForm,
-  onToggleEvaporatorForm,
-  onToggleCondenserForm,
-  onToggleCompressorForm,
-  motorForm,
-  evaporatorForm,
-  condenserForm,
-  compressorForm,
-  onMotorFormChange,
-  onEvaporatorFormChange,
-  onCondenserFormChange,
-  onCompressorFormChange,
+  evaporators,
+  condensers,
+  onAddEvaporator,
+  onAddCondenser,
+  onRemoveEvaporator,
+  onRemoveCondenser,
+  onEvaporatorChange,
+  onCondenserChange,
+  planMantenimiento,
+  onPlanMantenimientoChange,
+  client,
+  ordersForClient,
+  loadingOrders,
+  ordersError,
+  selectedOrderIds,
+  onOrderSelectionChange,
   onSubmit,
   onClose,
+  onLoadOrders,
 }: CreateEquipmentModalProps) {
+  
+  // 🔧 REFs para tracking de parámetros previos
+  const previousCategoryRef = useRef<string>("");
+  const previousClientRef = useRef<number | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // 🔧 EFECTO MEJORADO PARA CARGAR ÓRDENES CON DEBOUNCING
+  useEffect(() => {
+    // Limpiar timer anterior
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Solo cargar si el modal está abierto y tenemos los datos necesarios
+    if (isOpen && client && createForm.category) {
+      const hasSameParams = 
+        previousCategoryRef.current === createForm.category && 
+        previousClientRef.current === client.idCliente;
+      
+      // Evitar llamada si ya tenemos los datos para esta combinación
+      if (!hasSameParams) {
+        
+        // Usar debouncing para evitar múltiples llamadas rápidas
+        debounceTimerRef.current = setTimeout(() => {
+          onLoadOrders(client.idCliente, createForm.category);
+          
+          // Actualizar refs con los parámetros actuales
+          previousCategoryRef.current = createForm.category;
+          previousClientRef.current = client.idCliente;
+        }, 500); // 500ms de debounce
+      } else {
+      }
+    } else if (isOpen && createForm.category && !client) {
+      console.warn('[Modal] No hay cliente definido para cargar órdenes');
+    }
+    
+    // Cleanup del timer al desmontar o cuando cambien las dependencias
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
+  }, [isOpen, createForm.category, client, onLoadOrders]);
+
+  // Función para recargar órdenes manualmente
+  const handleManualReloadOrders = useCallback(() => {
+    if (client && createForm.category) {
+      // Resetear refs para forzar recarga
+      previousCategoryRef.current = "";
+      previousClientRef.current = null;
+      
+      // Limpiar timer si existe
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      
+      // Cargar inmediatamente
+      onLoadOrders(client.idCliente, createForm.category);
+    }
+  }, [client, createForm.category, onLoadOrders]);
+
   if (!isOpen) return null;
+
+  // Función para verificar si el tipo seleccionado permite múltiples componentes
+  const allowsMultipleComponents = (): boolean => {
+    if (!selectedAcType || !selectedAcType.name) return false;
+    const typeName = selectedAcType.name.toLowerCase();
+    return MULTIPLE_COMPONENT_TYPES.some((multiType) =>
+      typeName.includes(multiType.toLowerCase()),
+    );
+  };
+
+  const canHaveMultipleComponents = allowsMultipleComponents();
+
+  // Determinar si se pueden agregar más componentes
+  const canAddMoreEvaporators =
+    canHaveMultipleComponents || evaporators.length === 0;
+  const canAddMoreCondensers =
+    canHaveMultipleComponents || condensers.length === 0;
+
+  // Determinar si se pueden eliminar componentes (solo si hay más de 1)
+  const canRemoveEvaporator =
+    canHaveMultipleComponents && evaporators.length > 1;
+  const canRemoveCondenser = canHaveMultipleComponents && condensers.length > 1;
 
   const handleAcTypeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     if (value === "__create_new__") {
       onOpenNewAcTypeForm();
-      // Reset the select
       const syntheticEvent = {
         target: { name: "airConditionerTypeId", value: "" },
       } as React.ChangeEvent<HTMLSelectElement>;
@@ -116,6 +233,9 @@ export default function CreateEquipmentModal({
       onCreateFormChange(e);
     }
   };
+
+  // Determinar si es aire acondicionado
+  const isAirConditioner = createForm.category === "Aires Acondicionados";
 
   return (
     <div className={styles.modal}>
@@ -135,33 +255,38 @@ export default function CreateEquipmentModal({
         {error && <div className={detailStyles.error}>{error}</div>}
 
         <form onSubmit={onSubmit}>
+          {/* Categoría */}
           <div className={styles.formRow}>
             <label>Categoría del equipo *</label>
             <select
               name="category"
               value={createForm.category}
-              onChange={onCreateFormChange}
+              onChange={(e) => {
+                // Resetear refs cuando cambia la categoría
+                previousCategoryRef.current = "";
+                onCreateFormChange(e);
+              }}
               required
               disabled={loading}
             >
+              <option value="">Seleccionar categoría...</option>
               <option value="Aires Acondicionados">Aires Acondicionados</option>
-              <option value="Instalaciones Contra Incendio">
-                Instalaciones Contra Incendio
+              <option value="Redes Contra Incendios">
+                Redes Contra Incendios
               </option>
-              <option value="Instalaciones Eléctricas">
-                Instalaciones Eléctricas
-              </option>
-              <option value="Obra Civil">Obra Civil</option>
+              <option value="Redes Eléctricas">Redes Eléctricas</option>
+              <option value="Obras Civiles">Obras Civiles</option>
             </select>
           </div>
 
-          {createForm.category === "Aires Acondicionados" && (
+          {/* Tipo de aire acondicionado (solo para aires) */}
+          {isAirConditioner && (
             <div className={styles.formRow}>
               <label>Tipo de Aire Acondicionado *</label>
               <div className={styles.creatableSelect}>
                 <select
                   name="airConditionerTypeId"
-                  value={createForm.airConditionerTypeId}
+                  value={createForm.airConditionerTypeId || ""}
                   onChange={handleAcTypeSelect}
                   required
                   disabled={loading}
@@ -195,6 +320,15 @@ export default function CreateEquipmentModal({
                   </button>
                 )}
               </div>
+              {selectedAcType && (
+                <div className={styles.typeInfo}>
+                  <small>
+                    {canHaveMultipleComponents
+                      ? "✓ Este tipo permite múltiples evaporadoras y condensadoras"
+                      : "✓ Este tipo permite una sola evaporadora y una sola condensadora"}
+                  </small>
+                </div>
+              )}
               {airConditionerTypes.length === 0 && (
                 <span className={styles.helperText}>
                   No hay tipos registrados. Crea uno nuevo seleccionando "Crear
@@ -204,30 +338,161 @@ export default function CreateEquipmentModal({
             </div>
           )}
 
+          {/* Estado */}
           <div className={styles.formRow}>
-            <label>Nombre del equipo *</label>
-            <input
-              name="name"
-              value={createForm.name}
+            <label>Estado *</label>
+            <select
+              name="status"
+              value={createForm.status || "Activo"}
               onChange={onCreateFormChange}
               required
               disabled={loading}
-              placeholder="Ej: Aire sala de juntas"
-            />
+            >
+              <option value="Activo">Activo</option>
+              <option value="Fuera de Servicio">Fuera de Servicio</option>
+              <option value="Dado de Baja">Dado de Baja</option>
+            </select>
           </div>
 
-          <div className={styles.formRow}>
-            <label>Ubicación física</label>
-            <input
-              name="physicalLocation"
-              value={createForm.physicalLocation}
-              onChange={onCreateFormChange}
-              disabled={loading}
-              placeholder="Ej: Techo bodega 1"
-            />
-          </div>
+          {/* ASOCIAR A ÓRDENES EXISTENTES (MÚLTIPLE SELECCIÓN) */}
+          {createForm.category && client && (
+            <div className={styles.formRow}>
+              <div className={styles.ordersHeader}>
+                <label>
+                  Asociar a Órdenes de Servicio (Opcional)
+                  <span className={styles.helperInfo}>
+                    Solo se muestran órdenes pendientes/asignadas de la misma categoría
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  className={styles.reloadOrdersButton}
+                  onClick={handleManualReloadOrders}
+                  disabled={loadingOrders || loading}
+                  title="Recargar órdenes"
+                >
+                  🔄
+                </button>
+              </div>
+              
+              {loadingOrders ? (
+                <div className={styles.loadingOrders}>
+                  <div className={styles.spinner}></div>
+                  <small>Cargando órdenes disponibles para {createForm.category}...</small>
+                </div>
+              ) : ordersError ? (
+                <div className={styles.ordersError}>
+                  <small>⚠️ {ordersError}</small>
+                  <div className={styles.retryContainer}>
+                    <button 
+                      type="button" 
+                      className={styles.retryButton}
+                      onClick={handleManualReloadOrders}
+                      disabled={loading}
+                    >
+                      Reintentar
+                    </button>
+                    <button 
+                      type="button" 
+                      className={styles.continueButton}
+                      onClick={() => {/* Continuar sin órdenes */}}
+                      disabled={loading}
+                    >
+                      Continuar sin órdenes
+                    </button>
+                  </div>
+                </div>
+              ) : ordersForClient.length > 0 ? (
+                <>
+                  <div className={styles.multiSelectContainer}>
+                    {ordersForClient.map((order) => {
+                      const isSelected = selectedOrderIds.includes(
+                        order.orden_id,
+                      );
+                      return (
+                        <div
+                          key={order.orden_id}
+                          className={`${styles.orderOption} ${isSelected ? styles.selected : ''}`}
+                        >
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                onOrderSelectionChange(
+                                  order.orden_id,
+                                  e.target.checked,
+                                );
+                              }}
+                              disabled={loading}
+                            />
+                            <div className={styles.orderInfo}>
+                              <span className={styles.orderLabel}>
+                                <strong>Orden #{order.orden_id}</strong> - {order.servicio.nombre_servicio}
+                              </span>
+                              <div className={styles.orderMeta}>
+                                <small className={styles.orderDate}>
+                                  {new Date(order.fecha_solicitud).toLocaleDateString()}
+                                </small>
+                                <span className={`${styles.orderStatus} ${styles[order.estado.toLowerCase().replace(' ', '')]}`}>
+                                  {order.estado}
+                                </span>
+                              </div>
+                              {order.comentarios && (
+                                <small className={styles.orderComments}>
+                                  {order.comentarios}
+                                </small>
+                              )}
+                            </div>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className={styles.ordersSummary}>
+                    <span className={styles.helperText}>
+                      {selectedOrderIds.length > 0 ? (
+                        <>
+                          <span className={styles.selectedCount}>
+                            {selectedOrderIds.length} orden(es) seleccionada(s)
+                          </span>
+                          - Este equipo se asociará automáticamente a estas órdenes
+                        </>
+                      ) : (
+                        "Puedes crear el equipo sin asignarlo a órdenes existentes"
+                      )}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.noOrdersInfo}>
+                  <small>
+                    ℹ️ No hay órdenes pendientes/asignadas para la categoría "{createForm.category}".
+                    Puedes crear el equipo sin asignarlo a una orden.
+                  </small>
+                  <button 
+                    type="button" 
+                    className={styles.retryButton}
+                    onClick={handleManualReloadOrders}
+                    disabled={loading}
+                  >
+                    Verificar nuevamente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Selector jerárquico de área / subárea (cualquier profundidad) */}
+          {/* Mostrar mensaje cuando no hay cliente definido */}
+          {!client && createForm.category && (
+            <div className={styles.warningInfo}>
+              <small>
+                ⚠️ Para asociar órdenes, primero selecciona un cliente en el formulario principal.
+              </small>
+            </div>
+          )}
+
+          {/* Ubicación jerárquica */}
           <HierarchicalAreaSelector
             areas={areas}
             selectedAreaId={selectedAreaId}
@@ -237,22 +502,24 @@ export default function CreateEquipmentModal({
             onSubAreaChange={onSubAreaChange}
           />
 
+          {/* Fecha de instalación */}
           <div className={styles.formRow}>
             <label>Fecha de instalación</label>
             <input
               type="date"
               name="installationDate"
-              value={createForm.installationDate}
+              value={createForm.installationDate || ""}
               onChange={onCreateFormChange}
               disabled={loading}
             />
           </div>
 
+          {/* Observaciones */}
           <div className={styles.formRow}>
             <label>Observaciones</label>
             <textarea
               name="notes"
-              value={createForm.notes}
+              value={createForm.notes || ""}
               onChange={onCreateFormChange}
               rows={3}
               disabled={loading}
@@ -260,105 +527,162 @@ export default function CreateEquipmentModal({
             />
           </div>
 
-          {/* Sección de Componentes */}
-          <div className={styles.componentsSection}>
-            <h4>Componentes del Equipo (Opcionales)</h4>
+          {/* COMPONENTES (solo para aires acondicionados) */}
+          {isAirConditioner && (
+            <div className={styles.componentsSection}>
+              <h4>Componentes del Equipo</h4>
 
-            <div className={styles.componentToggle}>
-              <button
-                type="button"
-                className={`${styles.componentToggleButton} ${
-                  showMotorForm ? styles.active : ""
-                }`}
-                onClick={onToggleMotorForm}
-                disabled={loading}
-              >
-                Motor {showMotorForm ? "✓" : "+"}
-              </button>
+              {/* EVAPORADORES */}
+              <div className={styles.componentGroup}>
+                <div className={styles.groupHeader}>
+                  <h5>Evaporadores</h5>
+                  {canAddMoreEvaporators && (
+                    <button
+                      type="button"
+                      className={styles.addButton}
+                      onClick={onAddEvaporator}
+                      disabled={loading}
+                    >
+                      + Agregar Evaporador
+                    </button>
+                  )}
+                </div>
+                {evaporators.length === 0 ? (
+                  <div className={styles.noComponents}>
+                    <small>No se han agregado evaporadores</small>
+                  </div>
+                ) : (
+                  evaporators.map((evaporator, index) => (
+                    <div key={index} className={styles.componentItem}>
+                      <div className={styles.componentItemHeader}>
+                        <h6>Evaporador {index + 1}</h6>
+                        {canRemoveEvaporator && (
+                          <button
+                            type="button"
+                            className={styles.removeButton}
+                            onClick={() => onRemoveEvaporator(index)}
+                            disabled={loading}
+                          >
+                            ✕ Eliminar
+                          </button>
+                        )}
+                      </div>
+                      <EvaporatorForm
+                        data={evaporator}
+                        onChange={(e) => onEvaporatorChange(index, e)}
+                        disabled={loading}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
 
-              <button
-                type="button"
-                className={`${styles.componentToggleButton} ${
-                  showEvaporatorForm ? styles.active : ""
-                }`}
-                onClick={onToggleEvaporatorForm}
-                disabled={
-                  loading ||
-                  (createForm.category === "Aires Acondicionados" &&
-                    selectedAcType &&
-                    !selectedAcType.hasEvaporator)
-                }
-              >
-                Evaporador {showEvaporatorForm ? "✓" : "+"}
-              </button>
-
-              <button
-                type="button"
-                className={`${styles.componentToggleButton} ${
-                  showCondenserForm ? styles.active : ""
-                }`}
-                onClick={onToggleCondenserForm}
-                disabled={
-                  loading ||
-                  (createForm.category === "Aires Acondicionados" &&
-                    selectedAcType &&
-                    !selectedAcType.hasCondenser)
-                }
-              >
-                Condensador {showCondenserForm ? "✓" : "+"}
-              </button>
-
-              <button
-                type="button"
-                className={`${styles.componentToggleButton} ${
-                  showCompressorForm ? styles.active : ""
-                }`}
-                onClick={onToggleCompressorForm}
-                disabled={loading}
-              >
-                Compresor {showCompressorForm ? "✓" : "+"}
-              </button>
+              {/* CONDENSADORAS */}
+              <div className={styles.componentGroup}>
+                <div className={styles.groupHeader}>
+                  <h5>Condensadoras</h5>
+                  {canAddMoreCondensers && (
+                    <button
+                      type="button"
+                      className={styles.addButton}
+                      onClick={onAddCondenser}
+                      disabled={loading}
+                    >
+                      + Agregar Condensadora
+                    </button>
+                  )}
+                </div>
+                {condensers.length === 0 ? (
+                  <div className={styles.noComponents}>
+                    <small>No se han agregado condensadoras</small>
+                  </div>
+                ) : (
+                  condensers.map((condenser, index) => (
+                    <div key={index} className={styles.componentItem}>
+                      <div className={styles.componentItemHeader}>
+                        <h6>Condensadora {index + 1}</h6>
+                        {canRemoveCondenser && (
+                          <button
+                            type="button"
+                            className={styles.removeButton}
+                            onClick={() => onRemoveCondenser(index)}
+                            disabled={loading}
+                          >
+                            ✕ Eliminar
+                          </button>
+                        )}
+                      </div>
+                      <CondenserForm
+                        data={condenser}
+                        onChange={(e) => onCondenserChange(index, e)}
+                        disabled={loading}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
+          )}
 
-            {showMotorForm && (
-              <MotorForm
-                data={motorForm}
-                onChange={onMotorFormChange}
+          {/* PLAN DE MANTENIMIENTO (opcional) */}
+          <div className={styles.planSection}>
+            <h4>Plan de Mantenimiento (Opcional)</h4>
+            <div className={styles.formRow}>
+              <label>Frecuencia</label>
+              <input
+                name="frecuencia"
+                value={planMantenimiento.frecuencia || ""}
+                onChange={onPlanMantenimientoChange}
+                disabled={loading}
+                placeholder="Ej: mensual, trimestral, semestral, anual"
+              />
+            </div>
+            <div className={styles.formRow}>
+              <label>Fecha Programada</label>
+              <input
+                type="date"
+                name="fechaProgramada"
+                value={planMantenimiento.fechaProgramada || ""}
+                onChange={onPlanMantenimientoChange}
                 disabled={loading}
               />
-            )}
-
-            {showEvaporatorForm && (
-              <EvaporatorForm
-                data={evaporatorForm}
-                onChange={onEvaporatorFormChange}
+            </div>
+            <div className={styles.formRow}>
+              <label>Notas del Plan</label>
+              <textarea
+                name="notas"
+                value={planMantenimiento.notas || ""}
+                onChange={onPlanMantenimientoChange}
+                rows={2}
                 disabled={loading}
+                placeholder="Notas sobre el plan de mantenimiento..."
               />
-            )}
-
-            {showCondenserForm && (
-              <CondenserForm
-                data={condenserForm}
-                onChange={onCondenserFormChange}
-                disabled={loading}
-              />
-            )}
-
-            {showCompressorForm && (
-              <CompressorForm
-                data={compressorForm}
-                onChange={onCompressorFormChange}
-                disabled={loading}
-              />
-            )}
+            </div>
           </div>
 
+          {/* Botones de acción */}
           <div className={styles.formActions}>
-            <button type="button" onClick={onClose} disabled={loading}>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              disabled={loading}
+              className={styles.cancelButton}
+            >
               Cancelar
             </button>
-            <button type="submit" disabled={loading}>
-              {loading ? "Guardando..." : "Crear equipo"}
+            <button 
+              type="submit" 
+              disabled={loading}
+              className={styles.submitButton}
+            >
+              {loading ? (
+                <>
+                  <span className={styles.spinner}></span>
+                  Creando equipo...
+                </>
+              ) : (
+                'Crear equipo'
+              )}
             </button>
           </div>
         </form>

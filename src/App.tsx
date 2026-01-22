@@ -223,7 +223,7 @@ function App() {
         />
 
         <Route
-          path="/recursos-humanos"
+          path="/human-resources"
           element={
             <ProtectedRoute>
               <HumanResources />

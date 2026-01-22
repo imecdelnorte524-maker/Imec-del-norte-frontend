@@ -32,31 +32,24 @@ function findSubAreaPath(
 
 export default function LocationSection({
   equipment,
-  editing,
   areasWithTree,
 }: LocationSectionProps) {
   // Cliente
   const clientLabel = equipment.client
     ? `${equipment.client.nombre} (NIT: ${equipment.client.nit})`
-    : equipment.clientId;
+    : equipment.client;
 
   // Área (nombre directo desde el equipo)
-  const areaName =
-    equipment.area?.nombreArea || (equipment as any).areaNombre || null;
+  const areaName = equipment.area?.nombreArea || null;
 
   // Subárea directa (solo la hoja donde está el equipo)
-  const subAreaName =
-    equipment.subArea?.nombreSubArea ||
-    (equipment as any).subAreaNombre ||
-    null;
+  const subAreaName = equipment.subArea?.nombreSubArea || null;
 
   // Ruta jerárquica de subáreas usando el árbol (si lo tenemos)
   let hierarchicalPath: string | null = null;
 
-  const areaIdFromEquipment =
-    equipment.area?.idArea || (equipment as any).areaId || null;
-  const subAreaIdFromEquipment =
-    equipment.subArea?.idSubArea || (equipment as any).subAreaId || null;
+  const areaIdFromEquipment = equipment.area?.idArea || null;
+  const subAreaIdFromEquipment = equipment.subArea?.idSubArea || null;
 
   if (
     areasWithTree &&
@@ -95,24 +88,24 @@ export default function LocationSection({
 
       {subAreaName && (
         <div className={styles.detailItem}>
-          <strong>Subárea (directa):</strong>
+          <strong>Subárea:</strong>
           <span>{subAreaName}</span>
         </div>
       )}
 
       {hierarchicalPath && (
         <div className={styles.detailItem}>
-          <strong>Ubicación jerárquica en la empresa:</strong>
+          <strong>Ubicación jerárquica:</strong>
           <span>
             {areaName ? `${areaName} / ${hierarchicalPath}` : hierarchicalPath}
           </span>
         </div>
       )}
 
-      {equipment.physicalLocation && !editing && (
+      {equipment.workOrders && equipment.workOrders.length > 0 && (
         <div className={styles.detailItem}>
-          <strong>Ubicación física:</strong>
-          <span>{equipment.physicalLocation}</span>
+          <strong>Órdenes de Trabajo:</strong>
+          <span>{equipment.workOrders.length} órdenes asociadas</span>
         </div>
       )}
     </div>

@@ -1,8 +1,38 @@
+/* styles/components/equipment/equipment-list/EmptyState.module.css */
 .empty {
-  margin-top: var(--spacing-xl);
-  padding: var(--spacing-xl);
-  border-radius: var(--border-radius-lg);
-  border: 2px dashed var(--gray-200);
   text-align: center;
-  color: var(--gray-500);
+  padding: 60px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #dee2e6;
+  margin-top: 30px;
+  color: #6c757d;
+}
+
+.empty p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.actionButton {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+  margin-top: 15px;
+}
+
+.actionButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.actionButton:active {
+  transform: translateY(0);
 }

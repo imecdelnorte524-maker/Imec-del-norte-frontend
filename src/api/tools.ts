@@ -85,7 +85,6 @@ export const toolsApi = {
     }
   },
 
-  // Obtener herramienta por ID
   getById: async (id: number): Promise<Tool> => {
     try {
       const response = await api.get(`/tools/${id}`);
@@ -98,7 +97,6 @@ export const toolsApi = {
     }
   },
 
-  // Crear herramienta
   create: async (toolData: CreateToolDto): Promise<Tool> => {
     try {
       const response = await api.post("/tools", toolData);
@@ -111,7 +109,6 @@ export const toolsApi = {
     }
   },
 
-  // Actualizar herramienta
   updateTool: async (herramientaId: number, data: ToolUpdateData) => {
     try {
       const response = await api.patch(`/tools/${herramientaId}`, data);
@@ -124,7 +121,6 @@ export const toolsApi = {
     }
   },
 
-  // Soft delete con motivo
   softDelete: async (id: number, deleteData: DeleteToolDto): Promise<void> => {
     try {
       await api.delete(`/tools/${id}/soft`, { data: deleteData });
@@ -136,7 +132,6 @@ export const toolsApi = {
     }
   },
 
-  // Eliminar permanentemente
   deletePermanent: async (id: number): Promise<void> => {
     try {
       await api.delete(`/tools/${id}`);
@@ -148,7 +143,6 @@ export const toolsApi = {
     }
   },
 
-  // Restaurar herramienta
   restore: async (id: number): Promise<Tool> => {
     try {
       const response = await api.patch(`/tools/${id}/restore`);
@@ -161,7 +155,6 @@ export const toolsApi = {
     }
   },
 
-  // Actualizar estado
   updateStatus: async (id: number, estado: ToolStatus): Promise<Tool> => {
     try {
       const response = await api.patch(`/tools/${id}/status`, { estado });
@@ -174,7 +167,6 @@ export const toolsApi = {
     }
   },
 
-  // Obtener herramientas eliminadas
   getDeleted: async (): Promise<Tool[]> => {
     try {
       const response = await api.get("/tools", { params: { deleted: true } });
@@ -188,7 +180,6 @@ export const toolsApi = {
     }
   },
 
-  // Obtener motivos de eliminación
   getEliminationReasons: async (): Promise<string[]> => {
     try {
       const response = await api.get("/tools/motivos-eliminacion");
@@ -213,27 +204,34 @@ export const toolsApi = {
     }
   },
 
-  // Crear herramienta + subir imagen a Cloudinary (opcional)
   createHerramienta: async (herramientaData: any, file?: File) => {
     try {
       const valorUnitario = parseFloat(herramientaData.valorUnitario) || 0;
-      const datosParaEnviar = {
+      
+      // ⚠️ CORREGIDO: Solo campos permitidos por el backend
+      const datosParaEnviar: any = {
         nombre: herramientaData.nombre || "",
         marca: herramientaData.marca || "",
         serial: herramientaData.serial || "",
         modelo: herramientaData.modelo || "",
         caracteristicasTecnicas: herramientaData.caracteristicasTecnicas || "",
+        observacion: herramientaData.observacion || "",
         tipo: herramientaData.tipo || "Herramienta",
         estado: herramientaData.estado || "Disponible",
         valorUnitario,
       };
 
-      // 1. Crear herramienta (el inventario se crea automáticamente)
+      // Solo incluir bodegaId si tiene valor (es opcional)
+      if (herramientaData.bodegaId !== undefined && herramientaData.bodegaId !== null) {
+        datosParaEnviar.bodegaId = herramientaData.bodegaId;
+      }
+
+      // 1. Crear herramienta
       const response = await api.post("/tools", datosParaEnviar);
 
       const herramientaCreada = response.data.data;
 
-      // 2. Si hay archivo, subirlo a Cloudinary via /images/tool/:id
+      // 2. Si hay archivo, subirlo a Cloudinary
       if (file && herramientaCreada.herramientaId) {
         try {
           const formData = new FormData();
@@ -274,7 +272,6 @@ export const toolsApi = {
     }
   },
 
-  // Subir imagen para herramienta (uso adicional si lo necesitas)
   uploadHerramientaPhoto: async (herramientaId: number, file: File) => {
     try {
       const formData = new FormData();
@@ -296,8 +293,6 @@ export const toolsApi = {
       throw error;
     }
   },
-
-  // Subir imagen para insumo (uso adicional si lo necesitas)
 
   deleteHerramienta: async (herramientaId: number) => {
     try {

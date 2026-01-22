@@ -1,78 +1,97 @@
-// src/components/equipment-details/forms/CondenserEditForm.tsx
 import type { CondenserData } from "../../../../interfaces/EquipmentInterfaces";
 import styles from "../../../../styles/components/equipment/equipment-details/forms/ComponentEditForms.module.css";
 
 interface CondenserEditFormProps {
-  condenserForm: CondenserData;
+  condenser: CondenserData;
+  index: number;
   saving: boolean;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAddMotor?: () => void;
+  onAddCompressor?: () => void;
+  onRemove?: () => void;
 }
 
 export default function CondenserEditForm({
-  condenserForm,
+  condenser,
+  index,
   saving,
   onChange,
+  onAddMotor,
+  onAddCompressor,
+  onRemove,
 }: CondenserEditFormProps) {
   return (
     <div className={styles.componentSection}>
-      <h5>Condensador</h5>
+      <div className={styles.componentHeader}>
+        <h5>Condensadora {index + 1}</h5>
+        {onRemove && (
+          <button 
+            type="button" 
+            className={styles.removeButton}
+            onClick={onRemove}
+            disabled={saving}
+          >
+            ✕ Eliminar
+          </button>
+        )}
+      </div>
       <div className={styles.formGrid}>
         <div className={styles.formField}>
           <label>Marca</label>
           <input
             name="marca"
-            value={condenserForm.marca || ""}
-            onChange={onChange}
+            value={condenser.marca || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: Samsung"
+            placeholder="Ej: Daikin"
           />
         </div>
         <div className={styles.formField}>
           <label>Modelo</label>
           <input
             name="modelo"
-            value={condenserForm.modelo || ""}
-            onChange={onChange}
+            value={condenser.modelo || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: CNV12"
+            placeholder="Ej: RXS50K"
           />
         </div>
         <div className={styles.formField}>
           <label>Serial</label>
           <input
             name="serial"
-            value={condenserForm.serial || ""}
-            onChange={onChange}
+            value={condenser.serial || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: CN123456"
+            placeholder="Ej: CN-456789123"
           />
         </div>
         <div className={styles.formField}>
           <label>Capacidad</label>
           <input
             name="capacidad"
-            value={condenserForm.capacidad || ""}
-            onChange={onChange}
+            value={condenser.capacidad || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 12000 BTU"
+            placeholder="Ej: 18000 BTU"
           />
         </div>
         <div className={styles.formField}>
           <label>Amperaje</label>
           <input
             name="amperaje"
-            value={condenserForm.amperaje || ""}
-            onChange={onChange}
+            value={condenser.amperaje || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 8A"
+            placeholder="Ej: 9A"
           />
         </div>
         <div className={styles.formField}>
           <label>Voltaje</label>
           <input
             name="voltaje"
-            value={condenserForm.voltaje || ""}
-            onChange={onChange}
+            value={condenser.voltaje || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
             placeholder="Ej: 220V"
           />
@@ -81,18 +100,18 @@ export default function CondenserEditForm({
           <label>Tipo Refrigerante</label>
           <input
             name="tipoRefrigerante"
-            value={condenserForm.tipoRefrigerante || ""}
-            onChange={onChange}
+            value={condenser.tipoRefrigerante || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: R410A"
+            placeholder="Ej: R-410A"
           />
         </div>
         <div className={styles.formField}>
           <label>Número de Fases</label>
           <input
             name="numeroFases"
-            value={condenserForm.numeroFases || ""}
-            onChange={onChange}
+            value={condenser.numeroFases || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
             placeholder="Ej: 1"
           />
@@ -101,32 +120,56 @@ export default function CondenserEditForm({
           <label>Presión Alta</label>
           <input
             name="presionAlta"
-            value={condenserForm.presionAlta || ""}
-            onChange={onChange}
+            value={condenser.presionAlta || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 150 PSI"
+            placeholder="Ej: 320 PSI"
           />
         </div>
         <div className={styles.formField}>
           <label>Presión Baja</label>
           <input
             name="presionBaja"
-            value={condenserForm.presionBaja || ""}
-            onChange={onChange}
+            value={condenser.presionBaja || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 50 PSI"
+            placeholder="Ej: 120 PSI"
           />
         </div>
         <div className={styles.formField}>
           <label>HP</label>
           <input
             name="hp"
-            value={condenserForm.hp || ""}
-            onChange={onChange}
+            value={condenser.hp || ""}
+            onChange={(e) => onChange(index, e)}
             disabled={saving}
-            placeholder="Ej: 2.5"
+            placeholder="Ej: 3.5 HP"
           />
         </div>
+      </div>
+
+      {/* Botones para agregar motores y compresores dentro de la condensadora */}
+      <div className={styles.componentActions}>
+        {onAddMotor && (
+          <button 
+            type="button" 
+            className={styles.addButton}
+            onClick={onAddMotor}
+            disabled={saving}
+          >
+            + Agregar Motor
+          </button>
+        )}
+        {onAddCompressor && (
+          <button 
+            type="button" 
+            className={styles.addButton}
+            onClick={onAddCompressor}
+            disabled={saving}
+          >
+            + Agregar Compresor
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 // src/components/inventory/AddInventoryModal.tsx
 import { useState, useEffect } from "react";
 import { useCatalogActions } from "../../hooks/useInventory";
+import { inventory as inventoryAPI } from "../../api/inventory";
 import { imagesApi } from "../../api/images";
 import { warehouses, type Warehouse } from "../../api/warehouses";
 import UnitMeasureAutocomplete from "../common/UnitMeasureAutocomplete";
@@ -34,15 +35,13 @@ export default function AddInventoryModal({
     error: createError,
   } = useCatalogActions();
 
-  // Estados para imágenes
   const [toolImages, setToolImages] = useState<File[]>([]);
   const [supplyImages, setSupplyImages] = useState<File[]>([]);
-
-  // Estados para bodegas
   const [warehousesList, setWarehousesList] = useState<Warehouse[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // Estados para herramienta
+  // Estados para herramientas - SIN ubicacion
   const [nuevaHerramienta, setNuevaHerramienta] = useState({
     nombre: "",
     marca: "",
@@ -56,7 +55,7 @@ export default function AddInventoryModal({
     bodegaId: undefined as number | undefined,
   });
 
-  // Estados para insumo
+  // Estados para insumos - SIN ubicacion
   const [nuevoInsumo, setNuevoInsumo] = useState({
     nombre: "",
     categoria: "General" as SupplyCategory,
@@ -68,13 +67,17 @@ export default function AddInventoryModal({
     bodegaId: undefined as number | undefined,
   });
 
-  const loading = createLoading;
-  const error = createError;
+  // Estados separados SOLO para ubicación
+  const [ubicacionHerramienta, setUbicacionHerramienta] = useState("");
+  const [ubicacionInsumo, setUbicacionInsumo] = useState("");
 
-  // Cargar bodegas al abrir el modal
+  const loading = createLoading;
+  const error = createError || apiError;
+
   useEffect(() => {
     if (isOpen) {
       loadWarehouses();
+      setApiError(null);
     }
   }, [isOpen]);
 
@@ -92,6 +95,7 @@ export default function AddInventoryModal({
 
   const handleSubmitHerramienta = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
 
     if (
       !nuevaHerramienta.nombre ||
@@ -99,32 +103,63 @@ export default function AddInventoryModal({
       !nuevaHerramienta.estado
     ) {
       alert(
-        "Por favor complete los campos obligatorios: Nombre, Tipo y Estado"
+        "Por favor complete los campos obligatorios: Nombre, Tipo y Estado",
       );
       return;
     }
 
     try {
-      // 1. Crear la herramienta
-      const herramientaCreada = await createHerramienta(nuevaHerramienta);
+      // 1. Crear la herramienta - SOLO datos básicos (SIN ubicacion)
+      const herramientaData = {
+        nombre: nuevaHerramienta.nombre,
+        marca: nuevaHerramienta.marca,
+        serial: nuevaHerramienta.serial,
+        modelo: nuevaHerramienta.modelo,
+        caracteristicasTecnicas: nuevaHerramienta.caracteristicasTecnicas,
+        observacion: nuevaHerramienta.observacion,
+        tipo: nuevaHerramienta.tipo,
+        estado: nuevaHerramienta.estado,
+        valorUnitario: nuevaHerramienta.valorUnitario,
+        bodegaId: nuevaHerramienta.bodegaId,
+      };
+
+      const herramientaCreada = await createHerramienta(herramientaData);
 
       if (!herramientaCreada) {
         throw new Error("No se pudo crear la herramienta");
       }
 
-      // 2. Subir imágenes si hay
+      // 2. Crear registro en inventario CON la ubicación
+      if (herramientaCreada.herramientaId) {
+        const inventarioPayload = {
+          herramientaId: herramientaCreada.herramientaId,
+          bodegaId: nuevaHerramienta.bodegaId,
+          cantidadActual: 1,
+          ubicacion: ubicacionHerramienta || "",
+        };
+
+        try {
+          await inventoryAPI.createInventory(inventarioPayload);
+        } catch (inventoryError: any) {
+          console.error("❌ Error creando inventario:", inventoryError);
+          setApiError(
+            `Herramienta creada pero error en inventario: ${inventoryError.message}`,
+          );
+        }
+      }
+
+      // 3. Subir imágenes si hay
       if (toolImages.length > 0 && herramientaCreada.herramientaId) {
         try {
           await imagesApi.uploadToolImages(
             herramientaCreada.herramientaId,
-            toolImages
+            toolImages,
           );
         } catch (imgError: any) {
           console.warn(
             "⚠️ No se pudieron subir todas las imágenes:",
-            imgError?.message
+            imgError?.message,
           );
-          // Continuar aunque falle la subida de imágenes
         }
       }
 
@@ -132,12 +167,13 @@ export default function AddInventoryModal({
       handleClose();
     } catch (err: any) {
       console.error("❌ Error creando herramienta:", err);
-      alert(`Error: ${err.message || "No se pudo crear la herramienta"}`);
+      setApiError(err.message || "No se pudo crear la herramienta");
     }
   };
 
   const handleSubmitInsumo = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
 
     if (
       !nuevoInsumo.nombre ||
@@ -149,7 +185,7 @@ export default function AddInventoryModal({
     }
 
     try {
-      // 1. Crear el insumo
+      // 1. Crear el insumo - SOLO campos permitidos (SIN ubicacion)
       const insumoData = {
         nombre: nuevoInsumo.nombre,
         categoria: nuevoInsumo.categoria,
@@ -161,26 +197,43 @@ export default function AddInventoryModal({
         cantidadInicial: nuevoInsumo.cantidadInicial,
       };
 
-      const cleanData: any = { ...insumoData };
-      const insumoCreado = await createInsumo(cleanData);
+      const insumoCreado = await createInsumo(insumoData);
 
       if (!insumoCreado) {
         throw new Error("No se pudo crear el insumo");
       }
 
-      // 2. Subir imágenes si hay
+      // 2. Crear registro en inventario CON la ubicación
+      if (insumoCreado.insumoId) {
+        const inventarioPayload = {
+          insumoId: insumoCreado.insumoId,
+          bodegaId: nuevoInsumo.bodegaId,
+          cantidadActual: nuevoInsumo.cantidadInicial,
+          ubicacion: ubicacionInsumo || "",
+        };
+
+        try {
+          await inventoryAPI.createInventory(inventarioPayload);
+        } catch (inventoryError: any) {
+          console.error("❌ Error creando inventario:", inventoryError);
+          setApiError(
+            `Insumo creado pero error en inventario: ${inventoryError.message}`,
+          );
+        }
+      }
+
+      // 3. Subir imágenes si hay
       if (supplyImages.length > 0 && insumoCreado.insumoId) {
         try {
           await imagesApi.uploadSupplyImages(
             insumoCreado.insumoId,
-            supplyImages
+            supplyImages,
           );
         } catch (imgError: any) {
           console.warn(
             "⚠️ No se pudieron subir todas las imágenes:",
-            imgError?.message
+            imgError?.message,
           );
-          // Continuar aunque falle la subida de imágenes
         }
       }
 
@@ -189,7 +242,7 @@ export default function AddInventoryModal({
     } catch (err: any) {
       console.error("❌ Error creando insumo:", err);
 
-      const errorMessage = err.message || "No se pudo crear el insumo";
+      let errorMessage = err.message || "No se pudo crear el insumo";
 
       if (
         errorMessage.includes("valor unitario") ||
@@ -197,10 +250,10 @@ export default function AddInventoryModal({
         errorMessage.includes("número")
       ) {
         alert(
-          `⚠️ Error de validación: ${errorMessage}\n\nAsegúrese de ingresar valores numéricos positivos.`
+          `⚠️ Error de validación: ${errorMessage}\n\nAsegúrese de ingresar valores numéricos positivos.`,
         );
       } else {
-        alert(`Error: ${errorMessage}`);
+        setApiError(errorMessage);
       }
     }
   };
@@ -228,8 +281,11 @@ export default function AddInventoryModal({
       cantidadInicial: 0,
       bodegaId: undefined,
     });
+    setUbicacionHerramienta("");
+    setUbicacionInsumo("");
     setToolImages([]);
     setSupplyImages([]);
+    setApiError(null);
   };
 
   const handleClose = () => {
@@ -251,17 +307,13 @@ export default function AddInventoryModal({
 
         <div className={styles.tabs}>
           <button
-            className={`${styles.tab} ${
-              activeTab === "herramientas" ? styles.active : ""
-            }`}
+            className={`${styles.tab} ${activeTab === "herramientas" ? styles.active : ""}`}
             onClick={() => setActiveTab("herramientas")}
           >
             🛠️ Nueva Herramienta
           </button>
           <button
-            className={`${styles.tab} ${
-              activeTab === "insumos" ? styles.active : ""
-            }`}
+            className={`${styles.tab} ${activeTab === "insumos" ? styles.active : ""}`}
             onClick={() => setActiveTab("insumos")}
           >
             📦 Nuevo Insumo
@@ -425,6 +477,18 @@ export default function AddInventoryModal({
                 </div>
 
                 <div className={styles.formGroup}>
+                  <label htmlFor="ubicacionHerramienta">
+                    Ubicación en Bodega
+                  </label>
+                  <input
+                    type="text"
+                    id="ubicacionHerramienta"
+                    value={ubicacionHerramienta}
+                    onChange={(e) => setUbicacionHerramienta(e.target.value)}
+                    placeholder="Ej: Estante A, Caja 3, Piso 2..."
+                    className={styles.input}
+                  />
+
                   <label htmlFor="bodegaHerramienta">
                     Bodega de Almacenamiento
                   </label>
@@ -459,7 +523,7 @@ export default function AddInventoryModal({
                     </select>
                   )}
                   <small className={styles.helpText}>
-                    Opcional. Selecciona dónde se almacenará la herramienta
+                    La ubicación se guardará solo en el registro de inventario
                   </small>
                 </div>
 
@@ -500,10 +564,7 @@ export default function AddInventoryModal({
                     id="nombreInsumo"
                     value={nuevoInsumo.nombre}
                     onChange={(e) =>
-                      setNuevoInsumo({
-                        ...nuevoInsumo,
-                        nombre: e.target.value,
-                      })
+                      setNuevoInsumo({ ...nuevoInsumo, nombre: e.target.value })
                     }
                     placeholder="Ej: Tornillos 3mm, Cable eléctrico 2.5mm..."
                     className={styles.input}
@@ -563,8 +624,8 @@ export default function AddInventoryModal({
                         })
                       }
                       placeholder="Ej: 10, 5.5..."
-                      min=""
-                      step=""
+                      min="0"
+                      step="0.01"
                       className={styles.input}
                       required
                     />
@@ -585,7 +646,7 @@ export default function AddInventoryModal({
                         })
                       }
                       placeholder="0"
-                      min=""
+                      min="0"
                       className={styles.input}
                     />
                     <small className={styles.helpText}>
@@ -621,6 +682,16 @@ export default function AddInventoryModal({
                 </div>
 
                 <div className={styles.formGroup}>
+                  <label htmlFor="ubicacionInsumo">Ubicación en Bodega</label>
+                  <input
+                    type="text"
+                    id="ubicacionInsumo"
+                    value={ubicacionInsumo}
+                    onChange={(e) => setUbicacionInsumo(e.target.value)}
+                    placeholder="Ej: Estante B, Caja 5, Piso 1..."
+                    className={styles.input}
+                  />
+
                   <label htmlFor="bodegaInsumo">Bodega de Almacenamiento</label>
                   {loadingWarehouses ? (
                     <div className={styles.loadingSmall}>
@@ -653,7 +724,7 @@ export default function AddInventoryModal({
                     </select>
                   )}
                   <small className={styles.helpText}>
-                    Opcional. Selecciona dónde se almacenará el insumo
+                    La ubicación se guardará solo en el registro de inventario
                   </small>
                 </div>
 

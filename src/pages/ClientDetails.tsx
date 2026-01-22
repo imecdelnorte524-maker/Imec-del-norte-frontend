@@ -91,7 +91,7 @@ export default function ClientDetailsPage() {
           setEquipmentError(
             err.response?.data?.error ||
               err.message ||
-              "Error al cargar los equipos del cliente."
+              "Error al cargar los equipos del cliente.",
           );
           setEquipmentList([]);
         } finally {
@@ -226,7 +226,7 @@ export default function ClientDetailsPage() {
       // Subir imágenes
       const uploadedImages = await imagesApi.uploadClientImages(
         clientId,
-        filesArray
+        filesArray,
       );
 
       // Actualizar galería
@@ -310,23 +310,23 @@ export default function ClientDetailsPage() {
   // Navegación del carrusel
   const nextImage = () => {
     setCurrentImageIndex((prev) =>
-      prev === clientImages.length - 1 ? 0 : prev + 1
+      prev === clientImages.length - 1 ? 0 : prev + 1,
     );
   };
 
   const prevImage = () => {
     setCurrentImageIndex((prev) =>
-      prev === 0 ? clientImages.length - 1 : prev - 1
+      prev === 0 ? clientImages.length - 1 : prev - 1,
     );
   };
 
   // Función recursiva para organizar subáreas en árbol
   const organizeSubareasTree = (
     subareas: SubArea[],
-    parentId: number | null = null
+    parentId: number | null = null,
   ): SubArea[] => {
     const children = subareas.filter(
-      (sub) => (sub.parentSubAreaId ?? null) === parentId
+      (sub) => (sub.parentSubAreaId ?? null) === parentId,
     );
 
     const result: SubArea[] = [];
@@ -344,7 +344,7 @@ export default function ClientDetailsPage() {
   // Función recursiva para renderizar subáreas como árbol
   const renderSubareasTree = (
     subareas: SubArea[],
-    depth: number = 0
+    depth: number = 0,
   ): JSX.Element[] => {
     return subareas.map((subarea) => (
       <div key={subarea.idSubArea}>
@@ -359,12 +359,14 @@ export default function ClientDetailsPage() {
             <span className={styles.subareaName}>{subarea.nombreSubArea}</span>
             <span className={styles.subareaEquipmentCount}>
               {
-                equipmentList.filter((eq) => eq.subAreaId === subarea.idSubArea)
-                  .length
+                equipmentList.filter(
+                  (eq) => eq.subArea?.idSubArea === subarea.idSubArea,
+                ).length
               }{" "}
               equipo
-              {equipmentList.filter((eq) => eq.subAreaId === subarea.idSubArea)
-                .length !== 1
+              {equipmentList.filter(
+                (eq) => eq.subArea?.idSubArea === subarea.idSubArea,
+              ).length !== 1
                 ? "s"
                 : ""}
             </span>
@@ -387,7 +389,7 @@ export default function ClientDetailsPage() {
   // Función para renderizar equipos de una subárea
   const renderSubareaEquipment = (subarea: SubArea): JSX.Element | null => {
     const subareaEquipments = equipmentList.filter(
-      (eq) => eq.subAreaId === subarea.idSubArea
+      (eq) => eq.subArea?.idSubArea === subarea.idSubArea,
     );
 
     if (subareaEquipments.length === 0) return null;
@@ -396,7 +398,9 @@ export default function ClientDetailsPage() {
       <div className={styles.subareaEquipmentList}>
         {subareaEquipments.map((eq) => (
           <div key={eq.equipmentId} className={styles.equipmentItem}>
-            <span className={styles.equipmentName}>{eq.name}</span>
+            <span className={styles.equipmentName}>
+              {eq.code || `Equipo ${eq.equipmentId}`}
+            </span>
             {eq.code && <span className={styles.equipmentCode}>{eq.code}</span>}
           </div>
         ))}
@@ -407,7 +411,7 @@ export default function ClientDetailsPage() {
   // Función para renderizar equipos directos del área
   const renderAreaEquipment = (areaId: number): JSX.Element | null => {
     const areaEquipments = equipmentList.filter(
-      (eq) => eq.areaId === areaId && !eq.subAreaId
+      (eq) => eq.area?.idArea === areaId && !eq.subArea?.idSubArea,
     );
 
     if (areaEquipments.length === 0) return null;
@@ -420,7 +424,9 @@ export default function ClientDetailsPage() {
         <div className={styles.equipmentGrid}>
           {areaEquipments.map((eq) => (
             <div key={eq.equipmentId} className={styles.equipmentItem}>
-              <span className={styles.equipmentName}>{eq.name}</span>
+              <span className={styles.equipmentName}>
+                {eq.code || `Equipo ${eq.equipmentId}`}
+              </span>
               {eq.code && (
                 <span className={styles.equipmentCode}>{eq.code}</span>
               )}
@@ -487,7 +493,7 @@ export default function ClientDetailsPage() {
                       src={imagesApi.getOptimizedImageUrl(
                         clientLogo.url,
                         200,
-                        200
+                        200,
                       )}
                       alt={`Logo de ${client.nombre}`}
                       className={styles.clientLogo}
@@ -496,11 +502,11 @@ export default function ClientDetailsPage() {
                         const target = e.target as HTMLImageElement;
                         target.style.display = "none";
                         const wrapper = target.closest(
-                          `.${styles.logoImageWrapper}`
+                          `.${styles.logoImageWrapper}`,
                         );
                         if (wrapper) {
                           const placeholder = wrapper.querySelector(
-                            `.${styles.clientLogoPlaceholder}`
+                            `.${styles.clientLogoPlaceholder}`,
                           );
                           if (placeholder) {
                             (placeholder as HTMLElement).style.display = "flex";
@@ -836,7 +842,7 @@ export default function ClientDetailsPage() {
                     const subAreas = area.subAreas || [];
                     const organizedSubareas = organizeSubareasTree(subAreas);
                     const areaEquipmentsCount = equipmentList.filter(
-                      (eq) => eq.areaId === area.idArea
+                      (eq) => eq.area?.idArea === area.idArea,
                     ).length;
 
                     return (
@@ -970,7 +976,7 @@ export default function ClientDetailsPage() {
                         <img
                           src={imagesApi.getOptimizedImageUrl(
                             clientImages[currentImageIndex].url,
-                            800
+                            800,
                           )}
                           alt={`Imagen ${currentImageIndex + 1} de ${
                             client.nombre
@@ -996,7 +1002,7 @@ export default function ClientDetailsPage() {
                         className={styles.deleteImageBtn}
                         onClick={() =>
                           handleDeleteGalleryImage(
-                            clientImages[currentImageIndex].id
+                            clientImages[currentImageIndex].id,
                           )
                         }
                       >
@@ -1021,7 +1027,7 @@ export default function ClientDetailsPage() {
                           src={imagesApi.getOptimizedImageUrl(
                             image.url,
                             150,
-                            150
+                            150,
                           )}
                           alt={`Miniatura ${index + 1}`}
                           className={styles.thumbnailImage}

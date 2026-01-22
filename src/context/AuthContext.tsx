@@ -39,7 +39,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user?.role?.nombreRol === "Administrador" ||
     user?.role?.nombreRol === "ADMINISTRADOR" ||
     user?.role?.nombreRol === "SG-SST" ||
-    user?.role?.nombreRol === "SECRETARIA";
+    user?.role?.nombreRol === "SECRETARIA" || 
+    user?.role.nombreRol === "Sg-sst" ||
+    user?.role.nombreRol === "Secretaria";
 
   const normalizeUser = (userData: any): Usuario => {
     // Si ya es un Usuario mapeado (viene de usersApi.getMe), úsalo directamente
