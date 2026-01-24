@@ -1118,7 +1118,7 @@
 
 /* Si quieres un ícono para indicar que es generado automáticamente */
 .readonlyField::before {
-  content: "🔗";
+  content: "";
   position: absolute;
   left: 12px;
   top: 50%;
