@@ -1,0 +1,11 @@
+// src/components/equipment-detail/index.ts
+export { default as DetailHeader } from "./DetailHeader"
+export { default as PhotoCarousel } from "./PhotoCarousel"
+export { default as EquipmentInfoSection } from "./EquipmentInfoSection"
+export { default as EquipmentEditForm } from "./EquipmentEditForm"
+export { default as ComponentsReadOnly } from "./ComponentsReadOnly"
+export { default as LocationSection } from "./LocationSection"
+export { default as DatesNotesSection } from "./DatesNotesSection"
+export { default as AddPhotoModal } from "./AddPhotoModal"
+export { default as PhotoViewModal } from "./PhotoViewModal"
+export { default as HierarchicalAreaSelectorDetail } from "./HierarchicalAreaSelectorDetail"

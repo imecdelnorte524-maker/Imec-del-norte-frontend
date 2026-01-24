@@ -1,5 +1,3 @@
-/* src/styles/components/clients/ClientModal.module.css */
-
 /* Overlay */
 .modalOverlay {
   position: fixed;
@@ -226,9 +224,9 @@
   font-size: 1rem;
 }
 
-.optionalText {
-  color: #9ca3af;
-  font-size: 0.875rem;
+.requiredText {
+  color: #ef4444;
+  font-size: 0.85rem;
 }
 
 /* Form Grid */
@@ -252,6 +250,111 @@
   font-weight: 500;
   color: #374151;
   font-size: 0.95rem;
+}
+
+.fieldNote {
+  display: block;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* Logo Upload Styles */
+.logoUploadContainer {
+  position: relative;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoUploadContainer:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.logoPreview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoPreviewImage {
+  max-width: 100%;
+  max-height: 100px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.removeLogoBtn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.removeLogoBtn:hover:not(:disabled) {
+  background: #b91c1c;
+  transform: scale(1.1);
+}
+
+.removeLogoBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logoUploadPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.logoIcon {
+  font-size: 2rem;
+}
+
+.logoText {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.logoHint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.logoInput {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .formInput,
@@ -346,11 +449,6 @@
   font-size: 0.95rem;
 }
 
-.userInfo small {
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
 .userRole {
   background: #f3f4f6;
   color: #6b7280;
@@ -360,6 +458,17 @@
   display: inline-block;
   margin-top: 4px;
   width: fit-content;
+}
+
+.userContactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userEmail {
+  font-size: 0.85rem;
+  color: #6b7280;
 }
 
 .selectIcon {
@@ -385,6 +494,24 @@
   font-weight: bold;
 }
 
+.selectedUserInfo {
+  flex: 1;
+}
+
+.clearUserButton {
+  background: transparent;
+  border: 1px solid #16a34a;
+  color: #166534;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.clearUserButton:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
 /* Areas Section */
 .areasSection {
   display: flex;
@@ -408,6 +535,10 @@
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.areaInput {
+  flex: 1;
 }
 
 .addButton {
@@ -438,6 +569,31 @@
 .plusIcon {
   font-size: 1.1rem;
   font-weight: bold;
+}
+
+/* Botón + pequeño reutilizable */
+.addButtonSmall {
+  background: #dcfce7;
+  color: #166534;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.addButtonSmall:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
+.addButtonSmall:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Areas List */
@@ -503,6 +659,12 @@
   font-weight: 500;
 }
 
+.areaActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .removeButton {
   background: #fee2e2;
   color: #dc2626;
@@ -552,28 +714,53 @@
   cursor: not-allowed;
 }
 
-/* Subareas List */
+/* Subareas List (raíz del árbol) */
 .subareasList {
   margin-left: 24px;
   padding-left: 16px;
   border-left: 2px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
+/* Item del árbol de subáreas */
+.subareaTreeItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Cada fila de subárea */
 .subareaItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 6px 8px;
   background: #f8fafc;
   border-radius: 6px;
 }
 
+/* Texto de subárea */
 .subareaName {
   color: #4b5563;
   font-size: 0.9rem;
+}
+
+.subareaActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Contenedor de hijos de una subárea (indentado) */
+.subareaChildren {
+  margin-left: 16px;
+  padding-left: 12px;
+  border-left: 1px dashed #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* No Areas */
@@ -602,7 +789,7 @@
   font-size: 0.875rem;
 }
 
-/* Subareas Section */
+/* Subareas Section (ya no se usa para el input, queda por si acaso) */
 .subareasSection {
   background: white;
   border-radius: 12px;
@@ -623,9 +810,10 @@
   gap: 16px;
 }
 
+/* 2 columnas: nombre, botón (ya no se usa en el cuerpo, pero se deja por si) */
 .subareaControls {
   display: grid;
-  grid-template-columns: 1fr 2fr auto;
+  grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
 }
@@ -656,155 +844,82 @@
   cursor: not-allowed;
 }
 
-/* Confirmation Section */
-.confirmationSection {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.summaryCard {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px;
-}
-
-.summaryTitle {
-  margin: 0 0 20px 0;
-  color: #1f2937;
-  font-size: 1.1rem;
-  font-weight: 600;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.summaryGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.summaryItem {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.summaryItem.fullWidth {
-  grid-column: 1 / -1;
-}
-
-.summaryLabel {
-  color: #6b7280;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.summaryValue {
-  color: #1f2937;
-  font-size: 0.95rem;
-}
-
-/* Areas Summary */
-.areasSummary {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.areaSummaryItem {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.areaSummaryHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.areaSummaryName {
+/* Mini-modal para subárea */
+.subareaModalOverlay {
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #1f2937;
-  font-weight: 500;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1100;
 }
 
-.areaNumber {
-  color: #667eea;
-  font-weight: 600;
-}
-
-.areaSubareaCount {
-  background: #dbeafe;
-  color: #1d4ed8;
-  padding: 4px 10px;
+.subareaModal {
+  background: #ffffff;
   border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  padding: 20px 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
-.subareasSummary {
-  margin-left: 24px;
-  padding-left: 16px;
-  border-left: 2px solid #dbeafe;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.subareaSummaryItem {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-}
-
-.subareaBullet {
-  color: #3b82f6;
-  font-size: 0.9rem;
-}
-
-.subareaName {
-  color: #4b5563;
-  font-size: 0.9rem;
-}
-
-/* Note Section */
-.noteSection {
-  display: flex;
-  gap: 16px;
-  padding: 20px;
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 12px;
-}
-
-.noteIcon {
-  font-size: 2rem;
-  color: #0284c7;
-}
-
-.noteContent {
-  flex: 1;
-}
-
-.noteTitle {
+.subareaModalTitle {
   margin: 0 0 8px 0;
-  color: #0369a1;
-  font-weight: 600;
   font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
 }
 
-.noteText {
-  margin: 0;
-  color: #0c4a6e;
-  font-size: 0.95rem;
-  line-height: 1.5;
+.subareaModalContext {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.subareaModalContext strong {
+  color: #374151;
+}
+
+.subareaModalActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.subareaModalCancel,
+.subareaModalConfirm {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.subareaModalCancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.subareaModalCancel:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.subareaModalConfirm {
+  background: #10b981;
+  color: white;
+}
+
+.subareaModalConfirm:hover:not(:disabled) {
+  background: #0da271;
+}
+
+.subareaModalCancel:disabled,
+.subareaModalConfirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Footer */
@@ -914,51 +1029,47 @@
   .modal {
     max-height: 95vh;
   }
-  
+
   .modalHeader {
     padding: 20px 24px;
   }
-  
+
   .modalBody {
     padding: 24px;
   }
-  
+
   .modalFooter {
     padding: 20px 24px;
   }
-  
+
   .formGrid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .subareaControls {
     grid-template-columns: 1fr;
   }
-  
+
   .areaInputGroup {
     flex-direction: column;
   }
-  
+
   .addButton {
     width: 100%;
     justify-content: center;
   }
-  
-  .summaryGrid {
-    grid-template-columns: 1fr;
-  }
-  
+
   .footerContent {
     flex-direction: column;
     gap: 16px;
   }
-  
+
   .navigationButtons,
   .actionButtons {
     width: 100%;
   }
-  
+
   .backButton,
   .cancelButton,
   .nextButton,
@@ -974,14 +1085,47 @@
     gap: 12px;
     align-items: stretch;
   }
-  
+
   .closeButton {
     align-self: flex-end;
   }
-  
+
   .stepTitle {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
+}
+
+.readonlyInput {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+  color: #6b7280 !important;
+  font-style: italic !important;
+  cursor: not-allowed !important;
+  opacity: 0.9;
+}
+
+/* Nota del campo */
+.readonlyField .fieldNote {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.5rem;
+  display: block;
+  line-height: 1.4;
+}
+
+/* Si quieres un ícono para indicar que es generado automáticamente */
+.readonlyField::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.readonlyField input {
+  padding-left: 40px !important;
 }

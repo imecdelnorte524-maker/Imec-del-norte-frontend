@@ -15,11 +15,14 @@ export default function LoginForm() {
   });
 
   useEffect(() => {
-
-    if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
+    if (isAuthenticated && user) {
+      if (user.mustChangePassword) {
+        navigate("/profile", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     }
-  }, [isAuthenticated, user, loading, error, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -32,10 +35,9 @@ export default function LoginForm() {
     e.preventDefault();
     try {
       await login(formData);
-      navigate("/dashboard", { replace: true });
-
+      // La redirección la maneja el useEffect según mustChangePassword
     } catch (err) {
-      console.error('❌ [ERROR] En handleSubmit:', err);
+      console.error("❌ [ERROR] En handleSubmit:", err);
     }
   };
 
@@ -61,11 +63,7 @@ export default function LoginForm() {
           <h1 className={styles.title}>Bienvenido</h1>
           <p className={styles.subtitle}>Ingresa a tu cuenta para continuar</p>
 
-          {error && (
-            <div className={styles.error}>
-              {error}
-            </div>
-          )}
+          {error && <div className={styles.error}>{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <div className={styles.inputGroup}>

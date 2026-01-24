@@ -7,44 +7,59 @@ import {
   getEquipmentByClientRequest,
   createEquipmentRequest,
 } from "../api/equipment";
-import type { Equipment } from "../interfaces/EquipmentInterfaces";
-import styles from "../styles/pages/EquipmentDetailPage.module.css"; // Reusamos header/errores
+import {
+  addEquipmentToOrderRequest,
+  getOrdersByClientAndCategoryRequest,
+} from "../api/orders";
+import type {
+  AirConditionerTypeOption,
+  ClientOption,
+  Equipment,
+  CreateEquipmentData,
+  EvaporatorData,
+  CondenserData,
+  PlanMantenimientoData,
+} from "../interfaces/EquipmentInterfaces";
+import type { Order } from "../interfaces/OrderInterfaces";
+import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import listStyles from "../styles/pages/EquipmentListPage.module.css";
-
-interface ClientOption {
-  idCliente: number;
-  nombre: string;
-  nit: string;
-}
-
-interface SimpleArea {
-  idArea: number;
-  nombreArea: string;
-}
-
-interface SimpleSubArea {
-  idSubArea: number;
-  nombreSubArea: string;
-}
-
-interface RouteState {
-  clientId?: number;
-  clientName?: string;
-  clientNit?: string;
-}
+import { playErrorSound } from "../utils/sounds";
+import {
+  EquipmentFilters,
+  EquipmentGrid,
+  CreateEquipmentModal,
+  CreateAcTypeModal,
+  EmptyState,
+} from "../components/equipment/equipment-list";
+import type { AreaSimple } from "../interfaces/AreaInterfaces";
 
 export default function EquipmentListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const routeState = (location.state || {}) as RouteState;
+
+  // Interface para el estado de la ruta
+  interface RouteStateType {
+    clientId?: number;
+    clientName?: string;
+    clientNit?: string;
+    workOrderId?: number;
+  }
+
+  const routeState = (location.state || {}) as RouteStateType;
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<number | 0>(
     routeState.clientId ?? 0,
   );
 
+  // 🔧 NUEVO: Estado para el cliente seleccionado (objeto completo)
+  const [selectedClient, setSelectedClient] = useState<ClientOption | null>(
+    null,
+  );
+
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
   const [search, setSearch] = useState("");
 
   const [loadingClients, setLoadingClients] = useState(true);
@@ -56,22 +71,45 @@ export default function EquipmentListPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [areas, setAreas] = useState<SimpleArea[]>([]);
-  const [subAreas, setSubAreas] = useState<SimpleSubArea[]>([]);
-  const [selectedAreaId, setSelectedAreaId] = useState<number | "">("");
-  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | "">("");
-  const [createForm, setCreateForm] = useState({
-    category: "Aires Acondicionados",
+  const [areas, setAreas] = useState<AreaSimple[]>([]);
+  const [airConditionerTypes, setAirConditionerTypes] = useState<
+    AirConditionerTypeOption[]
+  >([]);
+  const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+  const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | null>(
+    null,
+  );
+
+  // Arrays de componentes
+  const [evaporators, setEvaporators] = useState<EvaporatorData[]>([]);
+  const [condensers, setCondensers] = useState<CondenserData[]>([]);
+  const [planMantenimiento, setPlanMantenimiento] =
+    useState<PlanMantenimientoData>({});
+
+  // Estados para crear tipo de aire acondicionado
+  const [showNewAcTypeForm, setShowNewAcTypeForm] = useState(false);
+  const [newAcTypeForm, setNewAcTypeForm] = useState({
     name: "",
+    hasEvaporator: true,
+    hasCondenser: true,
+  });
+  const [creatingAcType, setCreatingAcType] = useState(false);
+  const [acTypeError, setAcTypeError] = useState<string | null>(null);
+
+  // Estados para órdenes del cliente
+  const [ordersForClient, setOrdersForClient] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  // Estados para órdenes seleccionadas (múltiples)
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+
+  const [createForm, setCreateForm] = useState({
+    clientId: selectedClientId,
+    category: "Aires Acondicionados",
+    airConditionerTypeId: "",
     code: "",
-    brand: "",
-    model: "",
-    serialNumber: "",
-    capacity: "",
-    refrigerantType: "",
-    voltage: "",
-    physicalLocation: "",
-    manufacturer: "",
+    status: "Activo",
     installationDate: "",
     notes: "",
   });
@@ -85,9 +123,23 @@ export default function EquipmentListPage() {
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
+  // 🔧 NUEVO: Actualizar selectedClient cuando cambia selectedClientId
+  useEffect(() => {
+    if (selectedClientId && clients.length > 0) {
+      const client = clients.find((c) => c.idCliente === selectedClientId);
+      if (client) {
+        setSelectedClient(client);
+      }
+    } else {
+      setSelectedClient(null);
+    }
+  }, [selectedClientId, clients]);
+
+  // Cargar clientes
   useEffect(() => {
     if (!canView) {
       setError("No tiene permisos para ver el listado de equipos.");
+      playErrorSound();
       setLoadingClients(false);
       return;
     }
@@ -97,28 +149,27 @@ export default function EquipmentListPage() {
         setLoadingClients(true);
         setError(null);
 
-        // Si el nombre/NIT ya vienen del state, no es necesario ir al backend
         if (routeState.clientName) {
-          setClients([
-            {
-              idCliente: id,
-              nombre: routeState.clientName,
-              nit: routeState.clientNit || "",
-            },
-          ]);
+          const clientData = {
+            idCliente: id,
+            nombre: routeState.clientName,
+            nit: routeState.clientNit || "",
+          };
+          setClients([clientData]);
+          setSelectedClient(clientData);
           return;
         }
 
         const res = await api.get(`/clients/${id}`);
         const c = res.data?.data;
         if (c) {
-          setClients([
-            {
-              idCliente: c.idCliente,
-              nombre: c.nombre,
-              nit: c.nit,
-            },
-          ]);
+          const clientData = {
+            idCliente: c.idCliente,
+            nombre: c.nombre,
+            nit: c.nit,
+          };
+          setClients([clientData]);
+          setSelectedClient(clientData);
         }
       } catch (err: any) {
         console.error("Error cargando cliente para equipos:", err);
@@ -126,6 +177,7 @@ export default function EquipmentListPage() {
           err.response?.data?.error ||
             "Error al cargar la información del cliente.",
         );
+        playErrorSound();
       } finally {
         setLoadingClients(false);
       }
@@ -147,29 +199,68 @@ export default function EquipmentListPage() {
         setClients(mapped);
         if (mapped.length > 0 && !selectedClientId) {
           setSelectedClientId(mapped[0].idCliente);
+          setSelectedClient(mapped[0]);
         }
       } catch (err: any) {
         console.error("Error cargando clientes para equipos:", err);
         setError(
-          err.response?.data?.error ||
-            "Error al cargar la lista de clientes.",
+          err.response?.data?.error || "Error al cargar la lista de clientes.",
         );
+        playErrorSound();
       } finally {
         setLoadingClients(false);
       }
     };
 
-    // Si venimos de una orden con clientId, usamos ese cliente fijo
     if (hasFixedClientFromRoute && routeState.clientId) {
       setSelectedClientId(routeState.clientId);
       loadSingleClient(routeState.clientId);
     } else {
-      // Modo general: Admin/Secretaria/Técnico pueden elegir la empresa
       loadClients();
     }
-  }, [canView, hasFixedClientFromRoute, routeState.clientId, routeState.clientName, routeState.clientNit, selectedClientId]);
+  }, [
+    canView,
+    hasFixedClientFromRoute,
+    routeState.clientId,
+    routeState.clientName,
+    routeState.clientNit,
+    selectedClientId,
+  ]);
 
-  // Cargar equipos cuando cambia la empresa o la búsqueda
+  // Cargar tipos de aire acondicionado
+  const loadAirConditionerTypes = async () => {
+    try {
+      const res = await api.get("/air-conditioner-types");
+      const data = res.data?.data || [];
+      setAirConditionerTypes(data);
+    } catch (err) {
+      console.error("Error cargando tipos de aire acondicionado:", err);
+    }
+  };
+
+  const handleLoadOrders = async (
+    clienteEmpresaId: number,
+    category: string,
+  ) => {
+    setLoadingOrders(true);
+    setOrdersError(null);
+
+    try {
+      const orders = await getOrdersByClientAndCategoryRequest(
+        clienteEmpresaId,
+        category,
+      );
+      setOrdersForClient(orders);
+    } catch (error: any) {
+      console.error("Error cargando órdenes:", error);
+      setOrdersError("No se pudieron cargar las órdenes disponibles");
+      setOrdersForClient([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Cargar equipos
   useEffect(() => {
     const loadEquipment = async () => {
       if (!selectedClientId || !canView) return;
@@ -177,10 +268,9 @@ export default function EquipmentListPage() {
       try {
         setLoadingEquipment(true);
         setEquipmentError(null);
-        const equipments = await getEquipmentByClientRequest(
-          selectedClientId,
-          search || undefined,
-        );
+
+        const equipments = await getEquipmentByClientRequest(selectedClientId);
+        setAllEquipments(equipments);
         setEquipmentList(equipments);
       } catch (err: any) {
         console.error("Error cargando equipos:", err);
@@ -194,12 +284,117 @@ export default function EquipmentListPage() {
     };
 
     loadEquipment();
-  }, [selectedClientId, search, canView]);
+  }, [selectedClientId, canView]);
 
+  // Filtrar equipos
+  useEffect(() => {
+    const term = search.trim().toLowerCase();
+
+    if (!term) {
+      setEquipmentList(allEquipments);
+      return;
+    }
+
+    const filtered = allEquipments.filter((eq) => {
+      const code = eq.code?.toLowerCase() ?? "";
+      const clientName = eq.client?.nombre?.toLowerCase() ?? "";
+      const idStr = String(eq.equipmentId);
+
+      return (
+        code.includes(term) || clientName.includes(term) || idStr.includes(term)
+      );
+    });
+
+    setEquipmentList(filtered);
+  }, [search, allEquipments]);
+
+  // Cargar áreas jerárquicas
+  const loadHierarchicalAreas = async () => {
+    try {
+      const areasRes = await api.get("/areas", {
+        params: { clienteId: selectedClientId },
+      });
+      const areasData = areasRes.data?.data || [];
+
+      const areasWithTrees = await Promise.all(
+        areasData.map(async (area: any) => {
+          try {
+            const treeRes = await api.get(`/sub-areas/tree/${area.idArea}`);
+            const treeData = treeRes.data?.data;
+
+            return {
+              idArea: area.idArea,
+              nombreArea: area.nombreArea,
+              treeData: treeData,
+              subAreas: [],
+            };
+          } catch (err) {
+            console.error(
+              `Error cargando árbol para área ${area.idArea}:`,
+              err,
+            );
+            return {
+              idArea: area.idArea,
+              nombreArea: area.nombreArea,
+              treeData: null,
+              subAreas: [],
+            };
+          }
+        }),
+      );
+
+      setAreas(areasWithTrees);
+    } catch (err: any) {
+      console.error("Error cargando áreas jerárquicas:", err);
+      throw err;
+    }
+  };
+
+  // Cargar órdenes del cliente por categoría
+  const loadOrdersForClient = async (clientId: number, category: string) => {
+    if (!clientId || !category) {
+      setOrdersForClient([]);
+      return;
+    }
+
+    setLoadingOrders(true);
+    setOrdersError(null);
+
+    try {
+      const orders = await getOrdersByClientAndCategoryRequest(
+        clientId,
+        category,
+      );
+      setOrdersForClient(orders);
+    } catch (err: any) {
+      console.error("Error cargando órdenes del cliente:", err);
+      setOrdersError("Error al cargar órdenes disponibles");
+      setOrdersForClient([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Cargar órdenes cuando cambia la categoría en el modal
+  useEffect(() => {
+    if (showCreateForm && selectedClientId && createForm.category) {
+      loadOrdersForClient(selectedClientId, createForm.category);
+      // Resetear selección de órdenes cuando cambia la categoría
+      setSelectedOrderIds([]);
+    }
+  }, [showCreateForm, createForm.category, selectedClientId]);
+
+  // Handlers
   const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = parseInt(e.target.value, 10);
-    setSelectedClientId(isNaN(value) ? 0 : value);
+    const value = Number.parseInt(e.target.value, 10);
+    const newClientId = isNaN(value) ? 0 : value;
+
+    setSelectedClientId(newClientId);
     setSearch("");
+
+    // 🔧 ACTUALIZAR selectedClient
+    const client = clients.find((c) => c.idCliente === newClientId);
+    setSelectedClient(client || null);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,89 +405,66 @@ export default function EquipmentListPage() {
     navigate(`/equipment/${equipmentId}`);
   };
 
-  // ---- Crear equipo (hoja de vida) ----
-
-  const handleOpenCreateForm = async () => {
-    if (!selectedClientId) {
-      setCreateError("Debe seleccionar una empresa primero.");
-      return;
-    }
-
-    try {
-      setCreateError(null);
-      setCreateLoading(true);
-      const res = await api.get("/areas", {
-        params: { clienteId: selectedClientId },
-      });
-      const data = res.data?.data || [];
-      const mappedAreas: SimpleArea[] = data.map((a: any) => ({
-        idArea: a.idArea,
-        nombreArea: a.nombreArea,
-      }));
-      setAreas(mappedAreas);
-      setSubAreas([]);
-      setSelectedAreaId("");
-      setSelectedSubAreaId("");
-      setCreateForm((prev) => ({
-        ...prev,
-        category: "Aires Acondicionados",
-        name: "",
-        code: "",
-        brand: "",
-        model: "",
-        serialNumber: "",
-        capacity: "",
-        refrigerantType: "",
-        voltage: "",
-        physicalLocation: "",
-        manufacturer: "",
-        installationDate: "",
-        notes: "",
-      }));
-      setShowCreateForm(true);
-    } catch (err: any) {
-      console.error("Error cargando áreas para crear equipo:", err);
-      setCreateError(
-        err.response?.data?.error || "Error al cargar las áreas de la empresa.",
-      );
-    } finally {
-      setCreateLoading(false);
-    }
+  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? Number.parseInt(e.target.value, 10) : null;
+    setSelectedAreaId(value);
+    setSelectedSubAreaId(null); // Resetear subárea
   };
 
-  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const areaId = value ? parseInt(value, 10) : "";
-    setSelectedAreaId(areaId);
-    setSelectedSubAreaId("");
-    setSubAreas([]);
+  const handleSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? Number.parseInt(e.target.value, 10) : null;
+    setSelectedSubAreaId(value);
+  };
 
-    if (!areaId) return;
+  // Handlers para arrays de componentes
+  const handleAddEvaporator = () => {
+    setEvaporators([...evaporators, {}]);
+  };
 
-    const loadSubAreas = async () => {
-      try {
-        setCreateLoading(true);
-        const res = await api.get("/sub-areas", {
-          params: { areaId },
-        });
-        const data = res.data?.data || [];
-        const mappedSub: SimpleSubArea[] = data.map((s: any) => ({
-          idSubArea: s.idSubArea,
-          nombreSubArea: s.nombreSubArea,
-        }));
-        setSubAreas(mappedSub);
-      } catch (err: any) {
-        console.error("Error cargando subáreas:", err);
-        setCreateError(
-          err.response?.data?.error ||
-            "Error al cargar las subáreas del área seleccionada.",
-        );
-      } finally {
-        setCreateLoading(false);
-      }
+  const handleAddCondenser = () => {
+    setCondensers([...condensers, {}]);
+  };
+
+  const handleRemoveEvaporator = (index: number) => {
+    setEvaporators(evaporators.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveCondenser = (index: number) => {
+    setCondensers(condensers.filter((_, i) => i !== index));
+  };
+
+  const handleEvaporatorChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newEvaporators = [...evaporators];
+    newEvaporators[index] = {
+      ...newEvaporators[index],
+      [e.target.name]: e.target.value,
     };
+    setEvaporators(newEvaporators);
+  };
 
-    loadSubAreas();
+  const handleCondenserChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newCondensers = [...condensers];
+    newCondensers[index] = {
+      ...newCondensers[index],
+      [e.target.name]: e.target.value,
+    };
+    setCondensers(newCondensers);
+  };
+
+  const handlePlanMantenimientoChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setPlanMantenimiento((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleCreateFormChange = (
@@ -305,16 +477,151 @@ export default function EquipmentListPage() {
       ...prev,
       [name]: value,
     }));
+
+    // Si cambia la categoría, recargar órdenes
+    if (name === "category" && showCreateForm && selectedClientId) {
+      loadOrdersForClient(selectedClientId, value);
+    }
   };
 
+  const handleNewAcTypeFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value, type } = e.target;
+
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setNewAcTypeForm((prev) => ({
+        ...prev,
+        [name]: checked,
+      }));
+    } else {
+      setNewAcTypeForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  // Handler para selección múltiple de órdenes
+  const handleOrderSelectionChange = (orderId: number, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedOrderIds([...selectedOrderIds, orderId]);
+    } else {
+      setSelectedOrderIds(selectedOrderIds.filter((id) => id !== orderId));
+    }
+  };
+
+  // Abrir formulario de creación
+  const handleOpenCreateForm = async () => {
+    if (!selectedClientId || !selectedClient) {
+      setCreateError("Debe seleccionar una empresa primero.");
+      return;
+    }
+
+    try {
+      setCreateError(null);
+      setCreateLoading(true);
+
+      // Actualizar clientId en el form
+      setCreateForm((prev) => ({
+        ...prev,
+        clientId: selectedClientId,
+      }));
+
+      await loadHierarchicalAreas();
+      await loadAirConditionerTypes();
+
+      // CARGAR ÓRDENES DEL CLIENTE CON LA CATEGORÍA ACTUAL
+      await loadOrdersForClient(selectedClientId, createForm.category);
+
+      // Resetear selecciones
+      setSelectedAreaId(null);
+      setSelectedSubAreaId(null);
+      setSelectedOrderIds([]);
+
+      // Resetear arrays de componentes
+      setEvaporators([]);
+      setCondensers([]);
+      setPlanMantenimiento({});
+
+      setShowCreateForm(true);
+    } catch (err: any) {
+      console.error("Error cargando áreas para crear equipo:", err);
+      setCreateError(
+        err.response?.data?.error || "Error al cargar las áreas de la empresa.",
+      );
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Crear nuevo tipo de AC
+  const handleCreateNewAcType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAcTypeForm.name.trim()) {
+      setAcTypeError("El nombre del tipo es obligatorio.");
+      return;
+    }
+
+    setCreatingAcType(true);
+    setAcTypeError(null);
+
+    try {
+      const response = await api.post("/air-conditioner-types", {
+        name: newAcTypeForm.name.trim(),
+        hasEvaporator: newAcTypeForm.hasEvaporator,
+        hasCondenser: newAcTypeForm.hasCondenser,
+      });
+
+      const newType = response.data?.data;
+
+      setAirConditionerTypes((prev) => [...prev, newType]);
+      setCreateForm((prev) => ({
+        ...prev,
+        airConditionerTypeId: newType.id.toString(),
+      }));
+
+      setShowNewAcTypeForm(false);
+      setNewAcTypeForm({
+        name: "",
+        hasEvaporator: true,
+        hasCondenser: true,
+      });
+    } catch (err: any) {
+      console.error("Error creando tipo de aire acondicionado:", err);
+      let errorMessage = "Error al crear el tipo de aire acondicionado.";
+
+      if (err.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(", ");
+        } else {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      }
+
+      setAcTypeError(errorMessage);
+    } finally {
+      setCreatingAcType(false);
+    }
+  };
+
+  // Crear equipo con asociación a órdenes
   const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClientId) {
+
+    if (!selectedClientId || !selectedClient) {
       setCreateError("Debe seleccionar una empresa.");
       return;
     }
-    if (!createForm.name.trim()) {
-      setCreateError("El nombre del equipo es obligatorio.");
+
+    if (
+      createForm.category === "Aires Acondicionados" &&
+      !createForm.airConditionerTypeId
+    ) {
+      setCreateError("Debe seleccionar un tipo de aire acondicionado.");
       return;
     }
 
@@ -322,48 +629,132 @@ export default function EquipmentListPage() {
     setCreateError(null);
 
     try {
-      const payload = {
+      const payload: CreateEquipmentData = {
         clientId: selectedClientId,
         category: createForm.category,
-        name: createForm.name,
-        code: createForm.code || undefined, // backend ignora y genera automáticamente
-        brand: createForm.brand || undefined,
-        model: createForm.model || undefined,
-        serialNumber: createForm.serialNumber || undefined,
-        capacity: createForm.capacity || undefined,
-        refrigerantType: createForm.refrigerantType || undefined,
-        voltage: createForm.voltage || undefined,
-        physicalLocation: createForm.physicalLocation || undefined,
-        manufacturer: createForm.manufacturer || undefined,
-        installationDate: createForm.installationDate || undefined,
-        notes: createForm.notes || undefined,
-        areaId:
-          typeof selectedAreaId === "number" ? selectedAreaId : undefined,
-        subAreaId:
-          typeof selectedSubAreaId === "number"
-            ? selectedSubAreaId
-            : undefined,
+        status: createForm.status,
+        installationDate: createForm.installationDate || null,
+        notes: createForm.notes || null,
+        areaId: selectedAreaId || null,
+        subAreaId: selectedSubAreaId || null,
+        code: createForm.code || null,
+        evaporators: evaporators,
+        condensers: condensers,
+        planMantenimiento:
+          Object.keys(planMantenimiento).length > 0 ? planMantenimiento : null,
       };
 
-      await createEquipmentRequest(payload);
+      if (createForm.airConditionerTypeId) {
+        payload.airConditionerTypeId = Number(createForm.airConditionerTypeId);
+      }
 
-      // Recargar lista de equipos
-      const equipments = await getEquipmentByClientRequest(
-        selectedClientId,
-        search || undefined,
-      );
+      // 1. Crear el equipo
+      const newEquipment = await createEquipmentRequest(payload);
+
+      // 2. Asociar a órdenes seleccionadas (si hay)
+      if (selectedOrderIds.length > 0) {
+        try {
+          await Promise.all(
+            selectedOrderIds.map((orderId) =>
+              addEquipmentToOrderRequest(orderId, newEquipment.equipmentId),
+            ),
+          );
+        } catch (associationError) {
+          console.error("Error asociando órdenes:", associationError);
+          // Continuar aunque falle la asociación, el equipo ya está creado
+        }
+      }
+
+      // 3. Recargar equipos
+      const equipments = await getEquipmentByClientRequest(selectedClientId);
+      setAllEquipments(equipments);
       setEquipmentList(equipments);
 
+      // 4. Resetear todo
       setShowCreateForm(false);
+      setSelectedOrderIds([]);
+      setCreateForm({
+        clientId: selectedClientId,
+        category: "Aires Acondicionados",
+        airConditionerTypeId: "",
+        code: "",
+        status: "Activo",
+        installationDate: "",
+        notes: "",
+      });
+      setEvaporators([]);
+      setCondensers([]);
+      setPlanMantenimiento({});
+      setOrdersForClient([]);
     } catch (err: any) {
       console.error("Error creando equipo:", err);
       setCreateError(
         err.response?.data?.error ||
+          err.response?.data?.message ||
           "Error al crear la hoja de vida del equipo.",
       );
     } finally {
       setCreateLoading(false);
     }
+  };
+
+  // Obtener tipo de AC seleccionado
+  const selectedAcType = airConditionerTypes.find(
+    (type) => type.id === Number.parseInt(createForm.airConditionerTypeId),
+  );
+
+  // Función para renderizar el estado adecuado
+  const renderContent = () => {
+    // Caso 1: Sin permisos
+    if (error) {
+      return <div className={styles.error}>{error}</div>;
+    }
+
+    // Caso 2: Cargando clientes
+    if (loadingClients) {
+      return <p className={styles.loading}>Cargando clientes...</p>;
+    }
+
+    // Caso 3: No hay clientes disponibles
+    if (clients.length === 0 && !loadingClients && !hasFixedClientFromRoute) {
+      return (
+        <EmptyState message="No hay clientes registrados en el sistema. Para gestionar equipos, primero debe crear un cliente." />
+      );
+    }
+
+    // Caso 4: No hay cliente seleccionado
+    if (!selectedClientId || selectedClientId === 0) {
+      return (
+        <EmptyState message="Seleccione un cliente de la lista para ver sus equipos." />
+      );
+    }
+
+    // Caso 5: Cargando equipos
+    if (loadingEquipment) {
+      return <p className={styles.loading}>Cargando equipos...</p>;
+    }
+
+    // Caso 6: Error al cargar equipos
+    if (equipmentError) {
+      return <div className={styles.error}>{equipmentError}</div>;
+    }
+
+    // Caso 7: No hay equipos para el cliente seleccionado
+    if (equipmentList.length === 0 && !loadingEquipment) {
+      return (
+        <EmptyState
+          message={`${selectedClient?.nombre || "Este cliente"} no tiene equipos registrados. ${canCreate ? "¡Crea el primero!" : ""}`}
+        />
+      );
+    }
+
+    // Caso 8: Mostrar equipos
+    return (
+      <EquipmentGrid
+        equipmentList={equipmentList}
+        onOpenEquipment={handleOpenEquipment}
+      />
+    );
   };
 
   return (
@@ -375,12 +766,12 @@ export default function EquipmentListPage() {
           </button>
           <h1>Equipos por Empresa</h1>
 
-          {canCreate && (
+          {canCreate && selectedClientId && selectedClientId !== 0 && (
             <button
               type="button"
               className={listStyles.createButton}
               onClick={handleOpenCreateForm}
-              disabled={!selectedClientId}
+              disabled={!selectedClientId || createLoading}
             >
               + Crear equipo
             </button>
@@ -391,317 +782,78 @@ export default function EquipmentListPage() {
 
         {!error && (
           <>
-            {/* Filtros */}
-            <div className={listStyles.filters}>
-              <div className={listStyles.filterGroup}>
-                <label>Empresa</label>
-                {loadingClients ? (
-                  <p>Cargando empresas...</p>
-                ) : hasFixedClientFromRoute ? (
-                  // Cliente fijo (viene desde la orden)
-                  <p className={listStyles.fixedClientText}>
-                    {clients[0]
-                      ? `${clients[0].nombre} (${clients[0].nit})`
-                      : routeState.clientName
-                      ? `${routeState.clientName} (${routeState.clientNit || ""})`
-                      : "Cliente seleccionado"}
-                  </p>
-                ) : (
-                  // Modo general: combo de empresas
-                  <select
-                    value={selectedClientId || 0}
-                    onChange={handleClientChange}
-                  >
-                    <option value={0}>Seleccionar empresa...</option>
-                    {clients.map((c) => (
-                      <option key={c.idCliente} value={c.idCliente}>
-                        {c.nombre} ({c.nit})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className={listStyles.filterGroup}>
-                <label>Búsqueda</label>
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o código de equipo..."
-                  value={search}
-                  onChange={handleSearchChange}
-                />
-              </div>
-            </div>
-
-            {/* Lista de equipos */}
-            {equipmentError && (
-              <div className={styles.error}>{equipmentError}</div>
+            {/* Solo mostrar filtros si hay clientes */}
+            {clients.length > 0 && (
+              <EquipmentFilters
+                clients={clients}
+                selectedClientId={selectedClientId}
+                search={search}
+                loadingClients={loadingClients}
+                loadingEquipment={loadingEquipment}
+                hasFixedClientFromRoute={hasFixedClientFromRoute}
+                fixedClientName={routeState.clientName}
+                fixedClientNit={routeState.clientNit}
+                onClientChange={handleClientChange}
+                onSearchChange={handleSearchChange}
+              />
             )}
 
-            {loadingEquipment ? (
-              <p className={styles.loading}>Cargando equipos...</p>
-            ) : (
-              <div className={listStyles.grid}>
-                {equipmentList.map((eq) => (
-                  <div
-                    key={eq.equipmentId}
-                    className={listStyles.card}
-                    onClick={() => handleOpenEquipment(eq.equipmentId)}
-                  >
-                    <div className={listStyles.cardHeader}>
-                      <h3>{eq.name}</h3>
-                      <span className={listStyles.status}>{eq.status}</span>
-                    </div>
-
-                    <div className={listStyles.cardBody}>
-                      {eq.code && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Código:</span>
-                          <span className={listStyles.value}>{eq.code}</span>
-                        </div>
-                      )}
-                      <div className={listStyles.row}>
-                        <span className={listStyles.label}>Categoría:</span>
-                        <span className={listStyles.value}>{eq.category}</span>
-                      </div>
-                      {eq.brand && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Marca:</span>
-                          <span className={listStyles.value}>{eq.brand}</span>
-                        </div>
-                      )}
-                      {eq.model && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Modelo:</span>
-                          <span className={listStyles.value}>{eq.model}</span>
-                        </div>
-                      )}
-                      {eq.physicalLocation && (
-                        <div className={listStyles.row}>
-                          <span className={listStyles.label}>Ubicación:</span>
-                          <span className={listStyles.value}>
-                            {eq.physicalLocation}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className={listStyles.cardFooter}>
-                      <span className={listStyles.footerText}>
-                        ID #{eq.equipmentId}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!loadingEquipment &&
-              equipmentList.length === 0 &&
-              selectedClientId &&
-              !equipmentError && (
-                <div className={listStyles.empty}>
-                  <p>No se encontraron equipos para esta empresa.</p>
-                </div>
-              )}
+            {/* Mostrar contenido principal */}
+            {renderContent()}
           </>
         )}
 
-        {/* Modal de creación de equipo */}
-        {showCreateForm && (
-          <div className={listStyles.modal}>
-            <div className={listStyles.modalContent}>
-              <h3>Crear Hoja de Vida del Equipo</h3>
+        <CreateEquipmentModal
+          isOpen={showCreateForm}
+          loading={createLoading}
+          error={createError}
+          createForm={createForm}
+          onCreateFormChange={handleCreateFormChange}
+          airConditionerTypes={airConditionerTypes}
+          selectedAcType={selectedAcType}
+          onOpenNewAcTypeForm={() => {
+            setShowNewAcTypeForm(true);
+            setNewAcTypeForm({
+              name: "",
+              hasEvaporator: true,
+              hasCondenser: true,
+            });
+          }}
+          areas={areas}
+          selectedAreaId={selectedAreaId}
+          selectedSubAreaId={selectedSubAreaId}
+          onAreaChange={handleAreaChange}
+          onSubAreaChange={handleSubAreaChange}
+          evaporators={evaporators}
+          condensers={condensers}
+          onAddEvaporator={handleAddEvaporator}
+          onAddCondenser={handleAddCondenser}
+          onRemoveEvaporator={handleRemoveEvaporator}
+          onRemoveCondenser={handleRemoveCondenser}
+          onEvaporatorChange={handleEvaporatorChange}
+          onCondenserChange={handleCondenserChange}
+          planMantenimiento={planMantenimiento}
+          onPlanMantenimientoChange={handlePlanMantenimientoChange}
+          ordersForClient={ordersForClient}
+          loadingOrders={loadingOrders}
+          ordersError={ordersError}
+          selectedOrderIds={selectedOrderIds}
+          onOrderSelectionChange={handleOrderSelectionChange}
+          onSubmit={handleSubmitCreate}
+          onClose={() => setShowCreateForm(false)}
+          client={selectedClient}
+          onLoadOrders={handleLoadOrders}
+        />
 
-              {createError && <div className={styles.error}>{createError}</div>}
-
-              <form onSubmit={handleSubmitCreate}>
-                <div className={listStyles.formRow}>
-                  <label>Categoría del equipo *</label>
-                  <select
-                    name="category"
-                    value={createForm.category}
-                    onChange={handleCreateFormChange}
-                    required
-                  >
-                    <option value="Aires Acondicionados">
-                      Aires Acondicionados
-                    </option>
-                    <option value="Redes Eléctricas">Redes Eléctricas</option>
-                    <option value="Redes Contra Incendios">
-                      Redes Contra Incendios
-                    </option>
-                    <option value="Obras Civiles">Obras Civiles</option>
-                  </select>
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Nombre del equipo *</label>
-                  <input
-                    name="name"
-                    value={createForm.name}
-                    onChange={handleCreateFormChange}
-                    required
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Código interno (se generará automáticamente)</label>
-                  <input
-                    name="code"
-                    value={createForm.code}
-                    readOnly
-                    placeholder="Se generará al guardar (ej: AACI001)"
-                  />
-                  <span className={listStyles.helperText}>
-                    El sistema generará el código interno según la categoría y
-                    la empresa.
-                  </span>
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Marca</label>
-                  <input
-                    name="brand"
-                    value={createForm.brand}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Modelo</label>
-                  <input
-                    name="model"
-                    value={createForm.model}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Número de serie</label>
-                  <input
-                    name="serialNumber"
-                    value={createForm.serialNumber}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Capacidad</label>
-                  <input
-                    name="capacity"
-                    value={createForm.capacity}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Tipo de refrigerante</label>
-                  <input
-                    name="refrigerantType"
-                    value={createForm.refrigerantType}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Voltaje</label>
-                  <input
-                    name="voltage"
-                    value={createForm.voltage}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Ubicación física</label>
-                  <input
-                    name="physicalLocation"
-                    value={createForm.physicalLocation}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Fabricante</label>
-                  <input
-                    name="manufacturer"
-                    value={createForm.manufacturer}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Área (opcional)</label>
-                  <select
-                    value={selectedAreaId || ""}
-                    onChange={handleAreaChange}
-                  >
-                    <option value="">Sin área</option>
-                    {areas.map((a) => (
-                      <option key={a.idArea} value={a.idArea}>
-                        {a.nombreArea}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedAreaId && (
-                  <div className={listStyles.formRow}>
-                    <label>Subárea (opcional)</label>
-                    <select
-                      value={selectedSubAreaId || ""}
-                      onChange={(e) =>
-                        setSelectedSubAreaId(
-                          e.target.value ? parseInt(e.target.value, 10) : "",
-                        )
-                      }
-                    >
-                      <option value="">Sin subárea</option>
-                      {subAreas.map((s) => (
-                        <option key={s.idSubArea} value={s.idSubArea}>
-                          {s.nombreSubArea}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className={listStyles.formRow}>
-                  <label>Fecha de instalación</label>
-                  <input
-                    type="date"
-                    name="installationDate"
-                    value={createForm.installationDate}
-                    onChange={handleCreateFormChange}
-                  />
-                </div>
-
-                <div className={listStyles.formRow}>
-                  <label>Observaciones</label>
-                  <textarea
-                    name="notes"
-                    value={createForm.notes}
-                    onChange={handleCreateFormChange}
-                    rows={3}
-                  />
-                </div>
-
-                <div className={listStyles.formActions}>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button type="submit" disabled={createLoading}>
-                    {createLoading ? "Guardando..." : "Crear equipo"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <CreateAcTypeModal
+          isOpen={showNewAcTypeForm}
+          form={newAcTypeForm}
+          loading={creatingAcType}
+          error={acTypeError}
+          onChange={handleNewAcTypeFormChange}
+          onSubmit={handleCreateNewAcType}
+          onClose={() => setShowNewAcTypeForm(false)}
+        />
       </div>
     </DashboardLayout>
   );

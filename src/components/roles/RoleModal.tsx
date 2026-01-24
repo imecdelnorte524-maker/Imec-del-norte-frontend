@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { Rol, CreateRolDto, UpdateRolDto } from '../../interfaces/UserInterfaces';
+import type { Rol, CreateRolDto, UpdateRolDto } from '../../interfaces/RolesInterfaces';
 import styles from '../../styles/components/roles/RoleModal.module.css';
+import { playErrorSound } from '../../utils/sounds';
 
 interface RoleModalProps {
   isOpen: boolean;
@@ -11,17 +12,17 @@ interface RoleModalProps {
   onUpdateRole: (id: number, data: UpdateRolDto) => Promise<Rol>;
 }
 
-export default function RoleModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  editingRole, 
-  onCreateRole, 
-  onUpdateRole 
+export default function RoleModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  editingRole,
+  onCreateRole,
+  onUpdateRole,
 }: RoleModalProps) {
   const [formData, setFormData] = useState<CreateRolDto>({
     nombreRol: '',
-    descripcion: ''
+    descripcion: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,24 +31,42 @@ export default function RoleModal({
     if (isOpen) {
       if (editingRole) {
         setFormData({
-          nombreRol: editingRole.nombreRol,
-          descripcion: editingRole.descripcion || ''
+          nombreRol: editingRole.nombreRol ?? '',
+          descripcion: editingRole.descripcion ?? '',
         });
       } else {
         setFormData({
           nombreRol: '',
-          descripcion: ''
+          descripcion: '',
         });
       }
       setError(null);
     }
   }, [isOpen, editingRole]);
 
+  // Extrae un mensaje legible desde distintos formatos de error de axios/backend
+  const getApiErrorMessage = (err: any): string => {
+    const resp = err?.response?.data;
+    if (!resp) {
+      return err?.message || 'Error desconocido';
+    }
+    if (Array.isArray(resp.message)) return resp.message.join(', ');
+    if (typeof resp.message === 'string') return resp.message;
+    if (typeof resp.error === 'string') return resp.error;
+    try {
+      return JSON.stringify(resp);
+    } catch {
+      return String(resp);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.nombreRol.trim()) {
+
+    const nombreTrim = (formData.nombreRol ?? '').trim();
+    if (!nombreTrim) {
       setError('El nombre del rol es requerido');
+      playErrorSound();
       return;
     }
 
@@ -56,15 +75,33 @@ export default function RoleModal({
 
     try {
       if (editingRole) {
-        await onUpdateRole(editingRole.rolId, formData as UpdateRolDto);
+        // Para update: enviamos los campos (trim). Si quieres enviar solo los que cambiaron
+        // puedes comparar con editingRole y construir el payload dinámicamente.
+        const payload: UpdateRolDto = {
+          nombreRol: nombreTrim,
+          // Permitimos envío de string vacío si el usuario lo dejó así (para permitir limpiar la descripción)
+          descripcion: formData.descripcion !== undefined ? formData.descripcion.trim() : '',
+        };
+        console.debug('Updating role payload:', payload);
+        await onUpdateRole(editingRole.rolId, payload);
       } else {
-        await onCreateRole(formData);
+        // Para create: si descripción está vacía la dejamos undefined (mapCreateRolToBackend
+        // en rolesApi la convertirá a null si así lo definiste ahí).
+        const payload: CreateRolDto = {
+          nombreRol: nombreTrim,
+          descripcion: formData.descripcion?.trim() || undefined,
+        };
+        console.debug('Creating role payload:', payload);
+        await onCreateRole(payload);
       }
 
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      const msg = getApiErrorMessage(err);
+      setError(msg);
+      playErrorSound();
+      console.error('RoleModal submit error:', err);
     } finally {
       setLoading(false);
     }
@@ -72,9 +109,9 @@ export default function RoleModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -82,15 +119,23 @@ export default function RoleModal({
 
   return (
     <div className={styles.modalOverlay}>
-      <div className={styles.modal}>
+      <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
         <div className={styles.modalHeader}>
-          <h2>{editingRole ? 'Editar Rol' : 'Crear Nuevo Rol'}</h2>
-          <button className={styles.closeButton} onClick={onClose}>×</button>
+          <h2 id="role-modal-title">{editingRole ? 'Editar Rol' : 'Crear Nuevo Rol'}</h2>
+          <button
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Cerrar"
+            type="button"
+            disabled={loading}
+          >
+            ×
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleSubmit} className={styles.form} noValidate>
           {error && (
-            <div className={styles.errorMessage}>
+            <div className={styles.errorMessage} role="status" aria-live="polite">
               {error}
             </div>
           )}
@@ -106,6 +151,7 @@ export default function RoleModal({
               placeholder="Ej: Administrador, Técnico, Cliente"
               required
               disabled={loading}
+              autoFocus
             />
           </div>
 

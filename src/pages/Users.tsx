@@ -1,19 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useUsers } from "../hooks/useUsers";
 import UserModal from '../components/users/UserModal';
 import type { Usuario } from '../interfaces/UserInterfaces';
 import styles from '../styles/pages/UsersPage.module.css';
+import Pagination from '../components/Pagination';
 
 export default function Users() {
-  const { usuarios, loading, error, toggleUserStatus, createUser, updateUser, roles } = useUsers(); // 🔥 Agregar createUser y updateUser
+  const { usuarios, loading, error, toggleUserStatus, createUser, updateUser, roles } = useUsers();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
   const [filtroEstado, setFiltroEstado] = useState<'todos' | 'Activo' | 'Inactivo'>('todos');
   const [busqueda, setBusqueda] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10; // Cambia este valor según cuántos usuarios quieras por página
 
+  // Filtrar usuarios según estado y búsqueda
   const usuariosFiltrados = usuarios.filter(usuario => {
     const coincideEstado = filtroEstado === 'todos' ||
       (filtroEstado === 'Activo' && usuario.activo) ||
@@ -29,6 +33,26 @@ export default function Users() {
 
     return coincideEstado && coincideBusqueda;
   });
+
+  // Calcular índices de paginación
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  
+  // Obtener usuarios para la página actual
+  const currentUsers = usuariosFiltrados.slice(indexOfFirstUser, indexOfLastUser);
+  
+  const totalPages = Math.ceil(usuariosFiltrados.length / usersPerPage);
+
+  // Resetear a página 1 cuando cambie el filtro o búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filtroEstado, busqueda]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Hacer scroll al inicio cuando cambia de página
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleEdit = (usuario: Usuario) => {
     setEditingUser(usuario);
@@ -46,6 +70,8 @@ export default function Users() {
   };
 
   const handleModalSuccess = () => {
+    // Puedes añadir lógica adicional después de crear/actualizar un usuario
+    // Por ejemplo, mostrar un mensaje de éxito
   };
 
   const handleToggleStatus = async (usuario: Usuario) => {
@@ -78,25 +104,6 @@ export default function Users() {
           <p>Administra los usuarios del sistema</p>
         </header>
 
-        <div className={styles.stats}>
-          <div className={styles.statCard}>
-            <h3>Total Usuarios</h3>
-            <span className={styles.statNumber}>{usuarios.length}</span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Activos</h3>
-            <span className={styles.statNumber}>
-              {usuarios.filter(u => u.activo === true).length}
-            </span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Inactivos</h3>
-            <span className={styles.statNumber}>
-              {usuarios.filter(u => u.activo === false).length}
-            </span>
-          </div>
-        </div>
-
         <div className={styles.controls}>
           <div className={styles.filters}>
             <select
@@ -126,18 +133,24 @@ export default function Users() {
               📋 Gestión de Roles
             </button>
             <button
-              className={styles.btnSecondary}
-              onClick={() => navigate('/clients')}
-            >
-              📋 Gestión de Clientes
-            </button>
-            <button
               className={styles.btnPrimary}
               onClick={handleCreate}
             >
               + Nuevo Usuario
             </button>
           </div>
+        </div>
+
+        {/* Mostrar información de paginación */}
+        <div className={styles.paginationInfo}>
+          <span>
+            Mostrando {Math.min(usersPerPage, currentUsers.length)} de {usuariosFiltrados.length} usuarios
+            {busqueda && ` para "${busqueda}"`}
+            {filtroEstado !== 'todos' && ` (${filtroEstado})`}
+          </span>
+          <span>
+            Página {currentPage} de {totalPages || 1}
+          </span>
         </div>
 
         {error ? (
@@ -154,17 +167,15 @@ export default function Users() {
                     <tr>
                       <th>Nombre</th>
                       <th>Email</th>
-                      <th>Usuario</th>
                       <th>Cédula</th>
                       <th>Rol</th>
                       <th>Teléfono</th>
                       <th>Estado</th>
-                      <th>Fecha Registro</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {usuariosFiltrados.map(usuario => (
+                    {currentUsers.map(usuario => (
                       <tr key={usuario.usuarioId}>
                         <td>
                           <div className={styles.userInfo}>
@@ -172,7 +183,6 @@ export default function Users() {
                           </div>
                         </td>
                         <td>{usuario.email}</td>
-                        <td>{usuario.username}</td>
                         <td>{usuario.tipoCedula} {usuario.cedula}</td>
                         <td>
                           <span className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}>
@@ -184,9 +194,6 @@ export default function Users() {
                           <span className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}>
                             {usuario.activo ? 'Activo' : 'Inactivo'}
                           </span>
-                        </td>
-                        <td>
-                          {new Date(usuario.fechaCreacion).toLocaleDateString()}
                         </td>
                         <td>
                           <div className={styles.actions}>
@@ -215,7 +222,7 @@ export default function Users() {
 
             {/* Vista de tarjetas para móvil */}
             <div className={styles.mobileView}>
-              {usuariosFiltrados.map(usuario => (
+              {currentUsers.map(usuario => (
                 <div key={usuario.usuarioId} className={styles.mobileCard}>
                   <div className={styles.cardHeader}>
                     <div className={styles.userMainInfo}>
@@ -286,6 +293,17 @@ export default function Users() {
             {usuariosFiltrados.length === 0 && (
               <div className={styles.emptyState}>
                 {busqueda ? 'No se encontraron usuarios con esa búsqueda' : 'No hay usuarios registrados'}
+              </div>
+            )}
+
+            {/* Mostrar paginación si hay más de una página */}
+            {totalPages > 1 && (
+              <div className={styles.paginationWrapper}>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
               </div>
             )}
           </div>

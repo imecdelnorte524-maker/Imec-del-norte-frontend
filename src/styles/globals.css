@@ -8,15 +8,62 @@
   padding: 0;
 }
 
+/* Para que el navegador adapte scrollbars/controles nativos al tema */
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'],
+[data-theme='dark'] {
+  color-scheme: dark;
+}
+
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-base);
   color: var(--text-primary);
   background-color: var(--background);
+  
+  /* Por defecto: permitimos scroll para mobile-first */
+  overflow-y: auto;
+  min-height: 100vh;
+}
+
+/* Desktop: sin scroll */
+@media (min-width: 768px) {
+  body {
+    overflow: hidden; /* Elimina scroll en desktop */
+    height: 100vh;   /* Fija altura completa */
+  }
+  
+  /* Opcional: si necesitas scroll interno dentro de un contenedor */
+  .scroll-container {
+    height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .hidden-mobile {
+    display: block;
+  }
+  
+  .hidden-desktop {
+    display: none;
+  }
+}
+
+/* Mobile: scroll normal (ya está por defecto en body) */
+@media (max-width: 767px) {
+  body {
+    overflow-y: auto; /* Aseguramos scroll en mobile */
+    height: auto;     /* Altura automática */
+  }
 }
 
 /* Reset básico para elementos de formulario */
-input, button, textarea, select {
+input,
+button,
+textarea,
+select {
   font-family: inherit;
   font-size: inherit;
 }
@@ -37,12 +84,11 @@ input, button, textarea, select {
   display: none;
 }
 
-@media (min-width: 768px) {
-  .hidden-mobile {
-    display: block;
-  }
-  
-  .hidden-desktop {
-    display: none;
-  }
+/* Si necesitas una utilidad específica para el comportamiento de scroll */
+.desktop-no-scroll {
+  overflow: hidden !important;
+}
+
+.mobile-scroll {
+  overflow-y: auto !important;
 }

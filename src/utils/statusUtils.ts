@@ -1,22 +1,30 @@
 // Utilidades para estados - Evitar duplicación
-export const getStatusColor = (estado: string): string => {
-  switch (estado.toLowerCase()) {
+export const getStatusClass = (
+  estado: string,
+  classPrefix: string,
+): string => {
+  const normalized = estado.toLowerCase();
+
+  switch (normalized) {
     case 'completado':
     case 'completada':
-      return 'statusCompleted';
-    case 'en proceso':
-      return 'statusInProgress';
+      return `${classPrefix}Completed`;
+
     case 'pendiente':
-      return 'statusPending';
+      return `${classPrefix}Pending`;
+
     case 'cancelado':
     case 'cancelada':
-      return 'statusCancelled';
-    case 'rechazada':
-      return 'statusRejected';
+      return `${classPrefix}Cancelled`;
+
+    case 'en proceso':
+      return `${classPrefix}PendingAssigned`;
+
     default:
-      return 'statusPending';
+      return `${classPrefix}Pending`;
   }
 };
+
 
 export const getPriorityIcon = (prioridad?: string): string => {
   switch (prioridad?.toLowerCase()) {

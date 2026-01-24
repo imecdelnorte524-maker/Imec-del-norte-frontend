@@ -1,5 +1,3 @@
-/* src/styles/pages/DashboardPage.module.css */
-
 .container {
   padding: 0;
   max-width: 100%;
@@ -44,6 +42,19 @@
   gap: 4px;
 }
 
+/* Badge para rol SG-SST */
+.sgsstBadge {
+  background: #16a34a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .badgeIcon {
   width: 14px;
   height: 14px;
@@ -78,6 +89,13 @@
 
 .adminRole {
   color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Rol SG-SST */
+.sgsstRole {
+  color: #16a34a;
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -303,8 +321,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .noResults {
@@ -386,33 +408,205 @@
   height: 20px;
 }
 
+/* Gráfica de barras por estado */
+.barChart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.barChartRow {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 4fr auto;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.barLabel {
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  font-weight: 500;
+}
+
+.barTrack {
+  background: var(--gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+  height: 14px;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.barValue {
+  font-size: var(--font-size-sm);
+  color: var(--gray-800);
+  font-weight: 600;
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Colores de barras */
+.barUnassigned {
+  background: #fbbf24; /* amarillo */
+}
+
+.barAssigned {
+  background: #a855f7; /* morado */
+}
+
+.barInProgress {
+  background: #60a5fa; /* azul */
+}
+
+.barCompleted {
+  background: #22c55e; /* verde */
+}
+
+.barCanceled {
+  background: #f97373; /* rojo */
+}
+
+/* Lista de técnicos */
+.techList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.techItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+}
+
+.techName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.techStats {
+  display: flex;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-xs);
+  color: var(--gray-700);
+  flex-wrap: wrap;
+}
+
+.techStats span strong {
+  color: var(--gray-900);
+}
+
+.techEmpty {
+  font-size: var(--font-size-sm);
+  color: var(--gray-500);
+}
+
+/* ====== SG-SST: tabla de reportes pendientes ====== */
+.sgSstTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sgSstTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  min-width: 600px;
+}
+
+.sgSstTable thead {
+  background: var(--gray-50);
+}
+
+.sgSstTable th,
+.sgSstTable td {
+  padding: 0.75rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.sgSstTable th {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500);
+}
+
+.sgSstTable tbody tr:hover {
+  background: #f9fafb;
+}
+
+.sgSstTypeBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.sgSstStatusBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.sgSstEmpty {
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+}
+
+.sgSstError {
+  font-size: var(--font-size-sm);
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
 /* Responsive */
 @media (max-width: 767px) {
   .metricsGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .filtersGrid {
     grid-template-columns: 1fr;
     gap: var(--spacing-md);
   }
-  
+
   .sectionHeader {
     flex-direction: column;
     gap: var(--spacing-sm);
     align-items: stretch;
   }
-  
+
   .resultsSummary {
     flex-direction: column;
     gap: var(--spacing-sm);
     align-items: stretch;
   }
-  
+
   .servicesGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .pageTitle {
     font-size: var(--font-size-xl);
   }
@@ -424,6 +618,20 @@
 
   .userInfo {
     align-self: flex-start;
+  }
+
+  .barChartRow {
+    grid-template-columns: minmax(80px, 1fr) 3fr auto;
+  }
+
+  .techItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+
+  .sgSstTable {
+    min-width: 500px;
   }
 }
 
@@ -437,7 +645,7 @@
   .metricsGrid {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+
   .servicesGrid {
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }

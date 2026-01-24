@@ -1,0 +1,71 @@
+.hierarchicalSelector {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+}
+
+.hierarchicalSelector h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--gray-800);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.hierarchicalLevel {
+  margin-bottom: var(--spacing-md);
+}
+
+.hierarchicalLevel:last-child {
+  margin-bottom: 0;
+}
+
+.hierarchicalLevel label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.hierarchicalLevel select {
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  font-size: var(--font-size-sm);
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--white);
+  color: var(--gray-700);
+  transition: border-color 0.2s;
+}
+
+.hierarchicalLevel select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px var(--primary-100);
+}
+
+.hierarchicalLevel select:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+  color: var(--gray-500);
+}
+
+.levelIndicator {
+  display: inline-block;
+  margin-right: var(--spacing-xs);
+  color: var(--gray-500);
+  font-weight: bold;
+}
+
+.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-top: var(--spacing-md);
+  text-align: center;
+}

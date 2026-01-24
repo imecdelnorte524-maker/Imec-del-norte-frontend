@@ -1,127 +1,65 @@
-import { useState, useEffect } from 'react';
-import { users as usersAPI } from '../api/users';
-import type { Usuario, CreateUsuarioDto, UpdateUsuarioDto, Rol } from '../interfaces/UserInterfaces';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usersApi } from "../api/users";
+import { rolesApi } from "../api/roles";
+import { QUERY_KEYS } from "../api/keys";
+import type { UpdateUsuarioDto } from "../interfaces/UserInterfaces";
 
 export const useUsers = () => {
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [roles, setRoles] = useState<Rol[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Función para cargar todos los usuarios
-  const loadUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await usersAPI.getAllUsers();
-      setUsuarios(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar usuarios');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 1. Obtener Usuarios
+  const { data: usuarios = [], isLoading: loadingUsers, error: errorUsers } = useQuery({
+    queryKey: [QUERY_KEYS.users],
+    queryFn: usersApi.getAllUsers,
+  });
 
-  // Función para cargar roles
-  const loadRoles = async () => {
-    try {
-      setError(null);
-      const rolesData = await usersAPI.getActiveRoles();
-      setRoles(rolesData);
-    } catch (err: any) {
-      console.error('Error cargando roles:', err);
-      setError('Error al cargar los roles');
-      setRoles([]);
-    }
-  };
+  // 2. Obtener Roles (necesario para formularios de usuarios)
+  const { data: roles = [], isLoading: loadingRoles } = useQuery({
+    queryKey: [QUERY_KEYS.roles],
+    queryFn: rolesApi.getAllRoles,
+  });
 
-  // Cargar datos al inicializar
-  useEffect(() => {
-    const initializeData = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([loadUsers(), loadRoles()]);
-      } catch (err: any) {
-        setError(err.message || 'Error al inicializar datos');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // --- MUTATIONS ---
 
-    initializeData();
-  }, []);
+  const createUserMutation = useMutation({
+    mutationFn: usersApi.createUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+    },
+  });
 
-  // ✅ CREAR USUARIO - Con recarga automática
-  const createUser = async (userData: CreateUsuarioDto) => {
-    try {
-      setError(null);
-      const newUser = await usersAPI.createUser(userData);
-      
-      // 🔄 RECARGAR lista completa después de crear
-      await loadUsers();
-      
-      return newUser;
-    } catch (err: any) {
-      setError(err.message || 'Error al crear usuario');
-      throw err;
-    }
-  };
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateUsuarioDto }) =>
+      usersApi.updateUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+    },
+  });
 
-  // ✅ ACTUALIZAR USUARIO - Con recarga automática
-  const updateUser = async (id: number, userData: UpdateUsuarioDto) => {
-    try {
-      setError(null);
-      const updatedUser = await usersAPI.updateUser(id, userData);
-      
-      // 🔄 RECARGAR lista completa después de actualizar
-      await loadUsers();
-      
-      return updatedUser;
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar usuario');
-      throw err;
-    }
-  };
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
+      isActive ? usersApi.deactivateUser(id) : usersApi.activateUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+    },
+  });
 
-  // ✅ CAMBIAR ESTADO - Con recarga automática
-  const toggleUserStatus = async (id: number, currentStatus: boolean) => {
-    try {
-      setError(null);
-      let updatedUser;
-      
-      if (currentStatus) {
-        updatedUser = await usersAPI.deactivateUser(id);
-      } else {
-        updatedUser = await usersAPI.activateUser(id);
-      }
-      
-      // 🔄 RECARGAR lista completa después de cambiar estado
-      await loadUsers();
-      
-      return updatedUser;
-    } catch (err: any) {
-      setError(err.message || 'Error al cambiar estado del usuario');
-      throw err;
-    }
-  };
-
-  const refreshUsers = async () => {
-    await loadUsers();
-  };
-
-  const refreshRoles = async () => {
-    await loadRoles();
-  };
+  const loading = loadingUsers || loadingRoles;
+  const error = errorUsers ? (errorUsers as Error).message : null;
 
   return {
     usuarios,
     roles,
     loading,
     error,
-    refreshUsers,
-    refreshRoles,
-    createUser,
-    updateUser,
-    toggleUserStatus
+    
+    createUser: createUserMutation.mutateAsync,
+    updateUser: (id: number, data: UpdateUsuarioDto) => updateUserMutation.mutateAsync({ id, data }),
+    toggleUserStatus: (id: number, isActive: boolean) => toggleStatusMutation.mutateAsync({ id, isActive }),
+    
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.roles] });
+    },
   };
 };

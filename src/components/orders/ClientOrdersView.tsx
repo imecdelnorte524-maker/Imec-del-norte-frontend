@@ -10,9 +10,14 @@ import styles from '../../styles/components/orders/ClientOrdersView.module.css';
 interface Props {
   activeView: 'list' | 'create' | 'detail';
   setActiveView: (view: 'list' | 'create' | 'detail') => void;
+  initialOrderId?: number; // <- NUEVO
 }
 
-export default function ClientOrdersView({ activeView, setActiveView }: Props) {
+export default function ClientOrdersView({
+  activeView,
+  setActiveView,
+  initialOrderId,
+}: Props) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const handleCreateOrder = () => {
@@ -31,7 +36,7 @@ export default function ClientOrdersView({ activeView, setActiveView }: Props) {
 
   if (activeView === 'create') {
     return (
-      <CreateOrderForm 
+      <CreateOrderForm
         onSuccess={handleBackToList}
         onCancel={handleBackToList}
       />
@@ -40,7 +45,7 @@ export default function ClientOrdersView({ activeView, setActiveView }: Props) {
 
   if (activeView === 'detail' && selectedOrder) {
     return (
-      <OrderDetail 
+      <OrderDetail
         order={selectedOrder}
         onBack={handleBackToList}
         userRole="cliente"
@@ -52,17 +57,18 @@ export default function ClientOrdersView({ activeView, setActiveView }: Props) {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>Mis Solicitudes de Servicio</h1>
-        <button 
+        <button
           className={styles.createButton}
           onClick={handleCreateOrder}
         >
           + Nueva Solicitud
         </button>
       </div>
-      
-      <OrderList 
+
+      <OrderList
         userRole="cliente"
         onViewOrder={handleViewOrder}
+        initialOrderId={initialOrderId}
       />
     </div>
   );

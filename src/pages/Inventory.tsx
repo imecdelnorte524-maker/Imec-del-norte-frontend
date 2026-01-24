@@ -1,31 +1,36 @@
-// src/pages/Inventory.tsx
-import { useState, useEffect } from 'react';
+// src/pages/Inventory.tsx (VERSIÓN MEJORADA)
+import { useState, useEffect } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { inventory } from "../api/inventory";
 import type { Inventory, TipoFiltro } from "../interfaces/InventoryInterfaces";
-import AddInventoryModal from '../components/inventory/AddInventoyModal';
-import EditInventoryModal from '../components/inventory/EditInventoryModal';
-import DeleteConfirmationModal from '../components/inventory/DeleteInventoryModal';
-import ViewInventoryModal from '../components/inventory/ViewInventoryModal';
+import AddInventoryModal from "../components/inventory/AddInventoyModal";
+import EditInventoryModal from "../components/inventory/EditInventoryModal";
+import DeleteConfirmationModal from "../components/inventory/DeleteInventoryModal";
+import ToolSoftDeleteModal from "../components/tools/ToolSoftDeleteModal";
+import ViewInventoryModal from "../components/inventory/ViewInventoryModal";
 
-import styles from '../styles/pages/InventoryPage.module.css';
+import styles from "../styles/pages/InventoryPage.module.css";
+import { playErrorSound } from "../utils/sounds";
 
 export default function Inventory() {
   const [inventario, setInventario] = useState<Inventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filtro, setFiltro] = useState<TipoFiltro>('todos');
-  const [busqueda, setBusqueda] = useState('');
+  const [filtro, setFiltro] = useState<TipoFiltro>("todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [showDeleted, setShowDeleted] = useState(false);
+  
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
+  const [showSoftDeleteModal, setShowSoftDeleteModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Inventory | null>(null);
 
-  // Cargar inventario al montar el componente
   useEffect(() => {
     cargarInventario();
-  }, []);
+  }, [showDeleted]);
 
   const handleView = (item: Inventory) => {
     setSelectedItem(item);
@@ -35,73 +40,67 @@ export default function Inventory() {
   const cargarInventario = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Cargando inventario...');
-
       const data = await inventory.getAllInventory();
-      console.log('✅ Inventario cargado en frontend:', data);
-
-      // Verificar si cada item tiene tipo
-      data.forEach((item: { tipo: any; }, i: any) => {
-        if (!item.tipo) {
-          console.warn(`⚠️ Item ${i} sin tipo:`, item);
-        }
-      });
-
       setInventario(data);
       setError(null);
     } catch (err: any) {
-      console.error('❌ Error en cargarInventario:', err);
-      setError('Error al cargar el inventario: ' + err.message);
+      console.error("❌ Error en cargarInventario:", err);
+      setError("Error al cargar el inventario: " + err.message);
+      playErrorSound();
     } finally {
       setLoading(false);
     }
   };
 
-  // Handlers para editar
   const handleEdit = (item: Inventory) => {
     setSelectedItem(item);
     setShowEditModal(true);
   };
 
-  // Handlers para eliminar
+  const handleSoftDelete = (item: Inventory) => {
+    if (item.tipo === "herramienta") {
+      setSelectedItem(item);
+      setShowSoftDeleteModal(true);
+    } else {
+      handleDelete(item);
+    }
+  };
+
   const handleDelete = (item: Inventory) => {
     setSelectedItem(item);
     setShowDeleteModal(true);
   };
 
-  // Handler para éxito después de agregar/editar/eliminar
   const handleSuccess = () => {
-    cargarInventario(); // Esto soluciona que no se actualice
+    cargarInventario();
     setShowAddModal(false);
     setShowEditModal(false);
     setShowDeleteModal(false);
+    setShowSoftDeleteModal(false);
     setSelectedItem(null);
   };
 
-  // Filtrar items según tipo y búsqueda
-  const itemsFiltrados = inventario.filter(item => {
+  const itemsFiltrados = inventario.filter((item) => {
+    // Filtrar por tipo
     const coincideTipo =
-      filtro === 'todos' ||
-      (filtro === 'herramientas' && item.herramientaId) ||
-      (filtro === 'insumos' && item.insumoId);
+      filtro === "todos" ||
+      (filtro === "herramientas" && item.tipo === "herramienta") ||
+      (filtro === "insumos" && item.tipo === "insumo");
 
+    // Filtrar por búsqueda
     const coincideBusqueda =
-      busqueda === '' ||
-      item.supply?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      item.tool?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      busqueda === "" ||
+      item.nombreItem.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.ubicacion?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      item.nombreItem.toLowerCase().includes(busqueda.toLowerCase());
+      (item.tool?.marca?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
+      (item.tool?.serial?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
+      (item.supply?.categoria?.toLowerCase().includes(busqueda.toLowerCase()) ?? false);
 
-    return coincideTipo && coincideBusqueda;
+    // Filtrar por estado eliminado
+    const coincideEstado = showDeleted ? true : !item.fechaEliminacion;
+
+    return coincideTipo && coincideBusqueda && coincideEstado;
   });
-
-  // Estadísticas rápidas
-  const totalItems = inventario.length;
-  const totalHerramientas = inventario.filter(item => item.tool?.herramientaId).length;
-  const totalInsumos = inventario.filter(item => item.supply?.insumoId).length;
-  const stockBajo = inventario.filter(item =>
-    item.supply && item.cantidadActual <= (item.supply.stockMin || 0)
-  ).length;
 
   if (loading) {
     return (
@@ -119,27 +118,6 @@ export default function Inventory() {
           <p>Administra herramientas e insumos del taller</p>
         </header>
 
-        {/* Estadísticas */}
-        <div className={styles.stats}>
-          <div className={styles.statCard}>
-            <h3>Total Items</h3>
-            <span className={styles.statNumber}>{totalItems}</span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Herramientas</h3>
-            <span className={styles.statNumber}>{totalHerramientas}</span>
-          </div>
-          <div className={styles.statCard}>
-            <h3>Insumos</h3>
-            <span className={styles.statNumber}>{totalInsumos}</span>
-          </div>
-          <div className={`${styles.statCard} ${styles.warning}`}>
-            <h3>Stock Bajo</h3>
-            <span className={styles.statNumber}>{stockBajo}</span>
-          </div>
-        </div>
-
-        {/* Controles */}
         <div className={styles.controls}>
           <div className={styles.filters}>
             <select
@@ -154,11 +132,20 @@ export default function Inventory() {
 
             <input
               type="text"
-              placeholder="Buscar por nombre o ubicación..."
+              placeholder="Buscar por nombre, ubicación, marca, serial..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className={styles.searchInput}
             />
+
+            <label className={styles.showDeletedCheckbox}>
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.target.checked)}
+              />
+              <span>Mostrar eliminados</span>
+            </label>
           </div>
 
           <button
@@ -169,7 +156,6 @@ export default function Inventory() {
           </button>
         </div>
 
-        {/* Tabla de inventario */}
         {error ? (
           <div className={styles.errorMessage}>
             {error}
@@ -179,7 +165,6 @@ export default function Inventory() {
           </div>
         ) : (
           <div className={styles.inventoryContainer}>
-            {/* Vista de tabla para desktop */}
             <div className={styles.desktopView}>
               <div className={styles.tableContainer}>
                 <table className={styles.table}>
@@ -187,46 +172,69 @@ export default function Inventory() {
                     <tr>
                       <th>Tipo</th>
                       <th>Nombre</th>
-                      <th>Cantidad</th>
+                      <th>Cantidad / Stock Min</th>
                       <th>Ubicación</th>
                       <th>Estado</th>
-                      <th>Última Actualización</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {itemsFiltrados.map(item => (
-                      <tr key={item.inventarioId}>
+                    {itemsFiltrados.map((item) => (
+                      <tr 
+                        key={item.inventarioId}
+                        className={item.fechaEliminacion ? styles.deletedRow : ''}
+                      >
                         <td>
-                          <span className={`${styles.itemType} ${item.herramientaId ? styles.herramienta : styles.insumo}`}>
-                            {item.tipo === 'herramienta' ? '🛠️ Herramienta' : '📦 Insumo'}
+                          <span
+                            className={`${styles.itemType} ${
+                              item.tipo === "herramienta"
+                                ? styles.herramienta
+                                : styles.insumo
+                            }`}
+                          >
+                            {item.tipo === "herramienta"
+                              ? "🛠️ Herramienta"
+                              : "📦 Insumo"}
+                            {item.fechaEliminacion && " (Eliminado)"}
                           </span>
                         </td>
                         <td>
                           {item.nombreItem}
                           {item.supply && (
                             <small className={styles.unit}>
-                              {' '}({item.supply.unidadMedida})
+                              {" "}
+                              ({item.supply.unidadMedida})
                             </small>
                           )}
                         </td>
                         <td>
-                          <span className={`${styles.quantity} ${item.supply && item.cantidadActual <= (item.supply.stockMin || 0)
-                            ? styles.lowStock
-                            : ''
-                            }`}>
+                          <span
+                            className={`${styles.quantity} ${
+                              item.supply &&
+                              item.cantidadActual <= (item.supply.stockMin || 0)
+                                ? styles.lowStock
+                                : ""
+                            }`}
+                          >
                             {item.cantidadActual}
                             {item.supply && ` / ${item.supply.stockMin}`}
                           </span>
                         </td>
-                        <td>{item.ubicacion || 'Sin ubicación'}</td>
+                        <td>{item.ubicacion || "Sin ubicación"}</td>
                         <td>
-                          <span className={`${styles.status} ${styles.active}`}>
-                            {item.tool?.estado || item.supply?.estado || 'Activo'}
+                          <span className={`${styles.status} ${
+                            item.fechaEliminacion ? styles.deleted : 
+                            item.tool?.estado === "Disponible" || item.supply?.estado === "Disponible" 
+                              ? styles.active : 
+                              item.tool?.estado === "En Uso" || item.supply?.estado === "Stock Bajo" 
+                                ? styles.warning : 
+                                styles.inactive
+                          }`}>
+                            {item.tool?.estado ||
+                              item.supply?.estado ||
+                              "Activo"}
+                            {item.fechaEliminacion && " (Retirado)"}
                           </span>
-                        </td>
-                        <td>
-                          {new Date(item.fechaUltimaActualizacion).toLocaleDateString()}
                         </td>
                         <td>
                           <div className={styles.actionButtons}>
@@ -237,20 +245,34 @@ export default function Inventory() {
                             >
                               👁️
                             </button>
-                            <button
-                              className={styles.btnAction}
-                              onClick={() => handleEdit(item)}
-                              title="Editar"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              className={`${styles.btnAction} ${styles.delete}`}
-                              onClick={() => handleDelete(item)}
-                              title="Eliminar"
-                            >
-                              🗑️
-                            </button>
+                            {!item.fechaEliminacion && (
+                              <>
+                                <button
+                                  className={styles.btnAction}
+                                  onClick={() => handleEdit(item)}
+                                  title="Editar"
+                                >
+                                  ✏️
+                                </button>
+                                {item.tipo === "herramienta" ? (
+                                  <button
+                                    className={`${styles.btnAction} ${styles.softDelete}`}
+                                    onClick={() => handleSoftDelete(item)}
+                                    title="Retirar con motivo"
+                                  >
+                                    📤
+                                  </button>
+                                ) : (
+                                  <button
+                                    className={`${styles.btnAction} ${styles.delete}`}
+                                    onClick={() => handleDelete(item)}
+                                    title="Eliminar"
+                                  >
+                                    🗑️
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -260,13 +282,21 @@ export default function Inventory() {
               </div>
             </div>
 
-            {/* Vista de tarjetas para móvil */}
+            {/* Vista móvil - mantiene la misma estructura pero agregamos el filtro de eliminados */}
             <div className={styles.mobileView}>
-              {itemsFiltrados.map(item => (
-                <div key={item.inventarioId} className={styles.mobileCard}>
+              {itemsFiltrados.map((item) => (
+                <div 
+                  key={item.inventarioId} 
+                  className={`${styles.mobileCard} ${item.fechaEliminacion ? styles.deletedCard : ''}`}
+                >
                   <div className={styles.cardHeader}>
-                    <span className={`${styles.itemType} ${item.herramientaId ? styles.herramienta : styles.insumo}`}>
-                      {item.tipo === 'herramienta' ? '🛠️ Equipo' : '📦 Insumo'}
+                    <span
+                      className={`${styles.itemType} ${
+                        item.tipo === "herramienta" ? styles.herramienta : styles.insumo
+                      }`}
+                    >
+                      {item.tipo === "herramienta" ? "🛠️ Equipo" : "📦 Insumo"}
+                      {item.fechaEliminacion && " (Eliminado)"}
                     </span>
                     <div className={styles.cardActions}>
                       <button
@@ -276,20 +306,34 @@ export default function Inventory() {
                       >
                         👁️
                       </button>
-                      <button
-                        className={styles.btnAction}
-                        onClick={() => handleEdit(item)}
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className={`${styles.btnAction} ${styles.delete}`}
-                        onClick={() => handleDelete(item)}
-                        title="Eliminar"
-                      >
-                        🗑️
-                      </button>
+                      {!item.fechaEliminacion && (
+                        <>
+                          <button
+                            className={styles.btnAction}
+                            onClick={() => handleEdit(item)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          {item.tipo === "herramienta" ? (
+                            <button
+                              className={`${styles.btnAction} ${styles.softDelete}`}
+                              onClick={() => handleSoftDelete(item)}
+                              title="Retirar con motivo"
+                            >
+                              📤
+                            </button>
+                          ) : (
+                            <button
+                              className={`${styles.btnAction} ${styles.delete}`}
+                              onClick={() => handleDelete(item)}
+                              title="Eliminar"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -298,7 +342,8 @@ export default function Inventory() {
                       {item.nombreItem}
                       {item.supply && (
                         <small className={styles.unit}>
-                          {' '}({item.supply.unidadMedida})
+                          {" "}
+                          ({item.supply.unidadMedida})
                         </small>
                       )}
                     </h3>
@@ -306,10 +351,14 @@ export default function Inventory() {
                     <div className={styles.cardDetails}>
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Cantidad:</span>
-                        <span className={`${styles.quantity} ${item.supply && item.cantidadActual <= (item.supply.stockMin || 0)
-                          ? styles.lowStock
-                          : ''
-                          }`}>
+                        <span
+                          className={`${styles.quantity} ${
+                            item.supply &&
+                            item.cantidadActual <= (item.supply.stockMin || 0)
+                              ? styles.lowStock
+                              : ""
+                          }`}
+                        >
                           {item.cantidadActual}
                           {item.supply && ` / ${item.supply.stockMin}`}
                         </span>
@@ -318,21 +367,31 @@ export default function Inventory() {
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Ubicación:</span>
                         <span className={styles.detailValue}>
-                          {item.ubicacion || 'Sin ubicación'}
+                          {item.ubicacion || "Sin ubicación"}
                         </span>
                       </div>
 
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Estado:</span>
-                        <span className={`${styles.status} ${styles.active}`}>
-                          {item.tool?.estado || item.supply?.estado || 'Activo'}
+                        <span className={`${styles.status} ${
+                          item.fechaEliminacion ? styles.deleted : 
+                          item.tool?.estado === "Disponible" || item.supply?.estado === "Disponible" 
+                            ? styles.active : 
+                            item.tool?.estado === "En Uso" || item.supply?.estado === "Stock Bajo" 
+                              ? styles.warning : 
+                              styles.inactive
+                        }`}>
+                          {item.tool?.estado || item.supply?.estado || "Activo"}
+                          {item.fechaEliminacion && " (Retirado)"}
                         </span>
                       </div>
 
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Actualizado:</span>
                         <span className={styles.detailValue}>
-                          {new Date(item.fechaUltimaActualizacion).toLocaleDateString()}
+                          {new Date(
+                            item.fechaUltimaActualizacion
+                          ).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -343,12 +402,15 @@ export default function Inventory() {
 
             {itemsFiltrados.length === 0 && (
               <div className={styles.emptyState}>
-                {busqueda ? 'No se encontraron items con esa búsqueda' : 'No hay items en el inventario'}
+                {busqueda
+                  ? "No se encontraron items con esa búsqueda"
+                  : showDeleted
+                  ? "No hay items eliminados"
+                  : "No hay items en el inventario"}
               </div>
             )}
           </div>
         )}
-
       </div>
 
       {/* Modales */}
@@ -376,6 +438,16 @@ export default function Inventory() {
         }}
         onSuccess={handleSuccess}
         item={selectedItem}
+      />
+
+      <ToolSoftDeleteModal
+        isOpen={showSoftDeleteModal}
+        onClose={() => {
+          setShowSoftDeleteModal(false);
+          setSelectedItem(null);
+        }}
+        onSuccess={handleSuccess}
+       tool={selectedItem?.tipo === "herramienta" ? (selectedItem as unknown as any) : null}
       />
 
       <ViewInventoryModal

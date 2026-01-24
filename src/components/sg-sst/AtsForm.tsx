@@ -1,12 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { AtsFormData } from '../../interfaces/SgSstInterface';
-import type { Usuario, Rol } from '../../interfaces/UserInterfaces';
-import type { Client, Area, SubArea } from '../../interfaces/ClientInterfaces';
-import { users } from '../../api/users';
-import { sgSstService } from '../../api/sg-sst';
-import { clients } from '../../api/clients';
-import SignaturePad from './SignaturePad';
-import styles from '../../styles/components/sg-sst/AtsForm.module.css';
+// src/components/sg-sst/AtsForm.tsx
+import { useState, useEffect, useMemo } from "react";
+import type { AtsFormData } from "../../interfaces/SgSstInterface";
+import type { Usuario } from "../../interfaces/UserInterfaces";
+import type { Rol } from "../../interfaces/RolesInterfaces";
+import type { Client } from "../../interfaces/ClientInterfaces";
+import type { Order } from "../../interfaces/OrderInterfaces";
+import type { Area } from "../../interfaces/AreaInterfaces";
+import type { SubArea } from "../../interfaces/SubAreaInterfaces";
+import { usersApi } from "../../api/users";
+import { sgSstService } from "../../api/sg-sst";
+import { areas as areasAPI } from "../../api/areas";
+import { subAreas as subAreasAPI } from "../../api/subAreas";
+import SignaturePad from "./SignaturePad";
+import styles from "../../styles/components/sg-sst/AtsForm.module.css";
+import { useAuth } from "../../hooks/useAuth";
+import { rolesApi } from "../../api/roles";
+import { getMyAssignedOrdersRequest } from "../../api/orders";
 
 interface AtsFormProps {
   onSubmit: (data: AtsFormData) => void;
@@ -15,36 +24,47 @@ interface AtsFormProps {
   createdBy: number;
 }
 
-export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFormProps) {
-  const [dateString, setDateString] = useState<string>(new Date().toISOString().split('T')[0]);
+export default function AtsForm({
+  onSubmit,
+  onCancel,
+  userId,
+  createdBy,
+}: AtsFormProps) {
+  const { user } = useAuth();
 
-  const [formData, setFormData] = useState<Omit<AtsFormData, 'date' | 'signatureData' | 'signerType' | 'userName'>>({
-    workerName: '',
-    position: '',
-    area: '',
-    subArea: '',
-    workToPerform: '',
-    location: '',
-    startTime: '',
-    endTime: '',
-    observations: '',
+  const isTechnician =
+    user?.role?.nombreRol?.toLowerCase() === "técnico" ||
+    user?.role?.nombreRol?.toLowerCase() === "tecnico";
+
+  const [dateString, setDateString] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+
+  const [formData, setFormData] = useState<
+    Omit<AtsFormData, "date" | "signatureData" | "signerType" | "userName">
+  >({
+    workerName: "",
+    position: "",
+    area: "",
+    subArea: "",
+    workToPerform: "",
+    location: "",
+    startTime: "",
+    endTime: "",
+    observations: "",
     selectedRisks: {},
     requiredPpe: {},
     userId,
     createdBy,
+    workOrderId: 0,
   });
 
-  const [userIdentification, setUserIdentification] = useState<string>('');
+  const [userIdentification, setUserIdentification] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [availableAreas, setAvailableAreas] = useState<Area[]>([]);
   const [availableSubAreas, setAvailableSubAreas] = useState<SubArea[]>([]);
-  const [clientSearch, setClientSearch] = useState<string>('');
-  const [clientSuggestions, setClientSuggestions] = useState<Client[]>([]);
-  const [showClientSuggestions, setShowClientSuggestions] = useState<boolean>(false);
-  const [clientsList, setClientsList] = useState<Client[]>([]);
-  const [clientSearchLoading, setClientSearchLoading] = useState<boolean>(false);
 
-  const [signatureData, setSignatureData] = useState<string>('');
+  const [signatureData, setSignatureData] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
@@ -54,47 +74,98 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   const riskCategories = {
-    fisicos: ['Ruidos', 'Temperaturas extremas', 'Vibraciones', 'Presiones anormales'],
-    quimicos: ['Gases y vapores', 'Polvos inorgánicos', 'Polvos orgánicos', 'Humos', 'Neblinas'],
-    biomecanicos: ['Posiciones forzadas', 'Sobre esfuerzo', 'Fatiga'],
-    locativos: ['Pisos', 'Techos', 'Iluminación', 'Almacenamiento', 'Muros', 'Orden y limpieza'],
-    mecanicos: ['Herramientas', 'Máquinas', 'Equipos'],
-    electricos: ['Puestas a tierra', 'Instalaciones en mal estado', 'Instalaciones recargadas'],
-    transito: ['Colisiones', 'Obstáculos', 'Desplazamientos', 'Atropellamientos'],
-    biologicos: ['Virus', 'Hongos', 'Bacterias'],
-    psicosociales: ['Excesos de responsabilidad', 'Problemas familiares', 'Trabajo bajo presión', 'Monotonía y rutina', 'Problemas laborales'],
-    naturales: ['Terremotos', 'Volcánicos']
+    fisicos: [
+      "Ruidos",
+      "Temperaturas extremas",
+      "Vibraciones",
+      "Presiones anormales",
+    ],
+    quimicos: [
+      "Gases y vapores",
+      "Polvos inorgánicos",
+      "Polvos orgánicos",
+      "Humos",
+      "Neblinas",
+    ],
+    biomecanicos: ["Posiciones forzadas", "Sobre esfuerzo", "Fatiga"],
+    locativos: [
+      "Pisos",
+      "Techos",
+      "Iluminación",
+      "Almacenamiento",
+      "Muros",
+      "Orden y limpieza",
+    ],
+    mecanicos: ["Herramientas", "Máquinas", "Equipos"],
+    electricos: [
+      "Puestas a tierra",
+      "Instalaciones en mal estado",
+      "Instalaciones recargadas",
+    ],
+    transito: [
+      "Colisiones",
+      "Obstáculos",
+      "Desplazamientos",
+      "Atropellamientos",
+    ],
+    biologicos: ["Virus", "Hongos", "Bacterias"],
+    psicosociales: [
+      "Excesos de responsabilidad",
+      "Problemas familiares",
+      "Trabajo bajo presión",
+      "Monotonía y rutina",
+      "Problemas laborales",
+    ],
+    naturales: ["Terremotos", "Volcánicos"],
   };
 
   const ppeOptions = [
-    'ARNÉS DE SEGURIDAD',
-    'ROPA DE TRABAJO',
-    'PROTECCIÓN RESPIRATORIA',
-    'BOTAS DE SEGURIDAD',
-    'CASCO',
-    'GAFAS',
-    'GUANTES DE PROTECCIÓN',
-    'MASCARILLA'
+    "ARNÉS DE SEGURIDAD",
+    "ROPA DE TRABAJO",
+    "PROTECCIÓN RESPIRATORIA",
+    "BOTAS DE SEGURIDAD",
+    "CASCO",
+    "GAFAS",
+    "GUANTES DE PROTECCIÓN",
+    "MASCARILLA",
   ];
 
   const toolOptions = [
-    'MARTILLO',
-    'DESTORNILLADOR',
-    'LLAVE INGLESA',
-    'ALICATES',
-    'SIERRA',
-    'TALADRO',
-    'LLAVE DE TUBO',
-    'CINTA MÉTRICA',
-    'NIVEL',
-    'ESCALERA',
-    'ANDAMIO',
-    'EQUIPO DE SOLDADURA',
-    'COMPRESOR',
-    'MÁQUINA DE CORTE',
-    'EQUIPO DE ELEVACIÓN'
+    "MARTILLO",
+    "DESTORNILLADOR",
+    "LLAVE INGLESA",
+    "ALICATES",
+    "SIERRA",
+    "TALADRO",
+    "LLAVE DE TUBO",
+    "CINTA MÉTRICA",
+    "NIVEL",
+    "ESCALERA",
+    "ANDAMIO",
+    "EQUIPO DE SOLDADURA",
+    "COMPRESOR",
+    "MÁQUINA DE CORTE",
+    "EQUIPO DE ELEVACIÓN",
   ];
+
+  useEffect(() => {
+    if (!user) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      workerName:
+        prev.workerName || `${user.nombre} ${user.apellido || ""}`.trim(),
+      position: prev.position || user.role?.nombreRol || "Técnico",
+    }));
+
+    setUserIdentification((prev) => prev || user.cedula || "");
+  }, [user]);
 
   const isFormValid = useMemo(() => {
     const requiredFields = [
@@ -106,64 +177,89 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
       formData.location?.trim(),
       formData.startTime,
       formData.endTime,
-      dateString
+      dateString,
+      selectedOrder,
     ];
 
-    const allRequiredFieldsFilled = requiredFields.every(field =>
-      field !== undefined && field !== null && field !== ''
+    const allRequiredFieldsFilled = requiredFields.every(
+      (field) => field !== undefined && field !== null && field !== ""
     );
 
-    const hasSelectedRisks = Object.keys(formData.selectedRisks || {}).length > 0 &&
-      Object.values(formData.selectedRisks).some(risks => Array.isArray(risks) && risks.length > 0);
+    const hasSelectedRisks =
+      Object.keys(formData.selectedRisks || {}).length > 0 &&
+      Object.values(formData.selectedRisks).some(
+        (risks) => Array.isArray(risks) && risks.length > 0
+      );
 
-    const hasSelectedPPE = Object.values(formData.requiredPpe || {}).some(value => value === true);
+    const hasSelectedPPE = Object.values(formData.requiredPpe || {}).some(
+      (value) => value === true
+    );
 
     const hasSignature = !!signatureData;
     const hasAcceptedTerms = privacyAccepted;
 
-    return allRequiredFieldsFilled &&
+    return (
+      allRequiredFieldsFilled &&
       hasSelectedRisks &&
       hasSelectedPPE &&
       hasSignature &&
-      hasAcceptedTerms;
-  }, [formData, dateString, signatureData, privacyAccepted, userIdentification, selectedClient]);
+      hasAcceptedTerms
+    );
+  }, [
+    formData,
+    dateString,
+    signatureData,
+    privacyAccepted,
+    userIdentification,
+    selectedClient,
+    selectedOrder,
+  ]);
 
   const getValidationErrors = () => {
-    const errors = [];
+    const errors: string[] = [];
 
-    if (!formData.workerName?.trim()) errors.push('Nombre del trabajador');
-    if (!userIdentification?.trim()) errors.push('Cédula del trabajador');
-    if (!formData.position?.trim()) errors.push('Cargo');
-    if (!selectedClient) errors.push('Cliente');
-    if (!formData.workToPerform?.trim()) errors.push('Descripción del trabajo');
-    if (!formData.location?.trim()) errors.push('Ubicación');
-    if (!formData.startTime) errors.push('Hora de inicio');
-    if (!formData.endTime) errors.push('Hora de fin');
-    if (!dateString) errors.push('Fecha');
+    if (!selectedOrder) errors.push("Orden de trabajo");
+    if (!formData.workerName?.trim()) errors.push("Nombre del trabajador");
+    if (!userIdentification?.trim()) errors.push("Cédula del trabajador");
+    if (!formData.position?.trim()) errors.push("Cargo");
+    if (!selectedClient) errors.push("Cliente");
+    if (!formData.workToPerform?.trim()) errors.push("Descripción del trabajo");
+    if (!formData.location?.trim()) errors.push("Ubicación");
+    if (!formData.startTime) errors.push("Hora de inicio");
+    if (!formData.endTime) errors.push("Hora de fin");
+    if (!dateString) errors.push("Fecha");
 
-    if (Object.keys(formData.selectedRisks || {}).length === 0 ||
-      !Object.values(formData.selectedRisks).some(risks => Array.isArray(risks) && risks.length > 0)) {
-      errors.push('Al menos un riesgo seleccionado');
+    if (
+      Object.keys(formData.selectedRisks || {}).length === 0 ||
+      !Object.values(formData.selectedRisks).some(
+        (risks) => Array.isArray(risks) && risks.length > 0
+      )
+    ) {
+      errors.push("Al menos un riesgo seleccionado");
     }
 
-    if (!Object.values(formData.requiredPpe || {}).some(value => value === true)) {
-      errors.push('Al menos un EPP o herramienta seleccionado');
+    if (
+      !Object.values(formData.requiredPpe || {}).some((value) => value === true)
+    ) {
+      errors.push("Al menos un EPP o herramienta seleccionado");
     }
 
-    if (!signatureData) errors.push('Firma');
-    if (!privacyAccepted) errors.push('Aceptación de términos de seguridad');
+    if (!signatureData) errors.push("Firma");
+    if (!privacyAccepted) errors.push("Aceptación de términos de seguridad");
 
     return errors;
   };
 
   useEffect(() => {
     loadUsersAndRoles();
-    loadClients();
+    loadOrders();
   }, []);
 
   useEffect(() => {
     if (selectedClient) {
-      loadAreasByClient(selectedClient.idCliente);
+      loadAreasByClient(
+        (selectedClient as any).id_cliente || selectedClient.idCliente
+      );
     } else {
       setAvailableAreas([]);
       setAvailableSubAreas([]);
@@ -174,44 +270,51 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
     try {
       setIsLoading(true);
       const [usuariosData, rolesData] = await Promise.all([
-        users.getAllUsers(),
-        users.getAllRoles()
+        usersApi.getAllUsers(),
+        rolesApi.getAllRoles(),
       ]);
 
       setUsuarios(usuariosData);
       setRoles(rolesData);
     } catch (error) {
-      console.error('Error cargando datos:', error);
-      alert('Error al cargar la lista de usuarios y roles');
+      console.error("Error cargando datos:", error);
+      alert("Error al cargar la lista de usuarios y roles");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadClients = async () => {
+  const loadOrders = async () => {
     try {
-      const clientsData = await clients.getAllClients();
-      setClientsList(clientsData);
-    } catch (error) {
-      console.error('Error cargando clientes:', error);
-      alert('Error al cargar la lista de clientes');
+      setOrdersLoading(true);
+      setOrdersError(null);
+      const data = await getMyAssignedOrdersRequest();
+      setOrders(data);
+    } catch (error: any) {
+      console.error("Error cargando órdenes del técnico:", error);
+      setOrdersError(
+        error.response?.data?.message ||
+          "Error al cargar las órdenes del técnico"
+      );
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
   const loadAreasByClient = async (clientId: number) => {
     try {
       setIsLoading(true);
-      const areasData = await clients.getAllAreas(clientId);
+      const areasData = await areasAPI.getAllAreas(clientId);
       setAvailableAreas(areasData);
       setAvailableSubAreas([]);
-      
-      setFormData(prev => ({
+
+      setFormData((prev) => ({
         ...prev,
-        area: '',
-        subArea: ''
+        area: "",
+        subArea: "",
       }));
     } catch (error) {
-      console.error('Error cargando áreas:', error);
+      console.error("Error cargando áreas:", error);
     } finally {
       setIsLoading(false);
     }
@@ -219,56 +322,96 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
 
   const loadSubAreasByArea = async (areaId: number) => {
     try {
-      const subAreasData = await clients.getAllSubAreas(areaId);
+      const subAreasData = await subAreasAPI.getAllSubAreas(areaId);
       setAvailableSubAreas(subAreasData);
-      
-      setFormData(prev => ({
+
+      setFormData((prev) => ({
         ...prev,
-        subArea: ''
+        subArea: "",
       }));
     } catch (error) {
-      console.error('Error cargando subáreas:', error);
+      console.error("Error cargando subáreas:", error);
     }
   };
 
-  const handleClientSearch = (value: string) => {
-    setClientSearch(value);
-    
-    if (value.length > 1) {
-      setClientSearchLoading(true);
-      const filtered = clientsList.filter(client =>
-        client.nombre.toLowerCase().includes(value.toLowerCase()) ||
-        client.nit.toLowerCase().includes(value.toLowerCase())
-      );
-      setClientSuggestions(filtered.slice(0, 8));
-      setShowClientSuggestions(true);
-      setClientSearchLoading(false);
+  const handleSelectOrder = (orderId: string) => {
+    const id = parseInt(orderId, 10);
+    const order = orders.find((o) => o.orden_id === id) || null;
+    setSelectedOrder(order);
+
+    if (order?.cliente_empresa) {
+      setSelectedClient(order.cliente_empresa as any);
+      loadAreasByClient(order.cliente_empresa.id_cliente);
     } else {
-      setClientSuggestions([]);
-      setShowClientSuggestions(false);
+      setSelectedClient(null);
+      setAvailableAreas([]);
+      setAvailableSubAreas([]);
     }
-  };
 
-  const handleSelectClient = (client: Client) => {
-    setSelectedClient(client);
-    setClientSearch(client.nombre);
-    setShowClientSuggestions(false);
+    let locationFromOrder = formData.location;
+    if (order?.cliente_empresa) {
+      const empresa = order.cliente_empresa as any;
+      locationFromOrder =
+        empresa.direccion ||
+        order.cliente_empresa.localizacion ||
+        locationFromOrder;
+    }
+
+    let newDateString = dateString;
+    let startTimeFromOrder = formData.startTime;
+    let endTimeFromOrder = formData.endTime;
+
+    if (order?.fecha_inicio) {
+      const [datePart, timePart] = order.fecha_inicio.split("T");
+      newDateString = datePart;
+      if (timePart) {
+        startTimeFromOrder = timePart.slice(0, 5);
+      }
+    }
+
+    if (order?.fecha_finalizacion) {
+      const [, timePart] = order.fecha_finalizacion.split("T");
+      if (timePart) {
+        endTimeFromOrder = timePart.slice(0, 5);
+      }
+    }
+
+    let workToPerformFromOrder = formData.workToPerform;
+    if (!workToPerformFromOrder && order) {
+      workToPerformFromOrder =
+        order.comentarios || order.servicio.nombre_servicio || "";
+    }
+
+    setDateString(newDateString);
+
+    setFormData((prev) => ({
+      ...prev,
+      workOrderId: order ? order.orden_id : 0,
+      location: locationFromOrder || prev.location,
+      startTime: startTimeFromOrder || prev.startTime,
+      endTime: endTimeFromOrder || prev.endTime,
+      workToPerform: workToPerformFromOrder || prev.workToPerform,
+    }));
   };
 
   const handleWorkerNameChange = (value: string) => {
-    setFormData(prev => ({ ...prev, workerName: value }));
+    if (isTechnician) return;
+
+    setFormData((prev) => ({ ...prev, workerName: value }));
 
     if (value.length > 1) {
-      const filtered = usuarios.filter(usuario =>
-        `${usuario.nombre} ${usuario.apellido}`.toLowerCase().includes(value.toLowerCase())
+      const filtered = usuarios.filter((usuario) =>
+        `${usuario.nombre} ${usuario.apellido}`
+          .toLowerCase()
+          .includes(value.toLowerCase())
       );
       setSuggestions(filtered.slice(0, 5));
       setShowSuggestions(true);
-      
+
       if (filtered.length === 1) {
         const usuario = filtered[0];
         if (usuario.cedula) {
-          setUserIdentification(usuario.cedula || '');
+          setUserIdentification(usuario.cedula || "");
         }
       }
     } else {
@@ -277,67 +420,77 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
   };
 
   const handleSelectUser = (usuario: Usuario) => {
+    if (isTechnician) return;
+
     const nombreCompleto = `${usuario.nombre} ${usuario.apellido}`;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       workerName: nombreCompleto,
-      position: usuario.role?.nombreRol || ''
+      position: usuario.role?.nombreRol || "",
     }));
-    
+
     if (usuario.cedula) {
-      setUserIdentification(usuario.cedula || '');
+      setUserIdentification(usuario.cedula || "");
     }
-    
+
     setShowSuggestions(false);
   };
 
   const handleAreaChange = (areaId: string) => {
-    const area = availableAreas.find(a => a.idArea.toString() === areaId);
-    setFormData(prev => ({
+    const area = availableAreas.find((a) => a.idArea.toString() === areaId);
+    setFormData((prev) => ({
       ...prev,
-      area: area?.nombreArea || '',
-      subArea: ''
+      area: area?.nombreArea || "",
+      subArea: "",
     }));
-    
+
     if (areaId) {
-      loadSubAreasByArea(parseInt(areaId));
+      loadSubAreasByArea(parseInt(areaId, 10));
     } else {
       setAvailableSubAreas([]);
     }
   };
 
   const handleSubAreaChange = (subAreaId: string) => {
-    const subArea = availableSubAreas.find(sa => sa.idSubArea.toString() === subAreaId);
-    setFormData(prev => ({
+    const subArea = availableSubAreas.find(
+      (sa) => sa.idSubArea.toString() === subAreaId
+    );
+    setFormData((prev) => ({
       ...prev,
-      subArea: subArea?.nombreSubArea || ''
+      subArea: subArea?.nombreSubArea || "",
     }));
   };
 
   const handleRiskToggle = (category: string, risk: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       selectedRisks: {
         ...prev.selectedRisks,
         [category]: prev.selectedRisks?.[category]?.includes(risk)
           ? prev.selectedRisks[category].filter((r: string) => r !== risk)
-          : [...(prev.selectedRisks?.[category] || []), risk]
-      }
+          : [...(prev.selectedRisks?.[category] || []), risk],
+      },
     }));
   };
 
   const handlePpeToolToggle = (item: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       requiredPpe: {
         ...prev.requiredPpe,
-        [item]: !prev.requiredPpe?.[item]
-      }
+        [item]: !prev.requiredPpe?.[item],
+      },
     }));
   };
 
-  const handleInputChange = (field: keyof Omit<AtsFormData, 'date' | 'signatureData' | 'signerType' | 'userName'>, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (
+    field: keyof Omit<
+      AtsFormData,
+      "date" | "signatureData" | "signerType" | "userName"
+    >,
+    value: string
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleDateChange = (value: string) => {
@@ -349,29 +502,48 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
   };
 
   const handleSignatureClear = () => {
-    setSignatureData('');
+    setSignatureData("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!selectedOrder) {
+      alert("Debe seleccionar una orden de trabajo.");
+      return;
+    }
+
     if (!isFormValid) {
       const errors = getValidationErrors();
-      alert(`Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join('\n• ')}`);
+      alert(
+        `Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join(
+          "\n• "
+        )}`
+      );
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const dateValue = dateString || new Date().toISOString().split('T')[0];
+      const dateValue = dateString || new Date().toISOString().split("T")[0];
 
-      const atsData = {
+      const clientEmpresa = selectedOrder.cliente_empresa;
+      const clientPersona = selectedOrder.cliente;
+
+      const clientId = clientEmpresa?.id_cliente;
+      const clientName =
+        clientEmpresa?.nombre ||
+        `${clientPersona.nombre} ${clientPersona.apellido || ""}`.trim();
+      const clientNit = clientEmpresa?.nit;
+
+      const atsData: AtsFormData = {
         workerName: formData.workerName,
         workerIdentification: userIdentification,
         position: formData.position,
-        clientId: selectedClient?.idCliente,
-        clientName: selectedClient?.nombre,
+        clientId,
+        clientName,
+        clientNit,
         area: formData.area,
         subArea: formData.subArea,
         workToPerform: formData.workToPerform,
@@ -384,52 +556,29 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
         requiredPpe: formData.requiredPpe || {},
         userId: formData.userId,
         createdBy: formData.createdBy,
+        workOrderId: selectedOrder.orden_id,
+        signatureData,
       };
 
-      const atsResult = await sgSstService.createAts(atsData as any);
-
-      const formId = atsResult.data.form.id;
-
-      const signData = {
-        signatureData: signatureData,
-        signerType: 'TECHNICIAN' as const,
-        userId: formData.userId,
-        userName: formData.workerName
-      };
-
-      await sgSstService.signForm(formId, signData);
+      await sgSstService.createAts(atsData as any);
 
       if (onSubmit) {
-        const submitData = {
-          ...formData,
-          workerIdentification: userIdentification,
-          clientId: selectedClient?.idCliente,
-          clientName: selectedClient?.nombre,
-          subArea: formData.subArea,
-          date: dateValue,
-          selectedRisks: formData.selectedRisks || {},
-          requiredPpe: formData.requiredPpe || {},
-          signatureData: signatureData,
-          signerType: 'TECHNICIAN' as const,
-          userName: formData.workerName
-        };
-        onSubmit(submitData as AtsFormData);
+        onSubmit(atsData);
       }
 
-      alert('ATS creado y firmado exitosamente');
+      alert("ATS creado y firmado exitosamente");
       onCancel();
-
     } catch (error: any) {
-      console.error('❌ ERROR en el proceso:', error);
-      console.error('❌ RESPONSE DATA:', error.response?.data);
+      console.error("❌ ERROR en el proceso:", error);
+      console.error("❌ RESPONSE DATA:", error.response?.data);
 
       if (error.response?.data?.message) {
         const errorMessages = Array.isArray(error.response.data.message)
-          ? error.response.data.message.join(', ')
+          ? error.response.data.message.join(", ")
           : error.response.data.message;
         alert(`Error: ${errorMessages}`);
       } else {
-        alert('Error al crear el ATS');
+        alert("Error al crear el ATS");
       }
     } finally {
       setIsSubmitting(false);
@@ -439,18 +588,29 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
   const getSectionStatus = (sectionNumber: number) => {
     switch (sectionNumber) {
       case 1:
-        return formData.workerName?.trim() && userIdentification?.trim() && formData.position?.trim();
+        return (
+          formData.workerName?.trim() &&
+          userIdentification?.trim() &&
+          formData.position?.trim()
+        );
       case 2:
-        return selectedClient;
+        return selectedClient && selectedOrder;
       case 3:
-        return dateString && formData.startTime && formData.endTime &&
-          formData.location?.trim() && formData.workToPerform?.trim();
+        return (
+          dateString &&
+          formData.startTime &&
+          formData.endTime &&
+          formData.location?.trim() &&
+          formData.workToPerform?.trim()
+        );
       case 4:
-        return Object.values(formData.selectedRisks || {}).some(risks =>
-          Array.isArray(risks) && risks.length > 0
+        return Object.values(formData.selectedRisks || {}).some(
+          (risks) => Array.isArray(risks) && risks.length > 0
         );
       case 5:
-        return Object.values(formData.requiredPpe || {}).some(value => value === true);
+        return Object.values(formData.requiredPpe || {}).some(
+          (value) => value === true
+        );
       case 6:
         return !!signatureData;
       case 7:
@@ -458,6 +618,29 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
       default:
         return true;
     }
+  };
+
+  const getClientContactDisplay = () => {
+    const empresaContact = (selectedClient as any)?.contacto as
+      | string
+      | undefined;
+
+    if (empresaContact && empresaContact.trim() !== "") {
+      return empresaContact;
+    }
+
+    if (selectedOrder) {
+      const { cliente } = selectedOrder;
+      return `${cliente.nombre} ${cliente.apellido || ""}`.trim();
+    }
+
+    return "N/D";
+  };
+
+  const getClientPhoneDisplay = () => {
+    if (selectedClient?.telefono) return selectedClient.telefono;
+    if (selectedOrder?.cliente.telefono) return selectedOrder.cliente.telefono;
+    return "N/D";
   };
 
   return (
@@ -468,44 +651,63 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
         </button>
         <h1 className={styles.title}>Análisis de Trabajo Seguro (ATS)</h1>
 
-        <div className={`${styles.validationIndicator} ${isFormValid ? styles.valid : styles.invalid}`}>
-          {isFormValid ? '✓ Formulario completo' : '✗ Formulario incompleto'}
+        <div
+          className={`${styles.validationIndicator} ${
+            isFormValid ? styles.valid : styles.invalid
+          }`}
+        >
+          {isFormValid ? "✓ Formulario completo" : "✗ Formulario incompleto"}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
         {/* SECCIÓN 1: INFORMACIÓN DEL TRABAJADOR */}
-        <div className={`${styles.section} ${!getSectionStatus(1) ? styles.sectionIncomplete : ''}`}>
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(1) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>1. Información del Trabajador</h2>
-            {getSectionStatus(1) && <span className={styles.sectionStatus}>✓</span>}
+            <h2 className={styles.sectionTitle}>
+              1. Información del Trabajador
+            </h2>
+            {getSectionStatus(1) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
           </div>
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Nombre del Trabajador *
-                {!formData.workerName?.trim() && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!formData.workerName?.trim() && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <div className={styles.autocompleteContainer}>
                 <input
                   type="text"
-                  className={`${styles.input} ${!formData.workerName?.trim() ? styles.inputError : ''}`}
+                  className={`${styles.input} ${
+                    !formData.workerName?.trim() ? styles.inputError : ""
+                  }`}
                   value={formData.workerName}
                   onChange={(e) => handleWorkerNameChange(e.target.value)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onBlur={() =>
+                    setTimeout(() => setShowSuggestions(false), 200)
+                  }
                   onFocus={() => {
-                    if (formData.workerName.length > 1) {
+                    if (!isTechnician && formData.workerName.length > 1) {
                       setShowSuggestions(true);
                     }
                   }}
                   required
                   placeholder="Escriba para buscar..."
+                  disabled={isTechnician}
                 />
                 {isLoading && (
                   <div className={styles.loadingIndicator}>Cargando...</div>
                 )}
-                {showSuggestions && suggestions.length > 0 && (
+                {!isTechnician && showSuggestions && suggestions.length > 0 && (
                   <div className={styles.suggestionsList}>
                     {suggestions.map((usuario) => (
                       <div
@@ -520,7 +722,7 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
                           {usuario.role?.nombreRol}
                         </div>
                         <div className={styles.suggestionId}>
-                          Cédula: {usuario.cedula || 'N/A'}
+                          Cédula: {usuario.cedula || "N/A"}
                         </div>
                       </div>
                     ))}
@@ -532,28 +734,38 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Cédula del Trabajador *
-                {!userIdentification?.trim() && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!userIdentification?.trim() && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <input
                 type="text"
-                className={`${styles.input} ${!userIdentification?.trim() ? styles.inputError : ''}`}
+                className={`${styles.input} ${
+                  !userIdentification?.trim() ? styles.inputError : ""
+                }`}
                 value={userIdentification}
                 onChange={(e) => setUserIdentification(e.target.value)}
                 placeholder="Número de cédula"
                 required
+                disabled={isTechnician}
               />
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Cargo *
-                {!formData.position?.trim() && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!formData.position?.trim() && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <select
-                className={`${styles.input} ${!formData.position?.trim() ? styles.inputError : ''}`}
+                className={`${styles.input} ${
+                  !formData.position?.trim() ? styles.inputError : ""
+                }`}
                 value={formData.position}
-                onChange={(e) => handleInputChange('position', e.target.value)}
+                onChange={(e) => handleInputChange("position", e.target.value)}
                 required
+                disabled={isTechnician}
               >
                 <option value="">Seleccione un cargo</option>
                 {roles.map((rol) => (
@@ -566,153 +778,151 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
           </div>
         </div>
 
-        {/* SECCIÓN 2: INFORMACIÓN DEL CLIENTE */}
-        <div className={`${styles.section} ${!getSectionStatus(2) ? styles.sectionIncomplete : ''}`}>
+        {/* SECCIÓN 2: ORDEN Y CLIENTE */}
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(2) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>2. Información del Cliente</h2>
-            {getSectionStatus(2) && <span className={styles.sectionStatus}>✓</span>}
+            <h2 className={styles.sectionTitle}>
+              2. Orden de Trabajo e Información del Cliente
+            </h2>
+            {getSectionStatus(2) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
           </div>
 
           <div className={styles.formGrid}>
+            {/* Selección de Orden */}
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Cliente *
-                {!selectedClient && <span className={styles.requiredIndicator}> (Requerido)</span>}
-              </label>
-              <div className={styles.clientAutocompleteContainer}>
-                <div className={styles.clientSearchWrapper}>
-                  <input
-                    type="text"
-                    className={`${styles.input} ${!selectedClient ? styles.inputError : ''}`}
-                    value={clientSearch}
-                    onChange={(e) => handleClientSearch(e.target.value)}
-                    onBlur={() => setTimeout(() => setShowClientSuggestions(false), 200)}
-                    onFocus={() => {
-                      if (clientSearch.length > 1) {
-                        setShowClientSuggestions(true);
-                      }
-                    }}
-                    required
-                    placeholder="Buscar cliente por nombre o NIT..."
-                  />
-                  {clientSearchLoading && (
-                    <div className={styles.clientLoadingIndicator}>Buscando...</div>
-                  )}
-                  {!clientSearchLoading && clientSearch && (
-                    <button
-                      type="button"
-                      className={styles.clearClientButton}
-                      onClick={() => {
-                        setClientSearch('');
-                        setSelectedClient(null);
-                        setAvailableAreas([]);
-                        setAvailableSubAreas([]);
-                        setFormData(prev => ({ ...prev, area: '', subArea: '' }));
-                      }}
-                      title="Limpiar búsqueda"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-                
-                {showClientSuggestions && clientSuggestions.length > 0 && (
-                  <div className={styles.clientSuggestionsList}>
-                    <div className={styles.clientSuggestionsHeader}>
-                      <span>Clientes encontrados:</span>
-                      <small>{clientSuggestions.length} resultados</small>
-                    </div>
-                    {clientSuggestions.map((client) => (
-                      <div
-                        key={client.idCliente}
-                        className={styles.clientSuggestionItem}
-                        onClick={() => handleSelectClient(client)}
-                      >
-                        <div className={styles.clientSuggestionName}>
-                          <strong>{client.nombre}</strong>
-                        </div>
-                        <div className={styles.clientSuggestionInfo}>
-                          <span className={styles.clientNit}>NIT: {client.nit}</span>
-                          <span className={styles.clientContact}>Contacto: {client.contacto}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                Orden de trabajo *
+                {!selectedOrder && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
                 )}
-              </div>
-              
-              {selectedClient && (
+              </label>
+              {ordersLoading ? (
+                <p>Cargando órdenes...</p>
+              ) : ordersError ? (
+                <p className={styles.errorText}>{ordersError}</p>
+              ) : (
+                <select
+                  className={`${styles.input} ${
+                    !selectedOrder ? styles.inputError : ""
+                  }`}
+                  value={selectedOrder?.orden_id || ""}
+                  onChange={(e) => handleSelectOrder(e.target.value)}
+                  required
+                >
+                  <option value="">Seleccione una orden...</option>
+                  {orders.map((o) => (
+                    <option key={o.orden_id} value={o.orden_id}>
+                      #{o.orden_id} -{" "}
+                      {o.cliente_empresa?.nombre ||
+                        `${o.cliente.nombre} ${
+                          o.cliente.apellido || ""
+                        }`.trim()}{" "}
+                      - {o.servicio.nombre_servicio}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Info de cliente basada en la orden seleccionada */}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Cliente seleccionado</label>
+              {selectedClient ? (
                 <div className={styles.selectedClientCard}>
                   <div className={styles.clientCardHeader}>
-                    <h3 className={styles.clientCardTitle}>{selectedClient.nombre}</h3>
-                    <button
-                      type="button"
-                      className={styles.changeClientButton}
-                      onClick={() => {
-                        setSelectedClient(null);
-                        setClientSearch('');
-                      }}
-                    >
-                      Cambiar
-                    </button>
+                    <h3 className={styles.clientCardTitle}>
+                      {selectedClient.nombre}
+                    </h3>
                   </div>
                   <div className={styles.clientCardDetails}>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>NIT:</span>
-                      <span className={styles.detailValue}>{selectedClient.nit}</span>
+                      <span className={styles.detailValue}>
+                        {selectedClient.nit}
+                      </span>
                     </div>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>Contacto:</span>
-                      <span className={styles.detailValue}>{selectedClient.contacto}</span>
+                      <span className={styles.detailValue}>
+                        {getClientContactDisplay()}
+                      </span>
                     </div>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>Email:</span>
-                      <span className={styles.detailValue}>{selectedClient.email}</span>
+                      <span className={styles.detailValue}>
+                        {selectedClient.email}
+                      </span>
                     </div>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>Teléfono:</span>
-                      <span className={styles.detailValue}>{selectedClient.telefono}</span>
+                      <span className={styles.detailValue}>
+                        {getClientPhoneDisplay()}
+                      </span>
                     </div>
                   </div>
                 </div>
+              ) : (
+                <p className={styles.infoText}>
+                  Seleccione una orden de trabajo para ver la información del
+                  cliente.
+                </p>
               )}
             </div>
 
+            {/* Área / Sub-área */}
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Área <span className={styles.optionalIndicator}> (Opcional)</span>
+                Área{" "}
+                <span className={styles.optionalIndicator}> (Opcional)</span>
               </label>
               <select
                 className={styles.input}
-                value={availableAreas.find(a => a.nombreArea === formData.area)?.idArea || ''}
+                value={
+                  availableAreas.find((a) => a.nombreArea === formData.area)
+                    ?.idArea || ""
+                }
                 onChange={(e) => handleAreaChange(e.target.value)}
                 disabled={!selectedClient || availableAreas.length === 0}
               >
-                <option value="">{selectedClient ? 'Seleccione un área (opcional)' : 'Seleccione un cliente primero'}</option>
+                <option value="">
+                  {selectedClient
+                    ? "Seleccione un área (opcional)"
+                    : "Seleccione una orden primero"}
+                </option>
                 {availableAreas.map((area) => (
                   <option key={area.idArea} value={area.idArea}>
                     {area.nombreArea}
                   </option>
                 ))}
               </select>
-              {selectedClient && availableAreas.length === 0 && !isLoading && (
-                <div className={styles.clientInfoMessage}>
-                  Este cliente no tiene áreas registradas
-                </div>
-              )}
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Sub-Área <span className={styles.optionalIndicator}> (Opcional)</span>
+                Sub-Área{" "}
+                <span className={styles.optionalIndicator}> (Opcional)</span>
               </label>
               <select
                 className={styles.input}
-                value={availableSubAreas.find(sa => sa.nombreSubArea === formData.subArea)?.idSubArea || ''}
+                value={
+                  availableSubAreas.find(
+                    (sa) => sa.nombreSubArea === formData.subArea
+                  )?.idSubArea || ""
+                }
                 onChange={(e) => handleSubAreaChange(e.target.value)}
                 disabled={!formData.area || availableSubAreas.length === 0}
               >
-                <option value="">{formData.area ? 'Seleccione una sub-área (opcional)' : 'Seleccione un área primero'}</option>
+                <option value="">
+                  {formData.area
+                    ? "Seleccione una sub-área (opcional)"
+                    : "Seleccione un área primero"}
+                </option>
                 {availableSubAreas.map((subArea) => (
                   <option key={subArea.idSubArea} value={subArea.idSubArea}>
                     {subArea.nombreSubArea}
@@ -723,23 +933,32 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
           </div>
         </div>
 
-        {/* RESTANTE DEL FORMULARIO SE MANTIENE IGUAL */}
         {/* SECCIÓN 3: INFORMACIÓN DEL TRABAJO */}
-        <div className={`${styles.section} ${!getSectionStatus(3) ? styles.sectionIncomplete : ''}`}>
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(3) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>3. Información del Trabajo</h2>
-            {getSectionStatus(3) && <span className={styles.sectionStatus}>✓</span>}
+            {getSectionStatus(3) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
           </div>
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Fecha *
-                {!dateString && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!dateString && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <input
                 type="date"
-                className={`${styles.input} ${!dateString ? styles.inputError : ''}`}
+                className={`${styles.input} ${
+                  !dateString ? styles.inputError : ""
+                }`}
                 value={dateString}
                 onChange={(e) => handleDateChange(e.target.value)}
                 required
@@ -749,13 +968,17 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Hora de Inicio *
-                {!formData.startTime && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!formData.startTime && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <input
                 type="time"
-                className={`${styles.input} ${!formData.startTime ? styles.inputError : ''}`}
+                className={`${styles.input} ${
+                  !formData.startTime ? styles.inputError : ""
+                }`}
                 value={formData.startTime}
-                onChange={(e) => handleInputChange('startTime', e.target.value)}
+                onChange={(e) => handleInputChange("startTime", e.target.value)}
                 required
               />
             </div>
@@ -763,13 +986,17 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Hora de Fin *
-                {!formData.endTime && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!formData.endTime && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <input
                 type="time"
-                className={`${styles.input} ${!formData.endTime ? styles.inputError : ''}`}
+                className={`${styles.input} ${
+                  !formData.endTime ? styles.inputError : ""
+                }`}
                 value={formData.endTime}
-                onChange={(e) => handleInputChange('endTime', e.target.value)}
+                onChange={(e) => handleInputChange("endTime", e.target.value)}
                 required
               />
             </div>
@@ -777,13 +1004,17 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Ubicación *
-                {!formData.location?.trim() && <span className={styles.requiredIndicator}> (Requerido)</span>}
+                {!formData.location?.trim() && (
+                  <span className={styles.requiredIndicator}> (Requerido)</span>
+                )}
               </label>
               <input
                 type="text"
-                className={`${styles.input} ${!formData.location?.trim() ? styles.inputError : ''}`}
+                className={`${styles.input} ${
+                  !formData.location?.trim() ? styles.inputError : ""
+                }`}
                 value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
+                onChange={(e) => handleInputChange("location", e.target.value)}
                 placeholder="Ej: Planta 1, Oficina 204, etc."
                 required
               />
@@ -793,12 +1024,18 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
           <div className={styles.formGroup}>
             <label className={styles.label}>
               Descripción del Trabajo *
-              {!formData.workToPerform?.trim() && <span className={styles.requiredIndicator}> (Requerido)</span>}
+              {!formData.workToPerform?.trim() && (
+                <span className={styles.requiredIndicator}> (Requerido)</span>
+              )}
             </label>
             <textarea
-              className={`${styles.textarea} ${!formData.workToPerform?.trim() ? styles.textareaError : ''}`}
+              className={`${styles.textarea} ${
+                !formData.workToPerform?.trim() ? styles.textareaError : ""
+              }`}
               value={formData.workToPerform}
-              onChange={(e) => handleInputChange('workToPerform', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("workToPerform", e.target.value)
+              }
               rows={3}
               required
               placeholder="Describa detalladamente el trabajo a realizar..."
@@ -807,13 +1044,28 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
         </div>
 
         {/* SECCIÓN 4: IDENTIFICACIÓN DE RIESGOS */}
-        <div className={`${styles.section} ${!getSectionStatus(4) ? styles.sectionIncomplete : ''}`}>
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(4) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>4. Identificación de Riesgos / Peligros</h2>
-            {getSectionStatus(4) && <span className={styles.sectionStatus}>✓</span>}
-            {!getSectionStatus(4) && <span className={styles.requiredIndicator}> (Seleccione al menos uno)</span>}
+            <h2 className={styles.sectionTitle}>
+              4. Identificación de Riesgos / Peligros
+            </h2>
+            {getSectionStatus(4) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
+            {!getSectionStatus(4) && (
+              <span className={styles.requiredIndicator}>
+                {" "}
+                (Seleccione al menos uno)
+              </span>
+            )}
           </div>
-          <p className={styles.sectionSubtitle}>Seleccione los riesgos a los que se encuentra expuesto:</p>
+          <p className={styles.sectionSubtitle}>
+            Seleccione los riesgos a los que se encuentra expuesto:
+          </p>
 
           <div className={styles.riskCategories}>
             {Object.entries(riskCategories).map(([category, risks]) => (
@@ -826,7 +1078,10 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
                     <label key={risk} className={styles.riskCheckbox}>
                       <input
                         type="checkbox"
-                        checked={formData.selectedRisks?.[category]?.includes(risk) || false}
+                        checked={
+                          formData.selectedRisks?.[category]?.includes(risk) ||
+                          false
+                        }
                         onChange={() => handleRiskToggle(category, risk)}
                       />
                       <span className={styles.checkboxLabel}>{risk}</span>
@@ -839,16 +1094,30 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
         </div>
 
         {/* SECCIÓN 5: EPP Y HERRAMIENTAS REQUERIDAS */}
-        <div className={`${styles.section} ${!getSectionStatus(5) ? styles.sectionIncomplete : ''}`}>
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(5) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>5. Equipo y Herramientas Requeridas</h2>
-            {getSectionStatus(5) && <span className={styles.sectionStatus}>✓</span>}
-            {!getSectionStatus(5) && <span className={styles.requiredIndicator}> (Seleccione al menos uno)</span>}
+            <h2 className={styles.sectionTitle}>
+              5. Equipo y Herramientas Requeridas
+            </h2>
+            {getSectionStatus(5) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
+            {!getSectionStatus(5) && (
+              <span className={styles.requiredIndicator}>
+                {" "}
+                (Seleccione al menos uno)
+              </span>
+            )}
           </div>
 
-          {/* Subsección: Equipo de Protección Personal */}
           <div className={styles.subsection}>
-            <h3 className={styles.subsectionTitle}>Equipo de Protección Personal (EPP)</h3>
+            <h3 className={styles.subsectionTitle}>
+              Equipo de Protección Personal (EPP)
+            </h3>
             <div className={styles.ppeGrid}>
               {ppeOptions.map((ppe) => (
                 <label key={ppe} className={styles.ppeCheckbox}>
@@ -863,7 +1132,6 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
             </div>
           </div>
 
-          {/* Subsección: Herramientas */}
           <div className={styles.subsection}>
             <h3 className={styles.subsectionTitle}>Herramientas</h3>
             <div className={styles.toolsGrid}>
@@ -880,19 +1148,26 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
             </div>
           </div>
 
-          {/* Campo para otras herramientas */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>Otras herramientas o equipos (opcional)</label>
+            <label className={styles.label}>
+              Otras herramientas o equipos (opcional)
+            </label>
             <input
               type="text"
               className={styles.input}
               placeholder="Escriba herramientas adicionales separadas por coma"
               onChange={(e) => {
-                const tools = e.target.value.split(',').map(t => t.trim()).filter(t => t);
-                const newTools = tools.reduce((acc, tool) => ({ ...acc, [tool]: true }), {});
-                setFormData(prev => ({
+                const tools = e.target.value
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter((t) => t);
+                const newTools = tools.reduce(
+                  (acc, tool) => ({ ...acc, [tool]: true }),
+                  {}
+                );
+                setFormData((prev) => ({
                   ...prev,
-                  requiredPpe: { ...prev.requiredPpe, ...newTools }
+                  requiredPpe: { ...prev.requiredPpe, ...newTools },
                 }));
               }}
             />
@@ -902,27 +1177,38 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
         {/* SECCIÓN 6: OBSERVACIONES */}
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>6. Observaciones Adicionales</h2>
+            <h2 className={styles.sectionTitle}>
+              6. Observaciones Adicionales
+            </h2>
             <span className={styles.optionalIndicator}> (Opcional)</span>
           </div>
           <textarea
             className={styles.textarea}
             value={formData.observations}
-            onChange={(e) => handleInputChange('observations', e.target.value)}
+            onChange={(e) => handleInputChange("observations", e.target.value)}
             rows={4}
             placeholder="Observaciones adicionales sobre el trabajo, condiciones especiales, recomendaciones, etc..."
           />
         </div>
 
         {/* SECCIÓN 7: FIRMA */}
-        <div className={`${styles.section} ${!getSectionStatus(6) ? styles.sectionIncomplete : ''}`}>
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(6) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>7. Firma del Trabajador</h2>
-            {getSectionStatus(6) && <span className={styles.sectionStatus}>✓</span>}
-            {!getSectionStatus(6) && <span className={styles.requiredIndicator}> (Requerida)</span>}
+            {getSectionStatus(6) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
+            {!getSectionStatus(6) && (
+              <span className={styles.requiredIndicator}> (Requerida)</span>
+            )}
           </div>
           <p className={styles.sectionSubtitle}>
-            {formData.workerName || 'Trabajador'}, firme en el área inferior para confirmar el análisis de seguridad
+            {formData.workerName || "Trabajador"}, firme en el área inferior
+            para confirmar el análisis de seguridad
           </p>
 
           <SignaturePad
@@ -943,20 +1229,33 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
         </div>
 
         {/* SECCIÓN 8: TÉRMINOS Y CONDICIONES */}
-        <div className={`${styles.section} ${!getSectionStatus(7) ? styles.sectionIncomplete : ''}`}>
+        <div
+          className={`${styles.section} ${
+            !getSectionStatus(7) ? styles.sectionIncomplete : ""
+          }`}
+        >
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>8. Términos y Condiciones</h2>
-            {getSectionStatus(7) && <span className={styles.sectionStatus}>✓</span>}
-            {!getSectionStatus(7) && <span className={styles.requiredIndicator}> (Requerida)</span>}
+            {getSectionStatus(7) && (
+              <span className={styles.sectionStatus}>✓</span>
+            )}
+            {!getSectionStatus(7) && (
+              <span className={styles.requiredIndicator}> (Requerida)</span>
+            )}
           </div>
           <div className={styles.termsBox}>
             <p>Declaro que:</p>
             <ul className={styles.termsList}>
               <li>He leído y comprendido las instrucciones de seguridad.</li>
               <li>He identificado los riesgos asociados al trabajo.</li>
-              <li>Cuento con el herramienta de protección personal necesario.</li>
+              <li>
+                Cuento con el herramienta de protección personal necesario.
+              </li>
               <li>Conozco los procedimientos de emergencia.</li>
-              <li>Acepto realizar el trabajo de acuerdo a los estándares de seguridad.</li>
+              <li>
+                Acepto realizar el trabajo de acuerdo a los estándares de
+                seguridad.
+              </li>
             </ul>
           </div>
           <label className={styles.privacyCheckbox}>
@@ -967,24 +1266,33 @@ export default function AtsForm({ onSubmit, onCancel, userId, createdBy }: AtsFo
               required
             />
             <span className={styles.checkboxLabel}>
-              Confirmo que he leído y acepto los términos y condiciones de seguridad. *
+              Confirmo que he leído y acepto los términos y condiciones de
+              seguridad. *
             </span>
           </label>
         </div>
 
         {/* BOTONES DE ACCIÓN */}
         <div className={styles.formActions}>
-          <button type="button" className={styles.cancelButton} onClick={onCancel}>
+          <button
+            type="button"
+            className={styles.cancelButton}
+            onClick={onCancel}
+          >
             Cancelar
           </button>
           <button
             type="submit"
-            className={`${styles.submitButton} ${!isFormValid ? styles.submitButtonDisabled : ''}`}
+            className={`${styles.submitButton} ${
+              !isFormValid ? styles.submitButtonDisabled : ""
+            }`}
             disabled={isSubmitting || !isFormValid}
           >
-            {isSubmitting ? 'Guardando...' : (
-              isFormValid ? '✅ Guardar ATS' : 'Completar formulario primero'
-            )}
+            {isSubmitting
+              ? "Guardando..."
+              : isFormValid
+              ? "✅ Guardar ATS"
+              : "Completar formulario primero"}
           </button>
         </div>
 

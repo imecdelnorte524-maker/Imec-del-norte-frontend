@@ -1,0 +1,112 @@
+/* src/components/equipment-detail/ComponentsReadOnly.module.css */
+
+.section {
+  background: var(--white);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--gray-200);
+  margin-bottom: var(--spacing-lg);
+  box-sizing: border-box;
+}
+
+.section h3 {
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  border-bottom: 1px solid var(--gray-200);
+  padding-bottom: var(--spacing-sm);
+}
+
+.componentSection {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  background: var(--gray-50);
+}
+
+.componentSection h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  color: var(--gray-800);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.detailItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-md);
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--gray-100);
+}
+
+.detailItem:last-child {
+  border-bottom: none;
+}
+
+.detailItem strong {
+  color: var(--gray-700);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex: 0 0 auto;
+}
+
+.detailItem span {
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+  text-align: right;
+  flex: 1 1 auto;
+  word-break: break-word;
+}
+
+.emptyComponents {
+  font-size: var(--font-size-sm);
+  color: var(--gray-500);
+  font-style: italic;
+  text-align: center;
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border-radius: var(--border-radius);
+}
+
+@media (max-width: 1024px) {
+  .section {
+    padding: var(--spacing-md);
+  }
+
+  .detailGrid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .detailItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px 0;
+  }
+
+  .detailItem span {
+    text-align: left;
+    padding-left: 0;
+  }
+
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: var(--spacing-sm);
+  }
+}

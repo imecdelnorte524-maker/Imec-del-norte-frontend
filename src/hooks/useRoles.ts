@@ -1,77 +1,41 @@
-import { useState, useEffect } from 'react';
-import { users } from '../api/users';
-import type { Rol, CreateRolDto, UpdateRolDto } from '../interfaces/UserInterfaces';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { rolesApi } from "../api/roles";
+import { QUERY_KEYS } from "../api/keys";
+import type { UpdateRolDto } from "../interfaces/RolesInterfaces";
 
 export const useRoles = () => {
-  const [roles, setRoles] = useState<Rol[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Función para cargar todos los roles
-  const loadRoles = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const rolesData = await users.getAllRoles();
-      setRoles(rolesData);
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error cargando roles:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: roles = [], isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.roles],
+    queryFn: rolesApi.getAllRoles,
+  });
 
-  // Crear rol y recargar lista
-  const createRole = async (roleData: CreateRolDto): Promise<Rol> => {
-    try {
-      setError(null);
-      const newRole = await users.createRole(roleData);
-      await loadRoles();
-      return newRole;
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    }
-  };
+  const createRoleMutation = useMutation({
+    mutationFn: rolesApi.createRole,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.roles] }),
+  });
 
-  // Actualizar rol y recargar lista
-  const updateRole = async (id: number, roleData: UpdateRolDto): Promise<Rol> => {
-    try {
-      setError(null);
-      const updatedRole = await users.updateRole(id, roleData);
-      await loadRoles();
-      return updatedRole;
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    }
-  };
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateRolDto }) =>
+      rolesApi.updateRole(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.roles] }),
+  });
 
-  // Eliminar rol y recargar lista
-  const deleteRole = async (id: number): Promise<void> => {
-    try {
-      setError(null);
-      await users.deleteRole(id);
-      await loadRoles();
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    }
-  };
-
-  // Cargar roles al montar el componente
-  useEffect(() => {
-    loadRoles();
-  }, []);
+  const deleteRoleMutation = useMutation({
+    mutationFn: rolesApi.deleteRole,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.roles] }),
+  });
 
   return {
     roles,
-    loading,
-    error,
-    createRole,
-    updateRole,
-    deleteRole,
-    refreshRoles: loadRoles
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    
+    createRole: createRoleMutation.mutateAsync,
+    updateRole: (id: number, data: UpdateRolDto) => updateRoleMutation.mutateAsync({ id, data }),
+    deleteRole: deleteRoleMutation.mutateAsync,
+    
+    refreshRoles: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.roles] }),
   };
 };

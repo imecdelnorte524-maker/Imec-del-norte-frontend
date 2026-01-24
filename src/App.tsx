@@ -1,10 +1,11 @@
 // src/App.tsx
 
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -22,9 +23,16 @@ import Roles from "./pages/Roles";
 import Clients from "./pages/Clients";
 import EquipmentDetailPage from "./pages/EquipmentDetail";
 import EquipmentListPage from "./pages/EquipmentList";
+import UserProfilePage from "./pages/UserProfile";
+import RecoveryPage from "./pages/Recovey";
+import ResetPasswordPage from "./pages/ResetPassword";
+import RegistrationBoard from "./pages/RegistrationBoard";
+import ClientDetailsPage from "./pages/ClientDetails";
+import HumanResources from "./pages/HumanResources";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -43,7 +51,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Si el usuario debe cambiar contraseña, lo forzamos a /profile
+  if (user?.mustChangePassword && location.pathname !== "/profile") {
+    return <Navigate to="/profile" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function App() {
@@ -57,6 +74,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/registration-board"
+          element={
+            <ProtectedRoute>
+              <RegistrationBoard />
             </ProtectedRoute>
           }
         />
@@ -152,6 +178,15 @@ function App() {
         />
 
         <Route
+          path="/clients/:id"
+          element={
+            <ProtectedRoute>
+              <ClientDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/settings"
           element={
             <ProtectedRoute>
@@ -178,7 +213,30 @@ function App() {
           }
         />
 
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/human-resources"
+          element={
+            <ProtectedRoute>
+              <HumanResources />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Recuperación de contraseña (sin auth) */}
+        <Route path="/recovery" element={<RecoveryPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

@@ -1,0 +1,378 @@
+/* src/styles/components/common/UnitMeasureAutocomplete.module.css */
+
+.container {
+  position: relative;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.inputWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  padding-right: 2.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background-color: white;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  height: 2.75rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  z-index: 10;
+}
+
+.input.disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.input.disabled:focus {
+  border-color: #d1d5db;
+  box-shadow: none;
+}
+
+.createButton {
+  position: absolute;
+  right: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.75rem;
+  height: 1.75rem;
+  background-color: #10b981;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.createButton:hover:not(:disabled) {
+  background-color: #059669;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.createButton:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.createButton:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: translateY(-50%);
+}
+
+.plusIcon {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.suggestionsDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  max-height: 16rem;
+  overflow-y: auto;
+  animation: slideDown 0.15s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestionsList {
+  padding: 0.25rem;
+}
+
+.suggestionItem {
+  padding: 0.625rem 0.75rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.suggestionItem:hover {
+  background-color: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.suggestionItem:active {
+  background-color: #e5e7eb;
+  transform: scale(0.98);
+}
+
+.unitName {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.unitAbbreviation {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.loading {
+  padding: 0.75rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinnerSmall {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.helpText {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-style: italic;
+  padding: 0.25rem 0.5rem;
+  background-color: #fefce8;
+  border: 1px solid #fef08a;
+  border-radius: 0.375rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scrollbar para el dropdown */
+.suggestionsDropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suggestionsDropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.suggestionsDropdown::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.suggestionsDropdown::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .label {
+    color: #d1d5db;
+  }
+
+  .input {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
+  .input.disabled {
+    background-color: #4b5563;
+    color: #9ca3af;
+  }
+
+  .suggestionsDropdown {
+    background-color: #374151;
+    border-color: #4b5563;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  }
+
+  .suggestionItem:hover {
+    background-color: #4b5563;
+    border-color: #6b7280;
+  }
+
+  .suggestionItem:active {
+    background-color: #6b7280;
+  }
+
+  .unitName {
+    color: #f9fafb;
+  }
+
+  .unitAbbreviation {
+    color: #9ca3af;
+  }
+
+  .loading {
+    color: #9ca3af;
+  }
+
+  .helpText {
+    background-color: #1e293b;
+    border-color: #475569;
+    color: #cbd5e1;
+  }
+
+  .createButton {
+    background-color: #059669;
+  }
+
+  .createButton:hover:not(:disabled) {
+    background-color: #047857;
+  }
+
+  .suggestionsDropdown::-webkit-scrollbar-track {
+    background: #4b5563;
+  }
+  
+  .suggestionsDropdown::-webkit-scrollbar-thumb {
+    background: #6b7280;
+  }
+  
+  .suggestionsDropdown::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .container {
+    margin-bottom: 0.875rem;
+  }
+
+  .input {
+    font-size: 1rem;
+    height: 2.875rem;
+    padding: 0.75rem 0.875rem;
+    padding-right: 3rem;
+  }
+
+  .createButton {
+    width: 2rem;
+    height: 2rem;
+    right: 0.75rem;
+  }
+
+  .suggestionsDropdown {
+    max-height: 14rem;
+  }
+}
+
+/* Para el modal AddInventoryModal */
+.modalAutocomplete {
+  margin-bottom: 1.25rem;
+}
+
+.modalAutocomplete .input {
+  background-color: white;
+}
+
+.modalAutocomplete .suggestionsDropdown {
+  z-index: 1001; /* Más alto que el modal */
+}
+
+/* Estado de error */
+.input.error {
+  border-color: #ef4444;
+}
+
+.input.error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.errorMessage {
+  margin-top: 0.375rem;
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 500;
+}

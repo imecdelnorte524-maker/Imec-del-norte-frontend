@@ -1,5 +1,9 @@
-import styles from '../../styles/components/inventory/ViewInventoryModal.module.css';
-import type { Inventory } from '../../interfaces/InventoryInterfaces';
+// src/components/inventory/ViewInventoryModal.tsx (VERSIÓN MEJORADA)
+import { useEffect, useState } from "react";
+import styles from "../../styles/components/inventory/ViewInventoryModal.module.css";
+import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import { imagesApi } from "../../api/images";
+import ImageCarousel from "../common/ImageCarousel";
 
 interface Props {
   isOpen: boolean;
@@ -7,72 +11,254 @@ interface Props {
   item: Inventory | null;
 }
 
-export default function ViewInventoryModal({
-  isOpen,
-  onClose,
-  item,
-}: Props) {
+export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
+  const [images, setImages] = useState<string[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!isOpen || !item) {
+        setImages([]);
+        setImageError(null);
+        return;
+      }
+
+      try {
+        setLoadingImages(true);
+        setImageError(null);
+        setImages([]);
+
+        let fetchedImages: string[] = [];
+
+        if (item.herramientaId) {
+          const toolImages = await imagesApi.getToolImages(item.herramientaId);
+          fetchedImages = toolImages.map((img) => img.url);
+        } else if (item.insumoId) {
+          const supplyImages = await imagesApi.getSupplyImages(item.insumoId);
+          fetchedImages = supplyImages.map((img) => img.url);
+        }
+
+        setImages(fetchedImages);
+      } catch (err: any) {
+        console.error("Error cargando imágenes:", err);
+        setImageError(err.message || "No se pudieron cargar las imágenes");
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    loadImages();
+  }, [isOpen, item]);
+
   if (!isOpen || !item) return null;
 
-  const imageUrl =
-    item.tool?.fotoUrl ||
-    item.supply?.fotoUrl ||
-    null;
-
-  console.log('Image URL:', imageUrl);
-
-  const urlBase = import.meta.env.VITE_API_URL || 'https://fvwg9xhq-4001.use.devtunnels.ms/api';
+  const isHerramienta = item.tipo === "herramienta";
+  const status = item.tool?.estado || item.supply?.estado || "Activo";
+  const unit = item.supply?.unidadMedida;
+  const value = item.supply?.valorUnitario || item.tool?.valorUnitario || 0;
+  const lastUpdate = new Date(item.fechaUltimaActualizacion).toLocaleDateString('es-ES', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-
         <header className={styles.header}>
-          <h2>Detalle de la {item.tipo === 'herramienta' ? 'Herramienta' : 'Insumo'}</h2>
-          <button onClick={onClose}>✖</button>
+          <h2>
+            <span style={{ marginRight: '10px' }}>
+              {isHerramienta ? '🛠️' : '📦'}
+            </span>
+            Detalles de {isHerramienta ? "Herramienta" : "Insumo"}
+          </h2>
+          <button 
+            onClick={onClose} 
+            aria-label="Cerrar"
+            title="Cerrar"
+          >
+            ✕
+          </button>
         </header>
 
         <div className={styles.content}>
-          <div className={styles.imageBox}>
-            {imageUrl ? (
-              <img src={`${urlBase}${imageUrl}`} alt={item.nombreItem} />
-            ) : (
-              <div className={styles.noImage}>
-                Sin imagen
-              </div>
-            )}
+          <div className={styles.leftColumn}>
+            <div className={styles.imageSection}>
+              <h3>Imágenes</h3>
+              {loadingImages ? (
+                <div className={styles.loadingImages}>
+                  <div className={styles.spinner}></div>
+                  Cargando imágenes...
+                </div>
+              ) : images.length > 0 ? (
+                <div className={styles.carouselWrapper}>
+                  <ImageCarousel
+                    images={images}
+                    alt={item.nombreItem}
+                    showControls={true}
+                    autoPlay={true}
+                    interval={5000}
+                  />
+                  <div className={styles.imageCount}>
+                    {images.length} imagen{images.length !== 1 ? 'es' : ''}
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.noImages}>
+                  <div className={styles.noImagesIcon}>📷</div>
+                  <div className={styles.noImagesText}>
+                    No hay imágenes disponibles
+                  </div>
+                  <div className={styles.noImagesSubtext}>
+                    Puedes agregar imágenes desde la edición
+                  </div>
+                </div>
+              )}
+              {imageError && (
+                <div className={styles.imageError}>
+                  <span>⚠️</span> {imageError}
+                </div>
+              )}
+            </div>
           </div>
 
-          <div className={styles.info}>
-            <p><strong>Nombre:</strong> {item.nombreItem}</p>
-            <p><strong>Cantidad:</strong> {item.cantidadActual}</p>
-            <p><strong>Ubicación:</strong> {item.ubicacion || 'N/A'}</p>
-            <p><strong>Estado:</strong> {item.tool?.estado || item.supply?.estado || 'Activo'}</p>
+          <div className={styles.rightColumn}>
+            <div className={styles.infoSection}>
+              <h3>Información General</h3>
+              <div className={styles.infoGrid}>
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Nombre:</span>
+                  <span className={styles.infoValue}>
+                    <span className={styles.nameHighlight}>{item.nombreItem}</span>
+                  </span>
+                </div>
 
-            <p><strong>Tipo:</strong> {item.tipo}</p>
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Tipo:</span>
+                  <span className={styles.infoValue}>
+                    <span className={`${styles.typeBadge} ${isHerramienta ? styles.toolBadge : styles.supplyBadge}`}>
+                      {isHerramienta ? "🛠️ Herramienta" : "📦 Insumo"}
+                    </span>
+                  </span>
+                </div>
 
-            {item.supply && (
-              <>
-                <p><strong>Unidad:</strong> {item.supply.unidadMedida}</p>
-                <p><strong>Stock mínimo:</strong> {item.supply.stockMin}</p>
-              </>
-            )}
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Cantidad:</span>
+                  <span className={`${styles.infoValue} ${styles.quantity}`}>
+                    {item.cantidadActual}
+                    {unit && (
+                      <span className={styles.unit}> {unit}</span>
+                    )}
+                  </span>
+                </div>
 
-            <p>
-              <strong>Última actualización:</strong>
-              {' '}
-              {new Date(item.fechaUltimaActualizacion).toLocaleDateString()}
-            </p>
+                {item.supply && (
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Stock Mínimo:</span>
+                    <span className={styles.infoValue}>
+                      <span className={styles.stockMin}>
+                        {item.supply.stockMin} {item.supply.unidadMedida}
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Ubicación:</span>
+                  <span className={styles.infoValue}>
+                    {item.ubicacion || (
+                      <span className={styles.noInfo}>No especificada</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Estado:</span>
+                  <span className={`${styles.infoValue} ${styles.status}`}>
+                    {status}
+                  </span>
+                </div>
+
+                {item.supply && (
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Categoría:</span>
+                    <span className={styles.infoValue}>
+                      {item.supply.categoria}
+                    </span>
+                  </div>
+                )}
+
+                {item.tool && (
+                  <>
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>Marca:</span>
+                      <span className={styles.infoValue}>
+                        {item.tool.marca || (
+                          <span className={styles.noInfo}>No especificada</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>Serial:</span>
+                      <span className={styles.infoValue}>
+                        {item.tool.serial || (
+                          <span className={styles.noInfo}>No especificado</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className={styles.infoRow}>
+                      <span className={styles.infoLabel}>Modelo:</span>
+                      <span className={styles.infoValue}>
+                        {item.tool.modelo || (
+                          <span className={styles.noInfo}>No especificado</span>
+                        )}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Valor Unitario:</span>
+                  <span className={`${styles.infoValue} ${styles.price}`}>
+                    ${value.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <span className={styles.infoLabel}>Última Actualización:</span>
+                  <span className={styles.infoValue}>
+                    <span className={styles.lastUpdate}>{lastUpdate}</span>
+                  </span>
+                </div>
+
+                {item.bodega && (
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}>Bodega:</span>
+                    <span className={styles.infoValue}>
+                      <span className={styles.warehouseName}>
+                        {item.bodega.nombre}
+                      </span>
+                      {item.bodega.cliente && (
+                        <span className={styles.clientName}>
+                          ({item.bodega.cliente.nombre})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-
 
         <footer className={styles.footer}>
           <button onClick={onClose} className={styles.closeBtn}>
             Cerrar
           </button>
         </footer>
-
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
-/* src/styles/components/orders/OrderDetail.module.css */
-
+/* src/styles/components/orders/OrderDetails.module.css */
 .container {
   padding: var(--spacing-lg);
   max-width: 1200px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
+/* --- HEADER --- */
 .header {
   display: flex;
   align-items: center;
@@ -13,6 +14,7 @@
   margin-bottom: var(--spacing-xl);
   padding-bottom: var(--spacing-lg);
   border-bottom: 1px solid var(--gray-200);
+  flex-wrap: wrap;
 }
 
 .backButton {
@@ -27,6 +29,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+  white-space: nowrap;
 }
 
 .backButton:hover {
@@ -38,16 +41,27 @@
   font-size: var(--font-size-2xl);
   font-weight: 700;
   margin: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 200px;
 }
 
-.statusBadge {
+/* --- ESTADOS Y BADGES --- */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.statusBadge,
+.billingBadge {
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--border-radius-full);
   font-size: var(--font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .statusPending {
@@ -55,56 +69,79 @@
   color: #d97706;
   border: 1px solid #fed7aa;
 }
-
 .statusInProgress {
   background: #dbeafe;
   color: #1d4ed8;
   border: 1px solid #93c5fd;
 }
-
 .statusCompleted {
   background: #f0fdf4;
   color: #16a34a;
   border: 1px solid #86efac;
 }
-
 .statusCancelled {
   background: #f3f4f6;
   color: #6b7280;
   border: 1px solid #d1d5db;
 }
-
 .statusRejected {
   background: #fef2f2;
   color: #dc2626;
   border: 1px solid #fca5a5;
 }
 
-.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius);
-  margin-bottom: var(--spacing-lg);
-  text-align: center;
+.billingNotBilled {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #c959139b;
+}
+.billingBilled {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #26b05b;
 }
 
+.invoiceLinkButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius-full);
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid #bae6fd;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* --- GRID DE INFORMACIÓN --- */
 .detailsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
+  box-sizing: border-box;
 }
 
-.section {
+.section,
+.problemSection,
+.commentsSection {
   background: var(--white);
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
+  box-sizing: border-box;
+  height: fit-content;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
-.section h3 {
+.section h3,
+.problemSection h3,
+.commentsSection h3 {
   color: var(--gray-800);
   font-size: var(--font-size-lg);
   font-weight: 600;
@@ -116,18 +153,17 @@
 .detailItem {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: var(--spacing-md);
-}
-
-.detailItem:last-child {
-  margin-bottom: 0;
+  gap: var(--spacing-md);
+  word-break: break-word;
 }
 
 .detailItem strong {
   color: var(--gray-700);
   font-weight: 600;
   font-size: var(--font-size-sm);
+  flex-shrink: 0;
 }
 
 .detailItem span {
@@ -141,52 +177,82 @@
   font-style: italic;
 }
 
-.priorityHigh {
-  color: #dc2626;
-  font-weight: 600;
+/* --- TABLAS (Insumos / Herramientas) --- */
+.subSection {
+  margin-top: var(--spacing-lg);
 }
 
-.priorityMedium {
-  color: #d97706;
-  font-weight: 600;
-}
-
-.priorityLow {
-  color: #16a34a;
-  font-weight: 600;
-}
-
-.problemSection,
-.commentsSection {
-  background: var(--white);
-  padding: var(--spacing-lg);
-  border-radius: var(--border-radius-lg);
-  border: 1px solid var(--gray-200);
-  margin-bottom: var(--spacing-lg);
-}
-
-.problemSection h3,
-.commentsSection h3 {
-  color: var(--gray-800);
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.problemSection p,
-.commentsSection p {
+.subSection h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-md);
   color: var(--gray-700);
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
 }
 
+.itemsTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: var(--spacing-md);
+}
+
+.itemsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+  min-width: 300px;
+}
+
+.itemsTable th,
+.itemsTable td {
+  padding: var(--spacing-sm);
+  border-bottom: 1px solid var(--gray-200);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.itemsTable th {
+  background: var(--gray-50);
+  font-weight: 600;
+  color: var(--gray-700);
+  white-space: nowrap;
+}
+
+.deleteIconButton {
+  background: transparent;
+  border: none;
+  color: var(--gray-500);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--border-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+  width: 36px;
+  height: 36px;
+}
+
+.deleteIconButton:hover:not(:disabled) {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.deleteIconButton:disabled {
+  color: var(--gray-300);
+  cursor: not-allowed;
+}
+
+/* --- ACCIONES (BOTONES ABAJO) --- */
 .actions {
   display: flex;
   gap: var(--spacing-md);
   flex-wrap: wrap;
   padding-top: var(--spacing-lg);
   border-top: 1px solid var(--gray-200);
+  justify-content: flex-end;
 }
 
 .adminActions {
@@ -199,7 +265,10 @@
 .completeButton,
 .assignButton,
 .cancelButton,
-.rejectButton {
+.rejectButton,
+.invoiceButton,
+.secondaryButton,
+.viewEquipmentButton {
   padding: var(--spacing-md) var(--spacing-lg);
   border: none;
   border-radius: var(--border-radius);
@@ -207,76 +276,67 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .startButton {
   background: #10b981;
   color: white;
 }
-
-.startButton:hover:not(:disabled) {
-  background: #059669;
-}
-
 .completeButton {
   background: #059669;
   color: white;
 }
-
-.completeButton:hover:not(:disabled) {
-  background: #047857;
-}
-
 .assignButton {
   background: var(--primary-500);
   color: white;
 }
-
-.assignButton:hover:not(:disabled) {
-  background: var(--primary-600);
-}
-
 .cancelButton {
   background: #6b7280;
   color: white;
 }
-
-.cancelButton:hover:not(:disabled) {
-  background: #4b5563;
-}
-
 .rejectButton {
   background: #dc2626;
   color: white;
 }
-
-.rejectButton:hover:not(:disabled) {
-  background: #b91c1c;
+.invoiceButton {
+  background: #0f766e;
+  color: white;
+}
+.secondaryButton {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+.viewEquipmentButton {
+  background: var(--primary-500);
+  color: white;
+  margin-top: var(--spacing-md);
 }
 
 .startButton:disabled,
 .completeButton:disabled,
 .assignButton:disabled,
 .cancelButton:disabled,
-.rejectButton:disabled {
+.rejectButton:disabled,
+.invoiceButton:disabled {
   background: var(--gray-400);
   cursor: not-allowed;
-  transform: none;
 }
 
-/* Modales */
+/* --- MODALES GENERALES --- */
 .modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: center; /* Centrado vertical en escritorio */
   justify-content: center;
   z-index: 1000;
   padding: var(--spacing-lg);
+  overflow-y: auto;
 }
 
 .modalContent {
@@ -286,147 +346,263 @@
   box-shadow: var(--shadow-xl);
   max-width: 500px;
   width: 100%;
+  box-sizing: border-box;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
 }
 
-.modalContent h3 {
-  color: var(--gray-800);
-  font-size: var(--font-size-xl);
-  font-weight: 600;
-  margin: 0 0 var(--spacing-lg) 0;
+.modalHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
 }
 
+.modalCloseButton {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-500);
+}
+
+/* Inputs de Modal */
 .technicianSelect,
-.rejectTextarea {
+.rejectTextarea,
+input[type="number"],
+input[type="file"],
+select {
   width: 100%;
+  max-width: 100%;
   padding: var(--spacing-md);
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
   font-size: var(--font-size-base);
-  margin-bottom: var(--spacing-lg);
-}
-
-.technicianSelect:focus,
-.rejectTextarea:focus {
-  outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-sizing: border-box;
+  background-color: var(--white);
 }
 
 .rejectTextarea {
-  resize: vertical;
   min-height: 100px;
-  font-family: inherit;
+  resize: vertical;
 }
 
-.modalActions {
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.modalActions,
+.formActions {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
-.modalActions button {
-  padding: var(--spacing-md) var(--spacing-lg);
+.modalActions button,
+.formActions button {
+  padding: 10px 16px;
+  border-radius: 6px;
   border: none;
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-weight: 600;
 }
 
-.modalActions button:first-child {
+.modalActions button:first-child,
+.formActions button:first-child {
   background: var(--gray-200);
   color: var(--gray-700);
 }
-
-.modalActions button:first-child:hover {
-  background: var(--gray-300);
-}
-
-.modalActions button:last-child {
+.modalActions button:last-child,
+.formActions button:last-child {
   background: var(--primary-500);
   color: white;
 }
 
-.modalActions button:last-child:hover:not(:disabled) {
-  background: var(--primary-600);
+/* --- MINI MODAL DE CONFIRMACIÓN --- */
+.confirmationModalContent {
+  background: var(--white);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-2xl);
+  max-width: 400px;
+  width: 90%;
+  margin: auto;
+  text-align: center;
+  animation: popIn 0.2s ease-out;
+  box-sizing: border-box;
 }
 
-.modalActions button:disabled {
-  background: var(--gray-400);
-  cursor: not-allowed;
+@keyframes popIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-/* Responsive */
+.confirmationIcon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  display: block;
+}
+.confirmationTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0 0 var(--spacing-sm);
+}
+.confirmationText {
+  color: var(--gray-600);
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-xl);
+  line-height: 1.5;
+}
+
+.confirmationActions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+}
+
+.confirmDeleteButton {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+}
+.cancelDeleteButton {
+  background-color: var(--white);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+}
+
+.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+/* --- RESPONSIVE MEDIA QUERIES --- */
+
 @media (max-width: 768px) {
   .container {
     padding: var(--spacing-md);
   }
-  
+
   .header {
     flex-direction: column;
-    gap: var(--spacing-md);
     align-items: stretch;
+    gap: var(--spacing-md);
   }
-  
+
+  .header h1 {
+    font-size: var(--font-size-xl);
+    text-align: center;
+  }
+
+  .statusRow {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .backButton {
+    width: 100%;
+    justify-content: center;
+  }
+
   .detailsGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .detailItem {
     flex-direction: column;
+    gap: 4px;
     align-items: flex-start;
-    gap: var(--spacing-xs);
   }
-  
+
+  .detailItem span {
+    text-align: left;
+  }
+
   .actions {
     flex-direction: column;
   }
-  
+
   .adminActions {
     flex-direction: column;
+    width: 100%;
   }
-  
+
   .startButton,
   .completeButton,
   .assignButton,
   .cancelButton,
-  .rejectButton {
+  .rejectButton,
+  .invoiceButton,
+  .secondaryButton,
+  .viewEquipmentButton {
     width: 100%;
-    text-align: center;
   }
-  
+
   .modal {
+    padding: 10px;
+    align-items: flex-start;
+  }
+
+  .modalContent {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 20px;
     padding: var(--spacing-md);
   }
-  
-  .modalContent {
-    padding: var(--spacing-lg);
+
+  .technicianSelect,
+  select {
+    font-size: 14px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  
-  .modalActions {
-    flex-direction: column;
+}
+
+@media (max-width: 480px) {
+  .confirmationActions {
+    flex-direction: column-reverse;
   }
-  
-  .modalActions button {
+
+  .confirmDeleteButton,
+  .cancelDeleteButton {
     width: 100%;
+    padding: 14px;
   }
-}
 
-.viewEquipmentButton {
-  margin-top: var(--spacing-md);
-  background: var(--primary-500);
-  color: white;
-  border: none;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  display: inline-block;
-}
-
-.viewEquipmentButton:hover {
-  background: var(--primary-600);
+  .itemsTable th,
+  .itemsTable td {
+    font-size: 12px;
+    padding: 8px 4px;
+  }
 }

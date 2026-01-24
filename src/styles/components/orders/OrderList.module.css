@@ -1,16 +1,16 @@
-/* src/styles/components/orders/OrderList.module.css */
-
 .container {
   padding: var(--spacing-lg);
+  box-sizing: border-box;
 }
 
 .ordersGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: var(--spacing-lg);
   margin-top: var(--spacing-lg);
 }
 
+/* Tarjeta de orden */
 .orderCard {
   background: var(--white);
   border: 1px solid var(--gray-200);
@@ -19,6 +19,11 @@
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .orderCard:hover {
@@ -27,11 +32,21 @@
   border-color: var(--primary-300);
 }
 
+/* Bordes laterales de tarjeta por estado */
+.orderCardPending { border-left: 4px solid #efd11b; }
+.orderCardInProgress { border-left: 4px solid #3b82f6; }
+.orderCardCompletedBillingPending { border-left: 4px solid #0ea344; }
+.orderCardCompleted { border-left: 4px solid #22c55e; }
+.orderCardCancelled { border-left: 4px solid #f23e3e; }
+.orderCardPendingAssigned { border-left: 4px solid #de16f9; }
+
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .cardHeader h3 {
@@ -41,172 +56,162 @@
   margin: 0;
 }
 
-.priorityBadge {
-  padding: var(--spacing-xs) var(--spacing-sm);
+.serviceBadge {
+  padding: 4px 10px;
   border-radius: var(--border-radius-full);
   font-size: var(--font-size-xs);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.priorityHigh {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.priorityMedium {
-  background: #fffbeb;
-  color: #d97706;
-  border: 1px solid #fed7aa;
-}
-
-.priorityLow {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background: var(--primary-50);
+  color: var(--primary-700);
+  white-space: normal;
+  text-align: right;
+  max-width: 100%;
 }
 
 .serviceInfo {
   margin-bottom: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .serviceInfo strong {
   display: block;
   color: var(--gray-800);
-  font-size: var(--font-size-base);
-  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
 }
 
-.serviceInfo span {
-  color: var(--gray-600);
-  font-size: var(--font-size-sm);
+/* FILA DE TAGS (Tipo Servicio + H/I) */
+.tagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.typeTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.inventoryIndicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background-color: #f3e8ff;
+  color: #7e22ce;
+  border: 1px solid #d8b4fe;
+  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.inventoryIndicator strong {
+  font-weight: 700;
+  margin-left: 4px;
 }
 
 .clientInfo {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 4px;
   margin-bottom: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px dashed var(--gray-200);
 }
 
 .clientInfo span {
   color: var(--gray-600);
   font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dates {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
 }
 
 .dates span {
   color: var(--gray-500);
   font-size: var(--font-size-xs);
+  background: var(--gray-50);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .cardFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: auto;
 }
 
-.status {
-  padding: var(--spacing-xs) var(--spacing-sm);
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.status, .billingBadge {
+  padding: 4px 10px;
   border-radius: var(--border-radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.statusPending {
-  background: #fffbeb;
-  color: #d97706;
-}
+.statusPending { background: #fffbeb; color: #d97706; border: 1px solid #fbff1c; }
+.statusInProgress { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+.statusCompleted { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.statusCancelled { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.statusRejected { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; }
 
-.statusInProgress {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.statusCompleted {
-  background: #f0fdf4;
-  color: #16a34a;
-}
-
-.statusCancelled {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.statusRejected {
-  background: #fef2f2;
-  color: #dc2626;
-}
+.billingNotBilled { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+.billingBilled { background: #ecfccb; color: #3f6212; border: 1px solid #d9f99d; }
 
 .viewButton {
-  background: var(--primary-500);
-  color: white;
-  border: none;
-  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--white);
+  color: var(--primary-600);
+  border: 1px solid var(--primary-200);
+  padding: 6px 12px;
   border-radius: var(--border-radius);
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
 }
 
 .viewButton:hover {
-  background: var(--primary-600);
+  background: var(--primary-50);
+  border-color: var(--primary-400);
 }
 
-.loading {
+.loading, .error, .emptyState {
   text-align: center;
   padding: var(--spacing-3xl);
   color: var(--gray-500);
 }
+.error { color: #dc2626; background: #fef2f2; border-radius: 8px; }
+.emptyState { background: var(--gray-50); border-radius: 8px; border: 2px dashed var(--gray-300); }
 
-.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius);
-  margin: var(--spacing-lg) 0;
-  text-align: center;
-}
-
-.emptyState {
-  text-align: center;
-  padding: var(--spacing-3xl);
-  color: var(--gray-500);
-  background: var(--white);
-  border-radius: var(--border-radius-lg);
-  border: 2px dashed var(--gray-200);
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-  .ordersGrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .cardHeader {
-    flex-direction: column;
-    gap: var(--spacing-sm);
-  }
-  
-  .cardFooter {
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    align-items: stretch;
-  }
-  
-  .viewButton {
-    width: 100%;
-  }
+  .ordersGrid { grid-template-columns: 1fr; }
+  .cardFooter { flex-direction: column; align-items: stretch; }
+  .viewButton { width: 100%; text-align: center; margin-top: 8px;}
+  .statusRow { justify-content: space-between; width: 100%; }
 }

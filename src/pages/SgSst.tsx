@@ -1,25 +1,27 @@
-// src/pages/SGSST.tsx
-import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import FormSelectionModal from '../components/sg-sst/FormSelectionModal';
-import FormsList from '../components/sg-sst/FormsList';
-import StatsCards from '../components/sg-sst/StastCards';
-import AtsForm from '../components/sg-sst/AtsForm';
-import HeightWorkForm from '../components/sg-sst/HeightWorkForm';
-import PreoperationalForm from '../components/sg-sst/PreoperationalForm';
-import FormDetailsModal from '../components/sg-sst/FormDetailsModal';
-import { sgSstService } from '../api/sg-sst';
-import type { SgSstForm, SgSstStats, FormType, AtsFormData, HeightWorkFormData, PreoperationalFormData } from '../interfaces/SgSstInterface';
-import { 
-  canViewModule, 
-  // hasFullAccess, 
-  hasOwnAccess, 
-  getUserAccessLevel, 
+import { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
+import DashboardLayout from "../components/layout/DashboardLayout";
+import FormSelectionModal from "../components/sg-sst/FormSelectionModal";
+import FormsList from "../components/sg-sst/FormsList";
+import StatsCards from "../components/sg-sst/StastCards";
+import AtsForm from "../components/sg-sst/AtsForm";
+import HeightWorkForm from "../components/sg-sst/HeightWorkForm";
+import PreoperationalForm from "../components/sg-sst/PreoperationalForm";
+import FormDetailsModal from "../components/sg-sst/FormDetailsModal";
+import { sgSstService } from "../api/sg-sst";
+import type {
+  SgSstForm,
+  SgSstStats,
+  FormType,
+} from "../interfaces/SgSstInterface";
+import {
+  canViewModule,
+  hasOwnAccess,
+  getUserAccessLevel,
   getDisplayRoleName,
-  normalizeRoleName 
-} from '../config/roles.config';
-import styles from '../styles/pages/SgSstPage.module.css';
+  normalizeRoleName,
+} from "../config/roles.config";
+import styles from "../styles/pages/SgSstPage.module.css";
 
 export default function SGSST() {
   const { user } = useAuth();
@@ -29,22 +31,21 @@ export default function SGSST() {
   const [forms, setForms] = useState<SgSstForm[]>([]);
   const [stats, setStats] = useState<SgSstStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'ats' | 'height-work' | 'preoperational'>('dashboard');
-  const [selectedFormType, setSelectedFormType] = useState<FormType | null>(null);
+  const [currentView, setCurrentView] = useState<
+    "dashboard" | "ats" | "height-work" | "preoperational"
+  >("dashboard");
 
-  // Verificaciones de roles
+  // Estado para seguimiento de descarga de PDF
+  const [pdfLoadingFormId, setPdfLoadingFormId] = useState<number | null>(null);
+
   const userRole = user?.role?.nombreRol;
   const normalizedRole = normalizeRoleName(userRole);
   const displayRoleName = getDisplayRoleName(userRole);
   const canAccessModule = canViewModule(userRole);
   const accessLevel = getUserAccessLevel(userRole);
-  // const canViewAllForms = hasFullAccess(userRole);
   const canViewOwnForms = hasOwnAccess(userRole);
-  const canSignAsSST = normalizedRole === 'SG-SST';
-  const canCreateForms = canViewOwnForms; 
-
-  // Debug: Verificar los valores de los roles
-
+  const canSignAsSST = normalizedRole === "SG-SST";
+  const canCreateForms = canViewOwnForms;
 
   useEffect(() => {
     if (canAccessModule) {
@@ -55,13 +56,11 @@ export default function SGSST() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      // Determinar qué formularios cargar según el rol
       const userId = canViewOwnForms ? user?.usuarioId : undefined;
-      
+
       const [formsResponse, statsResponse] = await Promise.all([
         sgSstService.getAllForms(userId),
-        sgSstService.getDashboardStats(userId)
+        sgSstService.getDashboardStats(userId),
       ]);
 
       if (formsResponse.success) {
@@ -72,69 +71,45 @@ export default function SGSST() {
         setStats(statsResponse.data || null);
       }
     } catch (error) {
-      console.error('Error cargando datos SG-SST:', error);
+      console.error("Error cargando datos SG-SST:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleFormSelect = (formType: FormType) => {
-    setSelectedFormType(formType);
     setShowFormModal(false);
-    
     switch (formType) {
-      case 'ATS':
-        setCurrentView('ats');
+      case "ATS":
+        setCurrentView("ats");
         break;
-      case 'HEIGHT_WORK':
-        setCurrentView('height-work');
+      case "HEIGHT_WORK":
+        setCurrentView("height-work");
         break;
-      case 'PREOPERATIONAL':
-        setCurrentView('preoperational');
+      case "PREOPERATIONAL":
+        setCurrentView("preoperational");
         break;
     }
   };
 
-  const handleFormSubmit = async (formData: any) => {
-    try {
-      let response;
-      
-      switch (selectedFormType) {
-        case 'ATS':
-          response = await sgSstService.createAts(formData as AtsFormData);
-          break;
-        case 'HEIGHT_WORK':
-          response = await sgSstService.createHeightWork(formData as HeightWorkFormData);
-          break;
-        case 'PREOPERATIONAL':
-          response = await sgSstService.createPreoperational(formData as PreoperationalFormData);
-          break;
-      }
-
-      if (response?.success) {
-        setCurrentView('dashboard');
-        setSelectedFormType(null);
-        loadData();
-      }
-    } catch (error) {
-      console.error('❌ Error creando formulario:', error);
-    }
+  const handleFormSubmit = async (_formData: any) => {
+    setCurrentView("dashboard");
+    await loadData();
   };
 
   const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-    setSelectedFormType(null);
+    setCurrentView("dashboard");
   };
 
   const handleFormClick = async (formId: number) => {
     try {
       const response = await sgSstService.getFormById(formId);
       if (response.success) {
-        setSelectedForm(response.data);
+        setSelectedForm(response.data as unknown as SgSstForm);
         setShowDetailsModal(true);
       }
     } catch (error) {
-      console.error('Error cargando formulario:', error);
+      console.error("Error cargando formulario:", error);
     }
   };
 
@@ -149,11 +124,49 @@ export default function SGSST() {
   };
 
   const getUserName = () => {
-    if (!user) return 'Usuario';
-    return `${user.nombre} ${user.apellido || ''}`.trim();
+    if (!user) return "Usuario";
+    return `${user.nombre} ${user.apellido || ""}`.trim();
   };
 
-  // Si el usuario no tiene acceso al módulo, mostrar mensaje
+  // Descarga real de PDF (blob -> descarga)
+  const handleGeneratePdf = async (formId: number) => {
+    try {
+      setPdfLoadingFormId(formId);
+
+      const response = await sgSstService.downloadPdf(formId);
+
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      // Intentar obtener nombre del header
+      const disposition = response.headers["content-disposition"] as
+        | string
+        | undefined;
+      let fileName = `reporte_sgsst_form_${formId}.pdf`;
+
+      if (disposition) {
+        const match = disposition.match(/filename="(.+)"/);
+        if (match && match[1]) {
+          fileName = match[1];
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error descargando PDF:", error);
+      alert("Ocurrió un error al descargar el PDF.");
+    } finally {
+      setPdfLoadingFormId(null);
+    }
+  };
+
   if (!canAccessModule) {
     return (
       <DashboardLayout>
@@ -165,15 +178,18 @@ export default function SGSST() {
               No tienes permisos para acceder al módulo de Gestión SG-SST.
             </p>
             <p className={styles.accessDeniedDetail}>
-              Tu rol actual (<strong>{displayRoleName}</strong>) no está autorizado para ver este contenido.
+              Tu rol actual (<strong>{displayRoleName}</strong>) no está
+              autorizado para ver este contenido.
             </p>
             <div className={styles.accessDebug}>
-              <p><strong>Debug info:</strong></p>
+              <p>
+                <strong>Debug info:</strong>
+              </p>
               <p>Rol original: {userRole}</p>
               <p>Rol normalizado: {normalizedRole}</p>
               <p>Nivel de acceso: {accessLevel}</p>
             </div>
-            <button 
+            <button
               className={styles.accessDeniedButton}
               onClick={() => window.history.back()}
             >
@@ -186,25 +202,25 @@ export default function SGSST() {
   }
 
   const getModeDescription = () => {
-    if (normalizedRole === 'ADMINISTRADOR') {
-      return '👑 Modo Administrador: Tienes acceso completo a todo';
-    } else if (normalizedRole === 'SUPERVISOR') {
-      return '👁️ Modo Supervisor: Puedes ver todos los formularios del sistema';
-    } else if (normalizedRole === 'SECRETARIA') {
-      return '📋 Modo Secretaria: Puedes ver todos los formularios del sistema';
-    } else if (normalizedRole === 'SG-SST') {
-      return '✍️ Modo SG-SST: Puedes firmar y aprobar formularios pendientes';
-    } else if (normalizedRole === 'TECNICO') {
-      return '🔧 Modo Técnico: Solo puedes ver y crear tus formularios';
+    if (normalizedRole === "ADMINISTRADOR") {
+      return "👑 Modo Administrador: Tienes acceso completo a todo";
+    } else if (normalizedRole === "SUPERVISOR") {
+      return "👁️ Modo Supervisor: Puedes ver todos los formularios del sistema";
+    } else if (normalizedRole === "SECRETARIA") {
+      return "📋 Modo Secretaria: Puedes ver todos los formularios del sistema";
+    } else if (normalizedRole === "SG-SST") {
+      return "✍️ Modo SG-SST: Puedes firmar y aprobar formularios pendientes";
+    } else if (normalizedRole === "TECNICO") {
+      return "🔧 Modo Técnico: Solo puedes ver y crear tus formularios";
     }
-    return '';
+    return "";
   };
 
   const renderCurrentView = () => {
     const userName = getUserName();
-    
+
     switch (currentView) {
-      case 'ats':
+      case "ats":
         return (
           <AtsForm
             onSubmit={handleFormSubmit}
@@ -213,8 +229,8 @@ export default function SGSST() {
             createdBy={user?.usuarioId || 0}
           />
         );
-      
-      case 'height-work':
+
+      case "height-work":
         return (
           <HeightWorkForm
             onSubmit={handleFormSubmit}
@@ -223,8 +239,8 @@ export default function SGSST() {
             createdBy={user?.usuarioId || 0}
           />
         );
-      
-      case 'preoperational':
+
+      case "preoperational":
         return (
           <PreoperationalForm
             onSubmit={handleFormSubmit}
@@ -234,8 +250,8 @@ export default function SGSST() {
             userName={userName}
           />
         );
-      
-      case 'dashboard':
+
+      case "dashboard":
       default:
         return (
           <>
@@ -246,9 +262,7 @@ export default function SGSST() {
                   Sistema de Gestión de Seguridad y Salud en el Trabajo
                 </p>
                 {getModeDescription() && (
-                  <p className={styles.userNote}>
-                    {getModeDescription()}
-                  </p>
+                  <p className={styles.userNote}>{getModeDescription()}</p>
                 )}
               </div>
               <div className={styles.headerRight}>
@@ -268,21 +282,20 @@ export default function SGSST() {
             <div className={styles.section}>
               <div className={styles.sectionHeader}>
                 <h2 className={styles.sectionTitle}>
-                  {accessLevel === 'own' ? 'Mis Formularios' : 'Todos los Formularios'}
+                  {accessLevel === "own"
+                    ? "Mis Formularios"
+                    : "Todos los Formularios"}
                 </h2>
-                <button 
-                  className={styles.secondaryButton}
-                  onClick={loadData}
-                >
+                <button className={styles.secondaryButton} onClick={loadData}>
                   Actualizar
                 </button>
               </div>
-              
+
               {loading ? (
                 <div className={styles.loading}>Cargando formularios...</div>
               ) : (
-                <FormsList 
-                  forms={forms} 
+                <FormsList
+                  forms={forms}
                   onFormClick={handleFormClick}
                   onFormCreated={handleFormCreated}
                   userRole={normalizedRole}
@@ -310,6 +323,8 @@ export default function SGSST() {
                 onFormSigned={handleFormSigned}
                 canSignAsSST={canSignAsSST}
                 currentUser={user}
+                onDownloadPdf={handleGeneratePdf}
+                pdfLoading={pdfLoadingFormId === selectedForm.id}
               />
             )}
           </>
@@ -319,9 +334,7 @@ export default function SGSST() {
 
   return (
     <DashboardLayout>
-      <div className={styles.container}>
-        {renderCurrentView()}
-      </div>
+      <div className={styles.container}>{renderCurrentView()}</div>
     </DashboardLayout>
   );
 }

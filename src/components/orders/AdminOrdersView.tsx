@@ -1,3 +1,5 @@
+// src/components/orders/AdminOrdersView.tsx
+
 import { useState } from 'react';
 import OrderList from './OrderList';
 import CreateOrderForm from './CreateOrderForm';
@@ -9,11 +11,17 @@ interface Props {
   activeView: 'list' | 'create' | 'detail';
   setActiveView: (view: 'list' | 'create' | 'detail') => void;
   userRole: 'admin' | 'secretaria';
+  initialOrderId?: number; // <- NUEVO
 }
 
-export default function AdminOrdersView({ activeView, setActiveView, userRole }: Props) {
+export default function AdminOrdersView({
+  activeView,
+  setActiveView,
+  userRole,
+  initialOrderId,
+}: Props) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'assigned'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'assigned' | 'completed' | 'cancelled'>('all');
 
   const isAdmin = userRole === 'admin';
 
@@ -64,6 +72,8 @@ export default function AdminOrdersView({ activeView, setActiveView, userRole }:
             <option value="all">Todas las órdenes</option>
             <option value="pending">Pendientes de asignación</option>
             <option value="assigned">Asignadas</option>
+            <option value="completed">Completadas</option>
+            <option value="cancelled">Canceladas</option>
           </select>
 
           {isAdmin && (
@@ -81,6 +91,7 @@ export default function AdminOrdersView({ activeView, setActiveView, userRole }:
         userRole="admin"
         onViewOrder={handleViewOrder}
         filter={filter}
+        initialOrderId={initialOrderId}
       />
     </div>
   );
