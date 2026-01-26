@@ -1,5 +1,3 @@
-// vite.config.ts
-
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -13,4 +11,9 @@ export default defineConfig({
       usePolling: true,
     },
   },
+  build: {
+    outDir: "dist",
+    assetsDir: "assets",
+  },
+  base: "/", 
 });
