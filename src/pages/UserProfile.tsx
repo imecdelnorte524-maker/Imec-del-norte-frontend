@@ -12,6 +12,21 @@ import styles from "../styles/pages/UserProfilePage.module.css";
 import type { UpdateUsuarioDto } from "../interfaces/UserInterfaces";
 import { useLocation } from "react-router-dom";
 
+// Iconos para mostrar/ocultar contraseña (puedes usar tu propia librería o SVG)
+const EyeOpenIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
+
+const EyeClosedIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+  </svg>
+);
+
 interface UserPhoto {
   id: number;
   url: string;
@@ -41,6 +56,11 @@ export default function UserProfilePage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  
+  // Estados para mostrar/ocultar contraseña
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const passwordRules = {
     length: newPassword.length >= 8,
@@ -50,6 +70,9 @@ export default function UserProfilePage() {
     special: /[^A-Za-z0-9]/.test(newPassword),
   };
   const allPasswordRulesOk = Object.values(passwordRules).every(Boolean);
+  
+  // Estado para verificar si las contraseñas coinciden
+  const [passwordsMatch, setPasswordsMatch] = useState<boolean>(true);
 
   // ----- NUEVOS CAMPOS -----
   const [ubicacionResidencia, setUbicacionResidencia] = useState<string>("");
@@ -66,6 +89,15 @@ export default function UserProfilePage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
 
   const additionalInfoRef = useRef<HTMLDivElement | null>(null);
+
+  // Effect para verificar coincidencia de contraseñas
+  useEffect(() => {
+    if (newPassword && confirmNewPassword) {
+      setPasswordsMatch(newPassword === confirmNewPassword);
+    } else {
+      setPasswordsMatch(true);
+    }
+  }, [newPassword, confirmNewPassword]);
 
   // ---------- Helpers de sanitización ----------
   const sanitizeText = (s?: string | null): string | null =>
@@ -365,6 +397,10 @@ export default function UserProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmNewPassword("");
+      // Resetear estados de visibilidad
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
 
       // Actualizar el contexto del usuario después de cambiar contraseña
       try {
@@ -686,32 +722,54 @@ export default function UserProfilePage() {
                   >
                     Contraseña actual
                   </label>
-                  <input
-                    id="currentPassword"
-                    type="password"
-                    className={styles.passwordInput}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    autoComplete="current-password"
-                    required
-                    disabled={loading}
-                  />
+                  <div className={styles.passwordInputContainer}>
+                    <input
+                      id="currentPassword"
+                      type={showCurrentPassword ? "text" : "password"}
+                      className={styles.passwordInput}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className={styles.passwordToggle}
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      tabIndex={-1}
+                      aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showCurrentPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className={styles.passwordField}>
                   <label htmlFor="newPassword" className={styles.passwordLabel}>
                     Nueva contraseña
                   </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    className={styles.passwordInput}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    autoComplete="new-password"
-                    required
-                    disabled={loading}
-                  />
+                  <div className={styles.passwordInputContainer}>
+                    <input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      className={styles.passwordInput}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className={styles.passwordToggle}
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      tabIndex={-1}
+                      aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showNewPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}
+                    </button>
+                  </div>
                   <div className={styles.passwordRules}>
                     <p className={styles.passwordRulesTitle}>
                       La nueva contraseña debe tener:
@@ -763,16 +821,32 @@ export default function UserProfilePage() {
                   >
                     Confirmar nueva contraseña
                   </label>
-                  <input
-                    id="confirmNewPassword"
-                    type="password"
-                    className={styles.passwordInput}
-                    value={confirmNewPassword}
-                    onChange={(e) => setConfirmNewPassword(e.target.value)}
-                    autoComplete="new-password"
-                    required
-                    disabled={loading}
-                  />
+                  <div className={styles.passwordInputContainer}>
+                    <input
+                      id="confirmNewPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      className={`${styles.passwordInput} ${!passwordsMatch && confirmNewPassword ? styles.passwordMismatch : ""}`}
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      className={styles.passwordToggle}
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                      aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showConfirmPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}
+                    </button>
+                  </div>
+                  {!passwordsMatch && confirmNewPassword && (
+                    <div className={styles.mismatchMessage}>
+                      Las contraseñas no coinciden
+                    </div>
+                  )}
                 </div>
 
                 {passwordError && (
