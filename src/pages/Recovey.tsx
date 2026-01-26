@@ -44,8 +44,7 @@ export default function RecoveryPage() {
         <div className={styles.loginCard}>
           <h1 className={styles.title}>Recuperar contraseña</h1>
           <p className={styles.subtitle}>
-            Ingresa tu correo electrónico para recibir un enlace de
-            recuperación
+            Ingresa tu correo electrónico para recibir un enlace de recuperación
           </p>
 
           {error && <div className={styles.error}>{error}</div>}
@@ -69,11 +68,7 @@ export default function RecoveryPage() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={styles.button}
-            >
+            <button type="submit" disabled={loading} className={styles.button}>
               {loading ? "Enviando..." : "Enviar enlace de recuperación"}
             </button>
 

@@ -242,6 +242,10 @@
   color: #111827;
 }
 
+/* ====================== */
+/* ESTILOS PARA CAMPOS DE CONTRASEÑA */
+/* ====================== */
+
 /* Formulario de cambio de contraseña */
 .passwordForm {
   display: flex;
@@ -260,17 +264,78 @@
   color: #4b5563;
 }
 
+/* Contenedor del input de contraseña con botón de toggle */
+.passwordInputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .passwordInput {
+  width: 100%;
   border-radius: 0.5rem;
   border: 1px solid #d1d5db;
-  padding: 0.45rem 0.6rem;
+  padding: 0.45rem 2.5rem 0.45rem 0.6rem;
   font-size: 0.9rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .passwordInput:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+}
+
+/* Estilo para cuando las contraseñas no coinciden */
+.passwordMismatch {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2;
+}
+
+.passwordMismatch:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.3) !important;
+}
+
+/* Botón de mostrar/ocultar contraseña */
+.passwordToggle {
+  position: absolute;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.passwordToggle:hover {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.passwordToggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
+/* Mensaje de contraseñas no coincidentes */
+.mismatchMessage {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mismatchMessage::before {
+  content: "⚠";
+  font-size: 0.9rem;
 }
 
 .passwordRules {

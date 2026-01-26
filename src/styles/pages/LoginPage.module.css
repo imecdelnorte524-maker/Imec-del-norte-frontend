@@ -85,7 +85,10 @@
   border: 2px solid var(--gray-300);
   border-radius: var(--border-radius);
   font-size: var(--font-size-base);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
   background-color: var(--white);
 }
 
@@ -98,6 +101,62 @@
 .input:disabled {
   background-color: var(--gray-100);
   cursor: not-allowed;
+}
+
+.passwordInputContainer {
+  position: relative;
+}
+
+.passwordInput {
+  width: 100%;
+  padding: 14px 48px 14px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  color: #1f2937;
+  background: #f9fafb;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.passwordInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.passwordToggle:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.passwordToggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.passwordToggle svg {
+  width: 20px;
+  height: 20px;
 }
 
 .error {
@@ -121,7 +180,10 @@
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background-color var(--transition-fast);
   margin-top: var(--spacing-md);
 }
 
@@ -158,25 +220,25 @@
   .container {
     flex-direction: column;
   }
-  
+
   .leftSection {
     padding: var(--spacing-xl);
     min-height: 200px;
   }
-  
+
   .rightSection {
     padding: var(--spacing-xl);
   }
-  
+
   .logo {
     max-width: 250px;
   }
-  
+
   .tagline {
     font-size: var(--font-size-lg);
     margin-top: var(--spacing-md);
   }
-  
+
   .title {
     font-size: var(--font-size-2xl);
   }
@@ -187,15 +249,15 @@
   .leftSection {
     padding: var(--spacing-xl);
   }
-  
+
   .rightSection {
     padding: var(--spacing-xl);
   }
-  
+
   .logo {
     max-width: 300px;
   }
-  
+
   .tagline {
     font-size: var(--font-size-lg);
   }
@@ -206,15 +268,15 @@
   .leftSection {
     padding: var(--spacing-2xl);
   }
-  
+
   .rightSection {
     padding: var(--spacing-2xl);
   }
-  
+
   .logo {
     max-width: 400px;
   }
-  
+
   .button {
     transition: all 0.3s ease;
   }
