@@ -23,7 +23,7 @@ export default function EquipmentInfoReadView({
       {equipment.workOrders && equipment.workOrders.length > 0 && (
         <div className={styles.detailItem}>
           <strong>Órdenes asociadas:</strong>
-          <span>{equipment.workOrders.length} órdenes</span>
+          <span>{equipment.workOrders.length} {equipment.workOrders.length > 1 ? "órdenes" : "Órden"}</span>
         </div>
       )}
       <div className={styles.detailItem}>

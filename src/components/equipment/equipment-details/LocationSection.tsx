@@ -105,7 +105,7 @@ export default function LocationSection({
       {equipment.workOrders && equipment.workOrders.length > 0 && (
         <div className={styles.detailItem}>
           <strong>Órdenes de Trabajo:</strong>
-          <span>{equipment.workOrders.length} órdenes asociadas</span>
+          <span>{equipment.workOrders.length} {equipment.workOrders.length > 1 ? "Órdenes asociadas" : "Órden asociada"}</span>
         </div>
       )}
     </div>

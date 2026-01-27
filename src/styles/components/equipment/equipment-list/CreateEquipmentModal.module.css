@@ -1,7 +1,7 @@
 /* src/styles/equipment/equipment-list/CreateEquipmentModal.module.css */
 
 .modal {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
   display: flex;
@@ -853,6 +853,7 @@
 /* Estilos para el formulario de órdenes seleccionadas */
 .orderOption input[type="checkbox"] {
   margin-right: 8px;
+  width: 10px;
 }
 
 .orderOption label {
@@ -910,24 +911,24 @@
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .reloadOrdersButton {
     align-self: flex-start;
   }
-  
+
   .retryContainer {
     flex-direction: column;
   }
-  
+
   .continueButton,
   .retryButton {
     width: 100%;
   }
-  
+
   .multiSelectContainer {
     max-height: 200px;
   }
-  
+
   .orderInfo {
     margin-left: 0;
   }

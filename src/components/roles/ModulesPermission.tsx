@@ -160,9 +160,6 @@ const ModulesPermission: FC<Props> = ({ isOpen, role, onClose, onSaved }) => {
                     />
                     <div className={styles.meta}>
                       <div className={styles.nameRow}>
-                        <span className={styles.moduleIcon} aria-hidden>
-                          {m.icono ? m.icono : "📁"}
-                        </span>
                         <span className={styles.name}>{m.nombreModulo}</span>
                         <span className={styles.badge}>{m.activo ? "activo" : "inactivo"}</span>
                       </div>

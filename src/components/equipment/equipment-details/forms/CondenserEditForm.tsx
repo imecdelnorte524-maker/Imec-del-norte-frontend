@@ -1,5 +1,8 @@
+// src/components/equipment/equipment-details/forms/CondenserEditForm.tsx
 import type { CondenserData } from "../../../../interfaces/EquipmentInterfaces";
 import styles from "../../../../styles/components/equipment/equipment-details/forms/ComponentEditForms.module.css";
+import MotorEditForm from "./MotorEditForm";
+import CompressorEditForm from "./CompressorEditForm";
 
 interface CondenserEditFormProps {
   condenser: CondenserData;
@@ -9,6 +12,12 @@ interface CondenserEditFormProps {
   onAddMotor?: () => void;
   onAddCompressor?: () => void;
   onRemove?: () => void;
+  onMotorChange?: (condenserIndex: number, motorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onCompressorChange?: (condenserIndex: number, compressorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAddMotorToCondenser?: (condenserIndex: number) => void;
+  onAddCompressorToCondenser?: (condenserIndex: number) => void;
+  onRemoveMotor?: (condenserIndex: number, motorIndex: number) => void;
+  onRemoveCompressor?: (condenserIndex: number, compressorIndex: number) => void;
 }
 
 export default function CondenserEditForm({
@@ -19,7 +28,16 @@ export default function CondenserEditForm({
   onAddMotor,
   onAddCompressor,
   onRemove,
+  onMotorChange,
+  onCompressorChange,
+  onAddMotorToCondenser,
+  onAddCompressorToCondenser,
+  onRemoveMotor,
+  onRemoveCompressor,
 }: CondenserEditFormProps) {
+  const hasMotors = condenser.motors && condenser.motors.length > 0;
+  const hasCompressors = condenser.compressors && condenser.compressors.length > 0;
+
   return (
     <div className={styles.componentSection}>
       <div className={styles.componentHeader}>
@@ -35,6 +53,7 @@ export default function CondenserEditForm({
           </button>
         )}
       </div>
+      
       <div className={styles.formGrid}>
         <div className={styles.formField}>
           <label>Marca</label>
@@ -148,23 +167,67 @@ export default function CondenserEditForm({
         </div>
       </div>
 
-      {/* Botones para agregar motores y compresores dentro de la condensadora */}
+      {/* SECCIÓN DE MOTORES */}
+      {hasMotors && (
+        <div className={styles.motorsSection}>
+          <h6>Motores de la Condensadora</h6>
+          {condenser.motors?.map((motor, motorIndex) => (
+            <div key={motorIndex} className={styles.motorItem}>
+              <MotorEditForm
+                motor={motor}
+                index={motorIndex}
+                saving={saving}
+                onChange={(e) => onMotorChange?.(index, motorIndex, e)}
+                onRemove={onRemoveMotor 
+                  ? () => onRemoveMotor(index, motorIndex) 
+                  : undefined}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SECCIÓN DE COMPRESORES */}
+      {hasCompressors && (
+        <div className={styles.compressorsSection}>
+          <h6>Compresores de la Condensadora</h6>
+          {condenser.compressors?.map((compressor, compressorIndex) => (
+            <div key={compressorIndex} className={styles.compressorItem}>
+              <CompressorEditForm
+                compressor={compressor}
+                index={compressorIndex}
+                saving={saving}
+                onChange={(e) => onCompressorChange?.(index, compressorIndex, e)}
+                onRemove={onRemoveCompressor 
+                  ? () => onRemoveCompressor(index, compressorIndex) 
+                  : undefined}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Botones para agregar motores y compresores */}
       <div className={styles.componentActions}>
-        {onAddMotor && (
+        {(onAddMotor || onAddMotorToCondenser) && (
           <button 
             type="button" 
             className={styles.addButton}
-            onClick={onAddMotor}
+            onClick={onAddMotorToCondenser 
+              ? () => onAddMotorToCondenser(index) 
+              : onAddMotor}
             disabled={saving}
           >
             + Agregar Motor
           </button>
         )}
-        {onAddCompressor && (
+        {(onAddCompressor || onAddCompressorToCondenser) && (
           <button 
             type="button" 
             className={styles.addButton}
-            onClick={onAddCompressor}
+            onClick={onAddCompressorToCondenser 
+              ? () => onAddCompressorToCondenser(index) 
+              : onAddCompressor}
             disabled={saving}
           >
             + Agregar Compresor

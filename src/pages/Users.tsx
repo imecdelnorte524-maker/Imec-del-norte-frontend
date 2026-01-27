@@ -1,30 +1,41 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useUsers } from "../hooks/useUsers";
-import UserModal from '../components/users/UserModal';
-import type { Usuario } from '../interfaces/UserInterfaces';
-import styles from '../styles/pages/UsersPage.module.css';
-import Pagination from '../components/Pagination';
+import UserModal from "../components/users/UserModal";
+import type { Usuario } from "../interfaces/UserInterfaces";
+import styles from "../styles/pages/UsersPage.module.css";
+import Pagination from "../components/Pagination";
 
 export default function Users() {
-  const { usuarios, loading, error, toggleUserStatus, createUser, updateUser, roles } = useUsers();
+  const {
+    usuarios,
+    loading,
+    error,
+    toggleUserStatus,
+    createUser,
+    updateUser,
+    roles,
+  } = useUsers();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState<'todos' | 'Activo' | 'Inactivo'>('todos');
-  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<
+    "todos" | "Activo" | "Inactivo"
+  >("todos");
+  const [busqueda, setBusqueda] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10; // Cambia este valor según cuántos usuarios quieras por página
+  const usersPerPage = 10;
 
   // Filtrar usuarios según estado y búsqueda
-  const usuariosFiltrados = usuarios.filter(usuario => {
-    const coincideEstado = filtroEstado === 'todos' ||
-      (filtroEstado === 'Activo' && usuario.activo) ||
-      (filtroEstado === 'Inactivo' && !usuario.activo);
+  const usuariosFiltrados = usuarios.filter((usuario) => {
+    const coincideEstado =
+      filtroEstado === "todos" ||
+      (filtroEstado === "Activo" && usuario.activo) ||
+      (filtroEstado === "Inactivo" && !usuario.activo);
 
     const coincideBusqueda =
-      busqueda === '' ||
+      busqueda === "" ||
       usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       usuario.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
       usuario.email.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -37,10 +48,13 @@ export default function Users() {
   // Calcular índices de paginación
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  
+
   // Obtener usuarios para la página actual
-  const currentUsers = usuariosFiltrados.slice(indexOfFirstUser, indexOfLastUser);
-  
+  const currentUsers = usuariosFiltrados.slice(
+    indexOfFirstUser,
+    indexOfLastUser,
+  );
+
   const totalPages = Math.ceil(usuariosFiltrados.length / usersPerPage);
 
   // Resetear a página 1 cuando cambie el filtro o búsqueda
@@ -50,8 +64,7 @@ export default function Users() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    // Hacer scroll al inicio cuando cambia de página
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleEdit = (usuario: Usuario) => {
@@ -71,12 +84,11 @@ export default function Users() {
 
   const handleModalSuccess = () => {
     // Puedes añadir lógica adicional después de crear/actualizar un usuario
-    // Por ejemplo, mostrar un mensaje de éxito
   };
 
   const handleToggleStatus = async (usuario: Usuario) => {
     const confirmacion = window.confirm(
-      `¿Estás seguro de que quieres ${usuario.activo ? 'desactivar' : 'activar'} a ${usuario.nombre} ${usuario.apellido}?`
+      `¿Estás seguro de que quieres ${usuario.activo ? "desactivar" : "activar"} a ${usuario.nombre} ${usuario.apellido}?`,
     );
 
     if (confirmacion) {
@@ -128,14 +140,11 @@ export default function Users() {
           <div className={styles.buttonsGroup}>
             <button
               className={styles.btnSecondary}
-              onClick={() => navigate('/roles')}
+              onClick={() => navigate("/roles")}
             >
               📋 Gestión de Roles
             </button>
-            <button
-              className={styles.btnPrimary}
-              onClick={handleCreate}
-            >
+            <button className={styles.btnPrimary} onClick={handleCreate}>
               + Nuevo Usuario
             </button>
           </div>
@@ -144,9 +153,10 @@ export default function Users() {
         {/* Mostrar información de paginación */}
         <div className={styles.paginationInfo}>
           <span>
-            Mostrando {Math.min(usersPerPage, currentUsers.length)} de {usuariosFiltrados.length} usuarios
+            Mostrando {Math.min(usersPerPage, currentUsers.length)} de{" "}
+            {usuariosFiltrados.length} usuarios
             {busqueda && ` para "${busqueda}"`}
-            {filtroEstado !== 'todos' && ` (${filtroEstado})`}
+            {filtroEstado !== "todos" && ` (${filtroEstado})`}
           </span>
           <span>
             Página {currentPage} de {totalPages || 1}
@@ -154,9 +164,7 @@ export default function Users() {
         </div>
 
         {error ? (
-          <div className={styles.errorMessage}>
-            {error}
-          </div>
+          <div className={styles.errorMessage}>{error}</div>
         ) : (
           <div className={styles.usersContainer}>
             {/* Vista de tabla para desktop */}
@@ -167,7 +175,6 @@ export default function Users() {
                     <tr>
                       <th>Nombre</th>
                       <th>Email</th>
-                      <th>Cédula</th>
                       <th>Rol</th>
                       <th>Teléfono</th>
                       <th>Estado</th>
@@ -175,24 +182,47 @@ export default function Users() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentUsers.map(usuario => (
+                    {currentUsers.map((usuario) => (
                       <tr key={usuario.usuarioId}>
                         <td>
                           <div className={styles.userInfo}>
-                            <strong>{usuario.nombre} {usuario.apellido}</strong>
+                            <strong
+                              className={styles.userNameDesktop}
+                              data-fullname={`${usuario.nombre} ${usuario.apellido}`}
+                              title={`${usuario.nombre} ${usuario.apellido}`}
+                            >
+                              {usuario.nombre} {usuario.apellido}
+                            </strong>
                           </div>
                         </td>
-                        <td>{usuario.email}</td>
-                        <td>{usuario.tipoCedula} {usuario.cedula}</td>
+                        <td
+                          className={styles.emailCell}
+                          data-fulltext={usuario.email}
+                          title={usuario.email}
+                        >
+                          {usuario.email}
+                        </td>
                         <td>
-                          <span className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}>
+                          <span
+                            className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}
+                            data-fullrole={usuario.role.nombreRol}
+                            title={usuario.role.nombreRol}
+                          >
                             {usuario.role.nombreRol}
                           </span>
                         </td>
-                        <td>{usuario.telefono || 'No especificado'}</td>
+                        <td
+                          className={styles.phoneCell}
+                          data-fulltext={usuario.telefono || "No especificado"}
+                          title={usuario.telefono || "No especificado"}
+                        >
+                          {usuario.telefono || "No especificado"}
+                        </td>
                         <td>
-                          <span className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}>
-                            {usuario.activo ? 'Activo' : 'Inactivo'}
+                          <span
+                            className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}
+                          >
+                            {usuario.activo ? "Activo" : "Inactivo"}
                           </span>
                         </td>
                         <td>
@@ -207,9 +237,9 @@ export default function Users() {
                             <button
                               className={`${styles.btnAction} ${usuario.activo ? styles.deactivate : styles.activate}`}
                               onClick={() => handleToggleStatus(usuario)}
-                              title={usuario.activo ? 'Desactivar' : 'Activar'}
+                              title={usuario.activo ? "Desactivar" : "Activar"}
                             >
-                              {usuario.activo ? '⏸️' : '▶️'}
+                              {usuario.activo ? "⏸️" : "▶️"}
                             </button>
                           </div>
                         </td>
@@ -222,12 +252,24 @@ export default function Users() {
 
             {/* Vista de tarjetas para móvil */}
             <div className={styles.mobileView}>
-              {currentUsers.map(usuario => (
+              {currentUsers.map((usuario) => (
                 <div key={usuario.usuarioId} className={styles.mobileCard}>
                   <div className={styles.cardHeader}>
                     <div className={styles.userMainInfo}>
-                      <h3 className={styles.userName}>{usuario.nombre} {usuario.apellido}</h3>
-                      <p className={styles.userEmail}>{usuario.email}</p>
+                      <h3
+                        className={styles.userNameMobile}
+                        data-fullname={`${usuario.nombre} ${usuario.apellido}`}
+                        tabIndex={0}
+                      >
+                        {usuario.nombre} {usuario.apellido}
+                      </h3>
+                      <p
+                        className={styles.userEmail}
+                        data-fulltext={usuario.email}
+                        tabIndex={0}
+                      >
+                        {usuario.email}
+                      </p>
                     </div>
                     <div className={styles.cardActions}>
                       <button
@@ -240,9 +282,9 @@ export default function Users() {
                       <button
                         className={`${styles.btnAction} ${usuario.activo ? styles.deactivate : styles.activate}`}
                         onClick={() => handleToggleStatus(usuario)}
-                        title={usuario.activo ? 'Desactivar' : 'Activar'}
+                        title={usuario.activo ? "Desactivar" : "Activar"}
                       >
-                        {usuario.activo ? '⏸️' : '▶️'}
+                        {usuario.activo ? "⏸️" : "▶️"}
                       </button>
                     </div>
                   </div>
@@ -251,30 +293,62 @@ export default function Users() {
                     <div className={styles.cardDetails}>
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Usuario:</span>
-                        <span className={styles.detailValue}>{usuario.username}</span>
+                        <span className={styles.detailValue}>
+                          <span
+                            className={styles.truncatedText}
+                            data-fulltext={usuario.username}
+                            tabIndex={0}
+                          >
+                            {usuario.username}
+                          </span>
+                        </span>
                       </div>
 
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Cédula:</span>
-                        <span className={styles.detailValue}>{usuario.tipoCedula} {usuario.cedula}</span>
+                        <span className={styles.detailValue}>
+                          <span
+                            className={styles.truncatedText}
+                            data-fulltext={`${usuario.tipoCedula} ${usuario.cedula}`}
+                            tabIndex={0}
+                          >
+                            {usuario.tipoCedula} {usuario.cedula}
+                          </span>
+                        </span>
                       </div>
 
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Rol:</span>
-                        <span className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}>
+                        <span
+                          className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}
+                          data-fullrole={usuario.role.nombreRol}
+                          tabIndex={0}
+                        >
                           {usuario.role.nombreRol}
                         </span>
                       </div>
 
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Teléfono:</span>
-                        <span className={styles.detailValue}>{usuario.telefono || 'No especificado'}</span>
+                        <span className={styles.detailValue}>
+                          <span
+                            className={styles.truncatedText}
+                            data-fulltext={
+                              usuario.telefono || "No especificado"
+                            }
+                            tabIndex={0}
+                          >
+                            {usuario.telefono || "No especificado"}
+                          </span>
+                        </span>
                       </div>
 
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Estado:</span>
-                        <span className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}>
-                          {usuario.activo ? 'Activo' : 'Inactivo'}
+                        <span
+                          className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}
+                        >
+                          {usuario.activo ? "Activo" : "Inactivo"}
                         </span>
                       </div>
 
@@ -292,7 +366,9 @@ export default function Users() {
 
             {usuariosFiltrados.length === 0 && (
               <div className={styles.emptyState}>
-                {busqueda ? 'No se encontraron usuarios con esa búsqueda' : 'No hay usuarios registrados'}
+                {busqueda
+                  ? "No se encontraron usuarios con esa búsqueda"
+                  : "No hay usuarios registrados"}
               </div>
             )}
 

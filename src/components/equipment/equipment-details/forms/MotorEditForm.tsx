@@ -1,3 +1,4 @@
+// src/components/equipment/equipment-details/forms/MotorEditForm.tsx
 import type { MotorData } from "../../../../interfaces/EquipmentInterfaces";
 import styles from "../../../../styles/components/equipment/equipment-details/forms/ComponentEditForms.module.css";
 
@@ -5,7 +6,7 @@ interface MotorEditFormProps {
   motor: MotorData;
   index: number;
   saving: boolean;
-  onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; // Cambiado: sin índice
   onRemove?: () => void;
 }
 
@@ -37,7 +38,7 @@ export default function MotorEditForm({
           <input
             name="amperaje"
             value={motor.amperaje || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 8.5A"
           />
@@ -47,7 +48,7 @@ export default function MotorEditForm({
           <input
             name="voltaje"
             value={motor.voltaje || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 220-240V"
           />
@@ -57,7 +58,7 @@ export default function MotorEditForm({
           <input
             name="numeroFases"
             value={motor.numeroFases || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 1"
           />
@@ -67,7 +68,7 @@ export default function MotorEditForm({
           <input
             name="diametroEje"
             value={motor.diametroEje || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 19mm"
           />
@@ -77,7 +78,7 @@ export default function MotorEditForm({
           <input
             name="tipoEje"
             value={motor.tipoEje || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: Cónico"
           />
@@ -87,7 +88,7 @@ export default function MotorEditForm({
           <input
             name="rpm"
             value={motor.rpm || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 1450"
           />
@@ -97,7 +98,7 @@ export default function MotorEditForm({
           <input
             name="correa"
             value={motor.correa || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: A-52"
           />
@@ -107,7 +108,7 @@ export default function MotorEditForm({
           <input
             name="diametroPolea"
             value={motor.diametroPolea || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 150mm"
           />
@@ -117,7 +118,7 @@ export default function MotorEditForm({
           <input
             name="capacidadHp"
             value={motor.capacidadHp || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 1.5 HP"
           />
@@ -127,7 +128,7 @@ export default function MotorEditForm({
           <input
             name="frecuencia"
             value={motor.frecuencia || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 60 Hz"
           />
