@@ -1,5 +1,7 @@
+// src/components/equipment/equipment-details/forms/EvaporatorEditForm.tsx
 import type { EvaporatorData } from "../../../../interfaces/EquipmentInterfaces";
 import styles from "../../../../styles/components/equipment/equipment-details/forms/ComponentEditForms.module.css";
+import MotorEditForm from "./MotorEditForm";
 
 interface EvaporatorEditFormProps {
   evaporator: EvaporatorData;
@@ -8,6 +10,9 @@ interface EvaporatorEditFormProps {
   onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
   onAddMotor?: () => void;
   onRemove?: () => void;
+  onMotorChange?: (evaporatorIndex: number, motorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onAddMotorToEvaporator?: (evaporatorIndex: number) => void;
+  onRemoveMotor?: (evaporatorIndex: number, motorIndex: number) => void;
 }
 
 export default function EvaporatorEditForm({
@@ -17,7 +22,12 @@ export default function EvaporatorEditForm({
   onChange,
   onAddMotor,
   onRemove,
+  onMotorChange,
+  onAddMotorToEvaporator,
+  onRemoveMotor,
 }: EvaporatorEditFormProps) {
+  const hasMotors = evaporator.motors && evaporator.motors.length > 0;
+
   return (
     <div className={styles.componentSection}>
       <div className={styles.componentHeader}>
@@ -33,6 +43,7 @@ export default function EvaporatorEditForm({
           </button>
         )}
       </div>
+      
       <div className={styles.formGrid}>
         <div className={styles.formField}>
           <label>Marca</label>
@@ -86,13 +97,35 @@ export default function EvaporatorEditForm({
         </div>
       </div>
 
-      {/* Botón para agregar motor dentro del evaporador */}
-      {onAddMotor && (
+      {/* SECCIÓN DE MOTORES */}
+      {hasMotors && (
+        <div className={styles.motorsSection}>
+          <h6>Motores del Evaporador</h6>
+          {evaporator.motors?.map((motor, motorIndex) => (
+            <div key={motorIndex} className={styles.motorItem}>
+              <MotorEditForm
+                motor={motor}
+                index={motorIndex}
+                saving={saving}
+                onChange={(e) => onMotorChange?.(index, motorIndex, e)}
+                onRemove={onRemoveMotor 
+                  ? () => onRemoveMotor(index, motorIndex) 
+                  : undefined}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Botón para agregar motor */}
+      {(onAddMotor || onAddMotorToEvaporator) && (
         <div className={styles.componentActions}>
           <button 
             type="button" 
             className={styles.addButton}
-            onClick={onAddMotor}
+            onClick={onAddMotorToEvaporator 
+              ? () => onAddMotorToEvaporator(index) 
+              : onAddMotor}
             disabled={saving}
           >
             + Agregar Motor

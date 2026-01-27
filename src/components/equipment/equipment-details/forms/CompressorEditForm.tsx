@@ -1,3 +1,4 @@
+// src/components/equipment/equipment-details/forms/CompressorEditForm.tsx
 import type { CompressorData } from "../../../../interfaces/EquipmentInterfaces";
 import styles from "../../../../styles/components/equipment/equipment-details/forms/ComponentEditForms.module.css";
 
@@ -5,7 +6,7 @@ interface CompressorEditFormProps {
   compressor: CompressorData;
   index: number;
   saving: boolean;
-  onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; // Cambiado: sin índice
   onRemove?: () => void;
 }
 
@@ -37,7 +38,7 @@ export default function CompressorEditForm({
           <input
             name="marca"
             value={compressor.marca || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: Copeland"
           />
@@ -47,7 +48,7 @@ export default function CompressorEditForm({
           <input
             name="modelo"
             value={compressor.modelo || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: ZR48K5E"
           />
@@ -57,7 +58,7 @@ export default function CompressorEditForm({
           <input
             name="serial"
             value={compressor.serial || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: CMP-1122334455"
           />
@@ -67,7 +68,7 @@ export default function CompressorEditForm({
           <input
             name="capacidad"
             value={compressor.capacidad || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 48000 BTU"
           />
@@ -77,7 +78,7 @@ export default function CompressorEditForm({
           <input
             name="voltaje"
             value={compressor.voltaje || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 380V"
           />
@@ -87,7 +88,7 @@ export default function CompressorEditForm({
           <input
             name="frecuencia"
             value={compressor.frecuencia || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 60 Hz"
           />
@@ -97,7 +98,7 @@ export default function CompressorEditForm({
           <input
             name="tipoRefrigerante"
             value={compressor.tipoRefrigerante || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: R-410A"
           />
@@ -107,7 +108,7 @@ export default function CompressorEditForm({
           <input
             name="tipoAceite"
             value={compressor.tipoAceite || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: POE"
           />
@@ -117,7 +118,7 @@ export default function CompressorEditForm({
           <input
             name="cantidadAceite"
             value={compressor.cantidadAceite || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 1.8 L"
           />
@@ -127,7 +128,7 @@ export default function CompressorEditForm({
           <input
             name="capacitor"
             value={compressor.capacitor || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 45/5 µF"
           />
@@ -137,7 +138,7 @@ export default function CompressorEditForm({
           <input
             name="lra"
             value={compressor.lra || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 120A"
           />
@@ -147,7 +148,7 @@ export default function CompressorEditForm({
           <input
             name="fla"
             value={compressor.fla || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 18A"
           />
@@ -157,7 +158,7 @@ export default function CompressorEditForm({
           <input
             name="cantidadPolos"
             value={compressor.cantidadPolos || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 4"
           />
@@ -167,7 +168,7 @@ export default function CompressorEditForm({
           <input
             name="amperaje"
             value={compressor.amperaje || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 16A"
           />
@@ -177,7 +178,7 @@ export default function CompressorEditForm({
           <input
             name="voltajeBobina"
             value={compressor.voltajeBobina || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 24V"
           />
@@ -187,7 +188,7 @@ export default function CompressorEditForm({
           <input
             name="vac"
             value={compressor.vac || ""}
-            onChange={(e) => onChange(index, e)}
+            onChange={onChange}
             disabled={saving}
             placeholder="Ej: 230V"
           />

@@ -430,7 +430,7 @@
 
 /* Modal de foto ampliada */
 .photoModalOverlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(15, 23, 42, 0.7);
   display: flex;

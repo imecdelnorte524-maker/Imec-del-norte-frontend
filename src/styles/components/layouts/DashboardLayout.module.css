@@ -3,7 +3,7 @@
 .container {
   display: flex;
   min-height: 100vh;
-  background-color: var(--gray-50);
+  background-color: #f9fafb;
   height: 100vh;
   overflow: hidden;
   width: 100vw;
@@ -12,7 +12,7 @@
 /* ===== SIDEBAR ===== */
 .sidebar {
   width: 280px;
-  background: var(--primary-500);
+  background: #2563eb;
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
@@ -22,7 +22,7 @@
   position: fixed;
   left: 0;
   top: 0;
-  overflow: visible !important; /* IMPORTANTE: Permitir que los tooltips salgan */
+  overflow: visible !important;
   transform: translateX(-100%);
 }
 
@@ -35,12 +35,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--primary-700);
+  background: #1d4ed8;
   position: relative;
   min-height: 60px;
-  flex-shrink: 0; /* No se encoge */
+  flex-shrink: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 10; /* Encima del nav */
+  z-index: 10;
 }
 
 .logoContainer {
@@ -58,7 +58,7 @@
 .logoText {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--white);
+  color: #ffffff;
   white-space: nowrap;
 }
 
@@ -77,10 +77,10 @@
   display: block;
   background: none;
   border: none;
-  color: var(--white);
+  color: #ffffff;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   font-size: 1.5rem;
 }
 
@@ -92,10 +92,10 @@
   display: none;
   background: none;
   border: none;
-  color: var(--white);
+  color: #ffffff;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   font-size: 1.5rem;
 }
 
@@ -103,23 +103,23 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Navigation - CON SCROLL */
+/* Navigation */
 .nav {
   flex: 1;
   padding: 0.5rem 0;
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
-  overflow-y: auto !important; /* Scroll vertical */
+  overflow-y: auto !important;
   overflow-x: hidden !important;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  min-height: 0; /* Importante para flex scroll */
+  min-height: 0;
   position: relative;
   z-index: 1;
 }
 
-/* Personalizar scrollbar */
+/* Scrollbar personalizado */
 .nav::-webkit-scrollbar {
   width: 6px;
 }
@@ -152,7 +152,7 @@
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: var(--primary-500);
+  background: #2563eb;
   z-index: 2;
   margin-bottom: 0.25rem;
 }
@@ -162,7 +162,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.875rem 1.5rem;
-  color: var(--white);
+  color: #ffffff;
   background: none;
   border: none;
   transition: all 0.2s;
@@ -192,7 +192,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--white);
+  background: #ffffff;
 }
 
 .navIcon {
@@ -210,7 +210,7 @@
   text-overflow: ellipsis;
 }
 
-/* ===== TOOLTIP CORREGIDO ===== */
+/* Tooltip */
 .tooltip {
   position: absolute;
   left: 100%;
@@ -225,16 +225,16 @@
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
-  z-index: 1100 !important; /* Mayor z-index */
+  z-index: 1100 !important;
   pointer-events: none;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -4px rgba(0, 0, 0, 0.1);
   font-weight: 500;
   min-width: max-content;
-  margin-left: 8px; /* Separación del sidebar */
+  margin-left: 8px;
 }
 
-/* Flecha del tooltip */
 .tooltip::before {
   content: "";
   position: absolute;
@@ -245,14 +245,12 @@
   border-right-color: #1f2937;
 }
 
-/* MOSTRAR tooltip en hover - CORREGIDO */
 .navItem:hover .tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateY(-50%) translateX(0);
 }
 
-/* En sidebar colapsado, asegurar que tooltip se vea */
 .sidebarCollapsed .navItem {
   position: relative;
 }
@@ -261,18 +259,18 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(-50%) translateX(0);
-  z-index: 2000 !important; /* Muy alto para asegurar visibilidad */
+  z-index: 2000 !important;
 }
 
-/* ===== SIDEBAR FOOTER - FIJADO EN LA PARTE INFERIOR ===== */
+/* Sidebar Footer */
 .sidebarFooter {
   padding: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
   min-height: 80px;
-  flex-shrink: 0; /* No se encoge */
-  background: var(--primary-500);
-  position: relative; /* Para dropdowns */
+  flex-shrink: 0;
+  background: #2563eb;
+  position: relative;
   z-index: 10;
 }
 
@@ -287,7 +285,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
   min-height: 56px;
@@ -308,7 +306,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-600);
+  color: #2563eb;
   font-weight: 600;
   font-size: 0.875rem;
   flex-shrink: 0;
@@ -332,7 +330,7 @@
 
 .userName {
   font-weight: 600;
-  color: var(--white);
+  color: #ffffff;
   font-size: 0.875rem;
   line-height: 1.2;
   white-space: nowrap;
@@ -352,7 +350,7 @@
 .chevron {
   width: 16px;
   height: 16px;
-  color: var(--white);
+  color: #ffffff;
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -366,12 +364,14 @@
   position: absolute;
   width: 250px;
   bottom: 4.5rem;
-  background: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-lg);
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   animation: fadeIn 0.2s ease;
-  border: 1px solid var(--gray-200);
+  border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
@@ -389,7 +389,7 @@
   padding: 0.875rem;
   background: none;
   border: none;
-  color: var(--gray-700);
+  color: #374151;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
@@ -410,8 +410,8 @@
 }
 
 .dropdownItem:hover {
-  background: var(--gray-50);
-  color: var(--gray-900);
+  background: #f9fafb;
+  color: #111827;
 }
 
 .dropdownIcon {
@@ -431,16 +431,16 @@
   }
 }
 
-/* Tooltip para versión colapsada del perfil */
+/* Tooltip para perfil colapsado */
 .userProfileTooltip {
   position: absolute;
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  background: var(--gray-800);
+  background: #1f2937;
   color: white;
   padding: 0.5rem 0.75rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   font-size: 0.875rem;
   white-space: nowrap;
   margin-left: 1rem;
@@ -450,7 +450,8 @@
   z-index: 1100;
   pointer-events: none;
   text-align: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
@@ -461,7 +462,7 @@
   top: 50%;
   transform: translateY(-50%);
   border: 6px solid transparent;
-  border-right-color: var(--gray-800);
+  border-right-color: #1f2937;
 }
 
 .sidebarCollapsed .userProfile:hover .userProfileTooltip {
@@ -483,16 +484,16 @@
   width: 100vw;
 }
 
-/* Header fijo */
+/* Header */
 .header {
-  background: var(--white);
+  background: #ffffff;
   padding: 1rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -504,16 +505,16 @@
   display: flex;
   background: none;
   border: none;
-  color: var(--gray-600);
+  color: #4b5563;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   font-size: 1.5rem;
   align-items: center;
 }
 
 .menuButton:hover {
-  background: var(--gray-100);
+  background: #f3f4f6;
 }
 
 .headerLeft {
@@ -527,7 +528,7 @@
 .pageTitle {
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--gray-800);
+  color: #111827;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -544,10 +545,10 @@
 .iconButton {
   background: none;
   border: none;
-  color: var(--gray-600);
+  color: #4b5563;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   position: relative;
   font-size: 1.5rem;
   display: flex;
@@ -555,15 +556,15 @@
 }
 
 .iconButton:hover {
-  background: var(--gray-100);
-  color: var(--gray-800);
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .notificationBadge {
   position: absolute;
   top: 4px;
   right: 4px;
-  background: var(--secondary-500);
+  background: #ef4444;
   color: white;
   border-radius: 50%;
   width: 18px;
@@ -587,11 +588,11 @@
   border: none;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
 }
 
 .userAvatarButton:hover {
-  background: var(--gray-100);
+  background: #f3f4f6;
 }
 
 .mobileUserDropdown {
@@ -599,27 +600,29 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-lg);
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
   padding: 1rem;
   min-width: 220px;
   z-index: 1000;
   margin-top: 0.5rem;
-  border: 1px solid var(--gray-200);
+  border: 1px solid #e5e7eb;
   animation: fadeIn 0.2s ease;
 }
 
 .userDropdownInfo {
   padding-bottom: 1rem;
   margin-bottom: 0.5rem;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid #e5e7eb;
   text-align: left;
 }
 
 .userDropdownInfo .userName {
   font-weight: 600;
-  color: var(--gray-800);
+  color: #111827;
   font-size: 0.875rem;
   display: block;
   white-space: nowrap;
@@ -628,7 +631,7 @@
 }
 
 .userDropdownInfo .userRole {
-  color: var(--gray-600);
+  color: #4b5563;
   font-size: 0.75rem;
   display: block;
   margin-top: 2px;
@@ -642,7 +645,7 @@
   flex: 1;
   padding: 1.5rem;
   overflow-y: auto;
-  background: var(--gray-50);
+  background: #f9fafb;
   min-height: 0;
   width: 100%;
 }
@@ -662,7 +665,6 @@
   display: none;
 }
 
-/* Centrar iconos en sidebar colapsado */
 .sidebarCollapsed .navItem {
   justify-content: center;
   padding: 0.75rem;
@@ -671,7 +673,6 @@
   width: calc(100% - 1.5rem);
 }
 
-/* Mantener el footer visible en versión colapsada */
 .sidebarCollapsed .userInfo,
 .sidebarCollapsed .chevron {
   display: none;
@@ -689,7 +690,7 @@
   display: none;
 }
 
-/* ===== ESTILOS PARA CONTROL DE ROLES ===== */
+/* Estilos para control de roles */
 .noModulesMessage {
   padding: 2rem 1rem;
   text-align: center;
@@ -697,7 +698,7 @@
   font-size: 0.875rem;
   margin: 1rem 1rem 0;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--border-radius);
+  border-radius: 6px;
 }
 
 .noModulesMessage p {
@@ -707,13 +708,13 @@
 
 .pageSubtitle {
   font-size: 0.875rem;
-  color: var(--gray-500);
+  color: #6b7280;
   font-weight: 400;
   margin-left: 0.5rem;
   font-style: italic;
 }
 
-/* Estilos para los grupos de módulos */
+/* Estilos para grupos de módulos */
 .navSection:not(:first-child) {
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -743,7 +744,7 @@
   margin-top: 0.5rem;
 }
 
-/* ===== RESPONSIVE CORREGIDO ===== */
+/* ===== RESPONSIVE ===== */
 
 /* MÓVIL (hasta 767px) */
 @media (max-width: 767px) {
@@ -785,7 +786,6 @@
     display: flex;
   }
 
-  /* OCULTAR FOOTER DEL SIDEBAR EN MÓVIL */
   .sidebarFooter {
     display: none !important;
   }
@@ -810,23 +810,24 @@
     position: static;
     width: 220px;
     bottom: 4.5rem;
-    background: var(--white);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     animation: fadeIn 0.2s ease;
-    border: 1px solid var(--gray-200);
+    border: 1px solid #e5e7eb;
     overflow: hidden;
   }
 
-  /* Ajuste de dropdown de notificaciones en móvil */
   .notificationsDropdown {
     right: 0;
     left: auto;
     width: 90vw;
     max-width: 70vw;
     max-height: 60vh;
-    border-radius: var(--border-radius);
+    border-radius: 6px;
   }
 }
 
@@ -897,9 +898,39 @@
     display: none;
   }
 
-  /* MOSTRAR FOOTER EN TABLET */
   .sidebarFooter {
-    display: block !important;
+    display: none;
+  }
+
+  .userAvatarButton {
+    display: block;
+  }
+  .mobileUserDropdown {
+    display: block;
+    right: 20px;
+  }
+
+  .userDropdown {
+    position: static;
+    width: 220px;
+    bottom: 4.5rem;
+    background: #ffffff;
+    border-radius: 6px;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    animation: _fadeIn_19aru_1 0.2s ease;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+  }
+
+   .sidebarCollapsed .sidebarFooter {
+    display: none;
+  }
+
+  .sidebarControls {
+    display: none;
   }
 }
 
@@ -944,7 +975,6 @@
     display: none;
   }
 
-  /* MOSTRAR FOOTER EN LAPTOPS */
   .sidebarFooter {
     display: block !important;
   }
@@ -991,7 +1021,6 @@
     display: none;
   }
 
-  /* MOSTRAR FOOTER EN DESKTOP */
   .sidebarFooter {
     display: block !important;
   }
@@ -1038,7 +1067,6 @@
     display: none;
   }
 
-  /* MOSTRAR FOOTER EN DESKTOP GRANDE */
   .sidebarFooter {
     display: block !important;
   }
@@ -1115,7 +1143,7 @@
   }
 }
 
-/* ===== NOTIFICACIONES (DESKTOP + BASE) ===== */
+/* Notificaciones */
 .notificationsWrapper {
   position: relative;
 }
@@ -1126,10 +1154,12 @@
   margin-top: 0.5rem;
   width: 320px;
   max-height: 400px;
-  background: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--gray-200);
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
   z-index: 1000;
   overflow: hidden;
   display: flex;
@@ -1141,30 +1171,30 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid #e5e7eb;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--gray-800);
+  color: #111827;
 }
 
 .markAllReadButton {
   border: none;
   background: transparent;
-  color: var(--primary-600);
+  color: #2563eb;
   font-size: 0.75rem;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  border-radius: var(--border-radius);
+  border-radius: 6px;
 }
 
 .markAllReadButton:hover {
-  background: var(--gray-100);
+  background: #f3f4f6;
 }
 
 .noNotifications {
   padding: 0.75rem;
   font-size: 0.875rem;
-  color: var(--gray-500);
+  color: #6b7280;
 }
 
 .notificationsList {
@@ -1178,49 +1208,50 @@
 .notificationItemUnread,
 .notificationItemRead {
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
 }
 
 .notificationItemUnread {
-  background: #e5f0ff;
+  background: #eff6ff;
 }
 
 .notificationItemRead {
-  background: var(--white);
+  background: #ffffff;
 }
 
 .notificationItemUnread:hover,
 .notificationItemRead:hover {
-  background: var(--gray-100);
+  background: #f3f4f6;
 }
 
 .notificationTitle {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--gray-800);
+  color: #111827;
   margin-bottom: 0.125rem;
 }
 
 .notificationMessage {
   font-size: 0.8125rem;
-  color: var(--gray-600);
+  color: #4b5563;
 }
 
 .notificationDate {
   font-size: 0.75rem;
-  color: var(--gray-400);
+  color: #9ca3af;
   margin-top: 0.25rem;
 }
 
 .userAvatarImage {
   width: 100%;
   height: 100%;
-  border-radius: 9999px;
+  border-radius: 50%;
   object-fit: cover;
   display: block;
 }
 
+/* Global Profile Reminder */
 .globalProfileReminder {
   position: fixed;
   right: 1rem;
@@ -1228,17 +1259,19 @@
   z-index: 2000;
   min-width: 300px;
   max-width: 420px;
-  background: linear-gradient(90deg,#2563eb,#1d4ed8);
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
   color: #fff;
-  border-radius: 0.75rem;
+  border-radius: 12px;
   padding: 0.75rem 0.9rem;
   display: flex;
   gap: 0.75rem;
   align-items: center;
-  box-shadow: 0 12px 30px rgba(37,99,235,0.18);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.18);
   transform: translateX(120%);
   opacity: 0;
-  transition: transform 0.45s cubic-bezier(.22,.9,.2,1), opacity 0.45s;
+  transition:
+    transform 0.45s cubic-bezier(0.22, 0.9, 0.2, 1),
+    opacity 0.45s;
   pointer-events: auto;
 }
 
@@ -1286,4 +1319,37 @@
   font-size: 1.2rem;
   cursor: pointer;
   padding: 0.15rem 0.35rem;
+}
+
+/* Error message */
+.errorMessage {
+  color: #ef4444;
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.loadingMessage {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+/* Ajustes para hover en dispositivos táctiles */
+@media (hover: hover) {
+  .btnAction:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+}
+
+@media (hover: none) {
+  .btnAction:active,
+  .btnPrimary:active,
+  .btnSecondary:active {
+    transform: scale(0.98);
+  }
 }

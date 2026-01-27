@@ -18,7 +18,7 @@ export default function Inventory() {
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<TipoFiltro>("todos");
   const [busqueda, setBusqueda] = useState("");
-  const [showDeleted, setShowDeleted] = useState(false);
+  const [showDeleted] = useState(false);
   
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -138,14 +138,14 @@ export default function Inventory() {
               className={styles.searchInput}
             />
 
-            <label className={styles.showDeletedCheckbox}>
+            {/* <label className={styles.showDeletedCheckbox}>
               <input
                 type="checkbox"
                 checked={showDeleted}
                 onChange={(e) => setShowDeleted(e.target.checked)}
               />
               <span>Mostrar eliminados</span>
-            </label>
+            </label> */}
           </div>
 
           <button

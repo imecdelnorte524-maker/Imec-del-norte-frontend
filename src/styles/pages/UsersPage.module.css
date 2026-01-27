@@ -190,6 +190,23 @@
   transform: translateY(0);
 }
 
+/* Paginación superior */
+.paginationInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 20px 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #6c757d;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Contenedor principal responsivo */
 .usersContainer {
   width: 100%;
@@ -235,7 +252,7 @@
   border-bottom: 1px solid #f3f4f6;
   color: #374151;
   vertical-align: middle;
-  word-wrap: break-word;
+  overflow: hidden;
 }
 
 .table tr:hover {
@@ -246,17 +263,60 @@
   border-bottom: none;
 }
 
+/* Celda de nombre con tooltip */
 .userInfo {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.userInfo strong {
-  color: #1f2937;
+.userNameDesktop {
   font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+  cursor: help;
+  position: relative;
+  display: inline-block;
 }
 
+/* Tooltip para nombres largos en desktop */
+.userNameDesktop:hover::after {
+  content: attr(data-fullname);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  font-weight: normal;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userNameDesktop:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+  z-index: 1001;
+}
+
+/* Rol con tooltip */
 .role {
   padding: 8px 14px;
   border-radius: 20px;
@@ -267,8 +327,48 @@
   display: inline-block;
   text-align: center;
   min-width: 90px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+  position: relative;
 }
 
+.role:hover::after {
+  content: attr(data-fullrole);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  font-weight: normal;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: none;
+}
+
+.role:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+  z-index: 1001;
+}
+
+/* Colores para roles */
 .role.administrador {
   background: #dc3545;
   color: white;
@@ -300,6 +400,51 @@
 .role.gerente {
   background: #6610f2;
   color: white;
+}
+
+/* Email y teléfono con truncado */
+.emailCell,
+.phoneCell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+  position: relative;
+  cursor: help;
+}
+
+.emailCell:hover::after,
+.phoneCell:hover::after {
+  content: attr(data-fulltext);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  font-weight: normal;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emailCell:hover::before,
+.phoneCell:hover::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
+  z-index: 1001;
 }
 
 .status {
@@ -373,6 +518,7 @@
   padding: 20px;
   transition: transform 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
+  position: relative;
 }
 
 .mobileCard:hover {
@@ -392,20 +538,74 @@
 .userMainInfo {
   flex: 1;
   min-width: 200px;
+  position: relative;
 }
 
-.userName {
+/* Nombre en móvil con tooltip */
+.userNameMobile {
   font-size: 1.2rem;
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 6px 0;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  cursor: pointer;
+  position: relative;
+  padding-right: 20px;
+}
+
+/* Tooltip para nombres largos en móvil (tap/hold) */
+.userNameMobile:active::after,
+.userNameMobile:focus::after {
+  content: attr(data-fullname);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  white-space: normal;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: normal;
+  max-width: 300px;
+  width: max-content;
+  word-break: break-word;
 }
 
 .userEmail {
   color: #6b7280;
   font-size: 0.95rem;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Tooltip para email largo en móvil */
+.userEmail:active::after,
+.userEmail:focus::after {
+  content: attr(data-fulltext);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: normal;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 300px;
+  width: max-content;
   word-break: break-all;
 }
 
@@ -452,8 +652,38 @@
   font-size: 0.9rem;
   text-align: right;
   flex: 1;
-  word-break: break-word;
+  overflow: hidden;
   padding-left: 12px;
+  position: relative;
+}
+
+/* Valores con truncado y tooltip en móvil */
+.truncatedText {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  cursor: pointer;
+}
+
+.truncatedText:active::after,
+.truncatedText:focus::after {
+  content: attr(data-fulltext);
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #1f2937;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: normal;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 250px;
+  width: max-content;
+  word-break: break-word;
 }
 
 .emptyState {
@@ -489,23 +719,7 @@
   box-sizing: border-box;
 }
 
-/* Paginación */
-.paginationInfo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 20px 0;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  color: #6c757d;
-  flex-wrap: wrap;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
+/* Paginación inferior */
 .paginationWrapper {
   margin-top: 24px;
   padding-top: 20px;
@@ -528,6 +742,15 @@
   .stats {
     grid-template-columns: repeat(3, 1fr);
   }
+
+  .filterSelect {
+    display: none;
+  }
+
+  .searchInput {
+    min-width: auto;
+    width: 90%;
+  }
 }
 
 @media (max-width: 992px) {
@@ -538,6 +761,21 @@
   
   .stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  /* Ajustar anchos en tablet */
+  .userNameDesktop {
+    max-width: 150px;
+  }
+  
+  .emailCell,
+  .phoneCell {
+    max-width: 140px;
+  }
+  
+  .role {
+    max-width: 100px;
+    min-width: 80px;
   }
 }
 
@@ -567,11 +805,14 @@
     width: 100%;
   }
 
-  .filterSelect,
   .searchInput {
     min-width: auto;
     width: 100%;
-    font-size: 16px; /* Previene zoom en iOS */
+    font-size: 16px;
+  }
+
+  .filterSelect {
+    display: none;
   }
 
   .buttonsGroup {
@@ -688,7 +929,7 @@
     font-size: 1.75rem;
   }
   
-  .userName {
+  .userNameMobile {
     font-size: 1.1rem;
   }
   
@@ -705,6 +946,10 @@
   .paginationInfo {
     font-size: 0.85rem;
     padding: 14px;
+  }
+  
+  .truncatedText {
+    max-width: 120px;
   }
 }
 
@@ -731,7 +976,7 @@
     padding: 14px;
   }
   
-  .userName {
+  .userNameMobile {
     font-size: 1rem;
   }
   
@@ -748,6 +993,10 @@
   .status {
     font-size: 0.75rem;
     padding: 6px 10px;
+  }
+  
+  .truncatedText {
+    max-width: 100px;
   }
 }
 
@@ -789,16 +1038,17 @@
   .btnAction:active {
     background: #f3f4f6;
   }
-}
-
-/* Mejoras de accesibilidad */
-@media (prefers-reduced-motion: reduce) {
-  .statCard,
-  .mobileCard,
-  .btnPrimary,
-  .btnSecondary,
-  .btnAction {
-    transition: none;
+  
+  /* Tooltips en hover no funcionan en táctil */
+  .userNameDesktop:hover::after,
+  .userNameDesktop:hover::before,
+  .role:hover::after,
+  .role:hover::before,
+  .emailCell:hover::after,
+  .emailCell:hover::before,
+  .phoneCell:hover::after,
+  .phoneCell:hover::before {
+    display: none;
   }
 }
 

@@ -20,7 +20,7 @@ export default function ClientsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState<"all" | "withAreas" | "withoutAreas">(
+  const [filter] = useState<"all" | "withAreas" | "withoutAreas">(
     "all"
   );
 
@@ -126,7 +126,7 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          <div className={styles.controlsRight}>
+          {/* <div className={styles.controlsRight}>
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
@@ -136,7 +136,7 @@ export default function ClientsPage() {
               <option value="withAreas">Con áreas</option>
               <option value="withoutAreas">Sin áreas</option>
             </select>
-          </div>
+          </div> */}
         </div>
 
         {/* Error */}
