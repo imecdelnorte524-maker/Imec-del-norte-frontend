@@ -73,7 +73,9 @@ interface CreateEquipmentModalProps {
   // Plan de mantenimiento
   planMantenimiento: PlanMantenimientoData;
   onPlanMantenimientoChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => void;
 
   // Cliente actual (para obtener órdenes)
@@ -95,7 +97,7 @@ interface CreateEquipmentModalProps {
   // Acciones
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
-  
+
   // Nueva prop: función para cargar órdenes
   onLoadOrders: (clienteEmpresaId: number, category: string) => void;
 }
@@ -134,32 +136,30 @@ export default function CreateEquipmentModal({
   onClose,
   onLoadOrders,
 }: CreateEquipmentModalProps) {
-  
   // 🔧 REFs para tracking de parámetros previos
   const previousCategoryRef = useRef<string>("");
   const previousClientRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   // 🔧 EFECTO MEJORADO PARA CARGAR ÓRDENES CON DEBOUNCING
   useEffect(() => {
     // Limpiar timer anterior
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    
+
     // Solo cargar si el modal está abierto y tenemos los datos necesarios
     if (isOpen && client && createForm.category) {
-      const hasSameParams = 
-        previousCategoryRef.current === createForm.category && 
+      const hasSameParams =
+        previousCategoryRef.current === createForm.category &&
         previousClientRef.current === client.idCliente;
-      
+
       // Evitar llamada si ya tenemos los datos para esta combinación
       if (!hasSameParams) {
-        
         // Usar debouncing para evitar múltiples llamadas rápidas
         debounceTimerRef.current = setTimeout(() => {
           onLoadOrders(client.idCliente, createForm.category);
-          
+
           // Actualizar refs con los parámetros actuales
           previousCategoryRef.current = createForm.category;
           previousClientRef.current = client.idCliente;
@@ -167,9 +167,9 @@ export default function CreateEquipmentModal({
       } else {
       }
     } else if (isOpen && createForm.category && !client) {
-      console.warn('[Modal] No hay cliente definido para cargar órdenes');
+      console.warn("[Modal] No hay cliente definido para cargar órdenes");
     }
-    
+
     // Cleanup del timer al desmontar o cuando cambien las dependencias
     return () => {
       if (debounceTimerRef.current) {
@@ -185,13 +185,13 @@ export default function CreateEquipmentModal({
       // Resetear refs para forzar recarga
       previousCategoryRef.current = "";
       previousClientRef.current = null;
-      
+
       // Limpiar timer si existe
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
-      
+
       // Cargar inmediatamente
       onLoadOrders(client.idCliente, createForm.category);
     }
@@ -361,7 +361,8 @@ export default function CreateEquipmentModal({
                 <label>
                   Asociar a Órdenes de Servicio (Opcional)
                   <span className={styles.helperInfo}>
-                    Solo se muestran órdenes pendientes/asignadas de la misma categoría
+                    Solo se muestran órdenes pendientes/asignadas de la misma
+                    categoría
                   </span>
                 </label>
                 <button
@@ -374,28 +375,32 @@ export default function CreateEquipmentModal({
                   🔄
                 </button>
               </div>
-              
+
               {loadingOrders ? (
                 <div className={styles.loadingOrders}>
                   <div className={styles.spinner}></div>
-                  <small>Cargando órdenes disponibles para {createForm.category}...</small>
+                  <small>
+                    Cargando órdenes disponibles para {createForm.category}...
+                  </small>
                 </div>
               ) : ordersError ? (
                 <div className={styles.ordersError}>
                   <small>⚠️ {ordersError}</small>
                   <div className={styles.retryContainer}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className={styles.retryButton}
                       onClick={handleManualReloadOrders}
                       disabled={loading}
                     >
                       Reintentar
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className={styles.continueButton}
-                      onClick={() => {/* Continuar sin órdenes */}}
+                      onClick={() => {
+                        /* Continuar sin órdenes */
+                      }}
                       disabled={loading}
                     >
                       Continuar sin órdenes
@@ -412,7 +417,7 @@ export default function CreateEquipmentModal({
                       return (
                         <div
                           key={order.orden_id}
-                          className={`${styles.orderOption} ${isSelected ? styles.selected : ''}`}
+                          className={`${styles.orderOption} ${isSelected ? styles.selected : ""}`}
                         >
                           <label>
                             <input
@@ -428,13 +433,18 @@ export default function CreateEquipmentModal({
                             />
                             <div className={styles.orderInfo}>
                               <span className={styles.orderLabel}>
-                                <strong>Orden #{order.orden_id}</strong> - {order.servicio.nombre_servicio}
+                                <strong>Orden #{order.orden_id}</strong> -{" "}
+                                {order.servicio.nombre_servicio}
                               </span>
                               <div className={styles.orderMeta}>
                                 <small className={styles.orderDate}>
-                                  {new Date(order.fecha_solicitud).toLocaleDateString()}
+                                  {new Date(
+                                    order.fecha_solicitud,
+                                  ).toLocaleDateString()}
                                 </small>
-                                <span className={`${styles.orderStatus} ${styles[order.estado.toLowerCase().replace(' ', '')]}`}>
+                                <span
+                                  className={`${styles.orderStatus} ${styles[order.estado.toLowerCase().replace(" ", "")]}`}
+                                >
                                   {order.estado}
                                 </span>
                               </div>
@@ -456,7 +466,8 @@ export default function CreateEquipmentModal({
                           <span className={styles.selectedCount}>
                             {selectedOrderIds.length} orden(es) seleccionada(s)
                           </span>
-                          - Este equipo se asociará automáticamente a estas órdenes
+                          - Este equipo se asociará automáticamente a estas
+                          órdenes
                         </>
                       ) : (
                         "Puedes crear el equipo sin asignarlo a órdenes existentes"
@@ -467,11 +478,12 @@ export default function CreateEquipmentModal({
               ) : (
                 <div className={styles.noOrdersInfo}>
                   <small>
-                    ℹ️ No hay órdenes pendientes/asignadas para la categoría "{createForm.category}".
-                    Puedes crear el equipo sin asignarlo a una orden.
+                    ℹ️ No hay órdenes pendientes/asignadas para la categoría "
+                    {createForm.category}". Puedes crear el equipo sin asignarlo
+                    a una orden.
                   </small>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className={styles.retryButton}
                     onClick={handleManualReloadOrders}
                     disabled={loading}
@@ -487,7 +499,8 @@ export default function CreateEquipmentModal({
           {!client && createForm.category && (
             <div className={styles.warningInfo}>
               <small>
-                ⚠️ Para asociar órdenes, primero selecciona un cliente en el formulario principal.
+                ⚠️ Para asociar órdenes, primero selecciona un cliente en el
+                formulario principal.
               </small>
             </div>
           )}
@@ -627,16 +640,49 @@ export default function CreateEquipmentModal({
           {/* PLAN DE MANTENIMIENTO (opcional) */}
           <div className={styles.planSection}>
             <h4>Plan de Mantenimiento (Opcional)</h4>
+
             <div className={styles.formRow}>
-              <label>Frecuencia</label>
+              <label>Días</label>
               <input
-                name="frecuencia"
-                value={planMantenimiento.frecuencia || ""}
+                type="number"
+                name="diaDelMes"
+                min={1}
+                max={31}
+                value={
+                  planMantenimiento.diaDelMes !== null &&
+                  planMantenimiento.diaDelMes !== undefined
+                    ? planMantenimiento.diaDelMes
+                    : ""
+                }
                 onChange={onPlanMantenimientoChange}
                 disabled={loading}
-                placeholder="Ej: mensual, trimestral, semestral, anual"
+                placeholder="1-31"
               />
+              {/* <small className={styles.helperText}>
+                Introduce el día del mes en el que se programa el mantenimiento.
+              </small> */}
             </div>
+
+            {/* Unidad de frecuencia */}
+            <div className={styles.formRow}>
+              <label>Unidad de Frecuencia</label>
+              <select
+                name="unidadFrecuencia"
+                value={planMantenimiento.unidadFrecuencia || ""}
+                onChange={onPlanMantenimientoChange}
+                disabled={loading}
+              >
+                <option value="">Sin plan</option>
+                <option value="DIA">Dia</option>
+                <option value="SEMANA">Semanas</option>
+                <option value="MES">Meses</option>
+              </select>
+              <small className={styles.helperText}>
+                Selecciona la unidad básica de repetición del mantenimiento.
+              </small>
+            </div>
+
+            {/* Fecha programada inicial */}
             <div className={styles.formRow}>
               <label>Fecha Programada</label>
               <input
@@ -646,7 +692,12 @@ export default function CreateEquipmentModal({
                 onChange={onPlanMantenimientoChange}
                 disabled={loading}
               />
+              <small className={styles.helperText}>
+                Fecha de la próxima intervención programada.
+              </small>
             </div>
+
+            {/* Notas */}
             <div className={styles.formRow}>
               <label>Notas del Plan</label>
               <textarea
@@ -662,16 +713,16 @@ export default function CreateEquipmentModal({
 
           {/* Botones de acción */}
           <div className={styles.formActions}>
-            <button 
-              type="button" 
-              onClick={onClose} 
+            <button
+              type="button"
+              onClick={onClose}
               disabled={loading}
               className={styles.cancelButton}
             >
               Cancelar
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className={styles.submitButton}
             >
@@ -681,7 +732,7 @@ export default function CreateEquipmentModal({
                   Creando equipo...
                 </>
               ) : (
-                'Crear equipo'
+                "Crear equipo"
               )}
             </button>
           </div>

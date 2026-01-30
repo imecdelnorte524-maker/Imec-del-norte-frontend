@@ -26,14 +26,16 @@ const mapPhoto = (p: any): EquipmentPhoto => ({
 });
 
 const mapWorkOrderInfo = (wo: any): WorkOrderInfo => ({
-  workOrderId: wo.workOrderId || wo.orden_id,
-  description: wo.description,
+  workOrderId: wo.workOrderId || wo.orden_id || wo.workOrder?.ordenId,
+  description: wo.description || null,
   createdAt: wo.createdAt || wo.created_at,
-  workOrderDetails: wo.workOrderDetails ? {
-    estado: wo.workOrderDetails.estado,
-    tipoServicio: wo.workOrderDetails.tipoServicio,
-    fechaSolicitud: wo.workOrderDetails.fechaSolicitud,
-  } : undefined,
+  workOrderDetails: wo.workOrder
+    ? {
+        estado: wo.workOrder.estado,
+        tipoServicio: wo.workOrder.tipoServicio,
+        fechaSolicitud: wo.workOrder.fechaSolicitud,
+      }
+    : undefined,
 });
 
 const mapMotor = (motor: any): MotorData => ({
@@ -90,14 +92,23 @@ const mapCondenser = (cond: any): CondenserData => ({
   presionBaja: cond.presionBaja,
   hp: cond.hp,
   motors: Array.isArray(cond.motors) ? cond.motors.map(mapMotor) : [],
-  compressors: Array.isArray(cond.compressors) ? cond.compressors.map(mapCompressor) : [],
+  compressors: Array.isArray(cond.compressors)
+    ? cond.compressors.map(mapCompressor)
+    : [],
 });
 
-const mapPlanMantenimiento = (plan: any): PlanMantenimientoData | null => plan ? {
-  frecuencia: plan.frecuencia,
-  fechaProgramada: plan.fechaProgramada,
-  notas: plan.notas,
-} : null;
+const mapPlanMantenimiento = (plan: any): PlanMantenimientoData | null =>
+  plan
+    ? {
+        unidadFrecuencia: plan.unidadFrecuencia || undefined,
+        diaDelMes:
+          plan.diaDelMes !== undefined && plan.diaDelMes !== null
+            ? Number(plan.diaDelMes)
+            : null,
+        fechaProgramada: plan.fechaProgramada ?? null,
+        notas: plan.notas ?? null,
+      }
+    : null;
 
 export const mapEquipmentFromBackend = (data: any): Equipment => ({
   equipmentId: data.equipmentId,
@@ -106,24 +117,32 @@ export const mapEquipmentFromBackend = (data: any): Equipment => ({
     nombre: data.client.nombre,
     nit: data.client.nit,
   },
-  area: data.area ? {
-    idArea: data.area.idArea,
-    nombreArea: data.area.nombreArea,
-  } : undefined,
-  subArea: data.subArea ? {
-    idSubArea: data.subArea.idSubArea,
-    nombreSubArea: data.subArea.nombreSubArea,
-  } : undefined,
-  // ⚠️ CAMBIO: Mapear workOrders en lugar de workOrderId
-  workOrders: Array.isArray(data.workOrders) ? data.workOrders.map(mapWorkOrderInfo) : [],
+  area: data.area
+    ? {
+        idArea: data.area.idArea,
+        nombreArea: data.area.nombreArea,
+      }
+    : undefined,
+  subArea: data.subArea
+    ? {
+        idSubArea: data.subArea.idSubArea,
+        nombreSubArea: data.subArea.nombreSubArea,
+      }
+    : undefined,
+  // ⚠️ IMPORTANTE: Mapear workOrders en lugar de workOrderId
+  workOrders: Array.isArray(data.workOrders)
+    ? data.workOrders.map(mapWorkOrderInfo)
+    : [],
   category: data.category,
   airConditionerTypeId: data.airConditionerTypeId,
-  airConditionerType: data.airConditionerType ? {
-    id: data.airConditionerType.id,
-    name: data.airConditionerType.name,
-    hasEvaporator: data.airConditionerType.hasEvaporator,
-    hasCondenser: data.airConditionerType.hasCondenser,
-  } : undefined,
+  airConditionerType: data.airConditionerType
+    ? {
+        id: data.airConditionerType.id,
+        name: data.airConditionerType.name,
+        hasEvaporator: data.airConditionerType.hasEvaporator,
+        hasCondenser: data.airConditionerType.hasCondenser,
+      }
+    : undefined,
   code: data.code,
   status: data.status,
   installationDate: data.installationDate,
@@ -131,8 +150,12 @@ export const mapEquipmentFromBackend = (data: any): Equipment => ({
   createdAt: data.createdAt,
   updatedAt: data.updatedAt,
   photos: Array.isArray(data.photos) ? data.photos.map(mapPhoto) : [],
-  evaporators: Array.isArray(data.evaporators) ? data.evaporators.map(mapEvaporator) : [],
-  condensers: Array.isArray(data.condensers) ? data.condensers.map(mapCondenser) : [],
+  evaporators: Array.isArray(data.evaporators)
+    ? data.evaporators.map(mapEvaporator)
+    : [],
+  condensers: Array.isArray(data.condensers)
+    ? data.condensers.map(mapCondenser)
+    : [],
   planMantenimiento: mapPlanMantenimiento(data.planMantenimiento),
 });
 
@@ -178,7 +201,9 @@ const prepareEvaporatorForBackend = (evap: EvaporatorData): any => ({
   serial: evap.serial || null,
   capacidad: evap.capacidad || null,
   tipoRefrigerante: evap.tipoRefrigerante || null,
-  motors: Array.isArray(evap.motors) ? evap.motors.map(prepareMotorForBackend) : [],
+  motors: Array.isArray(evap.motors)
+    ? evap.motors.map(prepareMotorForBackend)
+    : [],
 });
 
 const prepareCondenserForBackend = (cond: CondenserData): any => ({
@@ -193,29 +218,38 @@ const prepareCondenserForBackend = (cond: CondenserData): any => ({
   presionAlta: cond.presionAlta || null,
   presionBaja: cond.presionBaja || null,
   hp: cond.hp || null,
-  motors: Array.isArray(cond.motors) ? cond.motors.map(prepareMotorForBackend) : [],
-  compressors: Array.isArray(cond.compressors) ? cond.compressors.map(prepareCompressorForBackend) : [],
+  motors: Array.isArray(cond.motors)
+    ? cond.motors.map(prepareMotorForBackend)
+    : [],
+  compressors: Array.isArray(cond.compressors)
+    ? cond.compressors.map(prepareCompressorForBackend)
+    : [],
 });
 
-export const prepareEquipmentForBackend = (data: CreateEquipmentData | UpdateEquipmentData): any => {
+export const prepareEquipmentForBackend = (
+  data: CreateEquipmentData | UpdateEquipmentData,
+): any => {
   const payload: any = {};
 
   // Solo incluir los campos que están definidos (no undefined)
   if (data.clientId !== undefined) payload.clientId = data.clientId;
   if (data.category !== undefined) payload.category = data.category;
-  if (data.status !== undefined) payload.status = data.status || 'Activo';
-  
+  if (data.status !== undefined) payload.status = data.status || "Activo";
+
   // Campos opcionales - incluir nulls si están definidos
   if (data.areaId !== undefined) payload.areaId = data.areaId;
   if (data.subAreaId !== undefined) payload.subAreaId = data.subAreaId;
-  // ⚠️ ELIMINADO: workOrderId
-  if (data.airConditionerTypeId !== undefined) payload.airConditionerTypeId = data.airConditionerTypeId;
-  if (data.installationDate !== undefined) payload.installationDate = data.installationDate;
+  // ⚠️ ELIMINADO: workOrderId (ahora es relación N:M)
+  if (data.airConditionerTypeId !== undefined)
+    payload.airConditionerTypeId = data.airConditionerTypeId;
+  if (data.installationDate !== undefined)
+    payload.installationDate = data.installationDate;
   if (data.notes !== undefined) payload.notes = data.notes;
 
   // Componentes anidados
   if (data.evaporators !== undefined) {
-    payload.evaporators = data.evaporators?.map(prepareEvaporatorForBackend) || [];
+    payload.evaporators =
+      data.evaporators?.map(prepareEvaporatorForBackend) || [];
   }
 
   if (data.condensers !== undefined) {
@@ -223,11 +257,30 @@ export const prepareEquipmentForBackend = (data: CreateEquipmentData | UpdateEqu
   }
 
   if (data.planMantenimiento !== undefined) {
-    payload.planMantenimiento = data.planMantenimiento ? {
-      frecuencia: data.planMantenimiento.frecuencia || null,
-      fechaProgramada: data.planMantenimiento.fechaProgramada || null,
-      notas: data.planMantenimiento.notas || null,
-    } : null;
+    if (!data.planMantenimiento) {
+      payload.planMantenimiento = null;
+    } else {
+      const { unidadFrecuencia, diaDelMes, fechaProgramada, notas } =
+        data.planMantenimiento;
+
+      // Solo enviamos diaDelMes si la unidad es MES
+      let diaDelMesNumber: number | null = null;
+
+      if (
+        unidadFrecuencia === "MES" &&
+        diaDelMes !== null
+      ) {
+        const n = Number(diaDelMes as any);
+        diaDelMesNumber = Number.isNaN(n) ? null : n;
+      }
+
+      payload.planMantenimiento = {
+        unidadFrecuencia: unidadFrecuencia || null,
+        diaDelMes: diaDelMesNumber,
+        fechaProgramada: fechaProgramada || null,
+        notas: notas || null,
+      };
+    }
   }
 
   return payload;
@@ -245,9 +298,11 @@ export const getEquipmentByClientRequest = async (
   params.append("clientId", clientId.toString());
   if (search) params.append("search", search);
 
-  const response = await api.get<EquipmentResponse>(`/equipment?${params.toString()}`);
+  const response = await api.get<EquipmentResponse>(
+    `/equipment?${params.toString()}`,
+  );
   const data = response.data.data;
-  
+
   if (Array.isArray(data)) {
     return data.map(mapEquipmentFromBackend);
   }
@@ -257,7 +312,9 @@ export const getEquipmentByClientRequest = async (
 export const getEquipmentByIdRequest = async (
   equipmentId: number,
 ): Promise<Equipment> => {
-  const response = await api.get<EquipmentResponse>(`/equipment/${equipmentId}`);
+  const response = await api.get<EquipmentResponse>(
+    `/equipment/${equipmentId}`,
+  );
   return mapEquipmentFromBackend(response.data.data);
 };
 
@@ -267,17 +324,55 @@ export const getEquipmentWorkOrdersRequest = async (
 ): Promise<WorkOrderInfo[]> => {
   const response = await api.get(`/equipment/${equipmentId}/work-orders`);
   const data = response.data.data || [];
-  
+
   return data.map((wo: any) => ({
-    workOrderId: wo.ordenId || wo.workOrderId,
+    workOrderId: wo.workOrderId || wo.ordenId,
     description: wo.description,
     createdAt: wo.createdAt || wo.created_at,
-    workOrderDetails: wo.workOrder ? {
-      estado: wo.workOrder.estado,
-      tipoServicio: wo.workOrder.tipoServicio,
-      fechaSolicitud: wo.workOrder.fechaSolicitud,
-    } : undefined,
+    workOrderDetails: wo.workOrder
+      ? {
+          estado: wo.workOrder.estado,
+          tipoServicio: wo.workOrder.tipoServicio,
+          fechaSolicitud: wo.workOrder.fechaSolicitud,
+          servicio: wo.workOrder.service
+            ? {
+                nombre_servicio: wo.workOrder.service.nombre_servicio,
+              }
+            : null,
+          cliente: wo.workOrder.cliente,
+          tecnico: wo.workOrder.tecnico,
+        }
+      : undefined,
   }));
+};
+
+// ⚠️ NUEVO: Asociar múltiples órdenes a un equipo
+export const associateOrdersToEquipmentRequest = async (
+  equipmentId: number,
+  orderIds: number[],
+  description?: string,
+): Promise<void> => {
+  await api.post(`/equipment/${equipmentId}/work-orders/batch`, {
+    orderIds,
+    description: description || "Asociado desde creación de equipo",
+  });
+};
+
+// ⚠️ NUEVO: Obtener órdenes disponibles para asociar
+export const getAvailableOrdersForClientRequest = async (
+  clientId: number,
+  category?: string,
+  excludeCompleted: boolean = true,
+): Promise<any[]> => {
+  const params = new URLSearchParams();
+  params.append("clientId", clientId.toString());
+  if (category) params.append("category", category);
+  if (excludeCompleted) params.append("excludeCompleted", "true");
+
+  const response = await api.get(
+    `/work-orders/available-for-equipment?${params.toString()}`,
+  );
+  return response.data.data || [];
 };
 
 export const createEquipmentRequest = async (
@@ -293,7 +388,10 @@ export const updateEquipmentRequest = async (
   data: UpdateEquipmentData,
 ): Promise<Equipment> => {
   const payload = prepareEquipmentForBackend(data);
-  const response = await api.patch<EquipmentResponse>(`/equipment/${equipmentId}`, payload);
+  const response = await api.patch<EquipmentResponse>(
+    `/equipment/${equipmentId}`,
+    payload,
+  );
   return mapEquipmentFromBackend(response.data.data);
 };
 
@@ -337,18 +435,27 @@ export const getEquipmentRequest = async (filters?: {
   search?: string;
 }): Promise<Equipment[]> => {
   const params = new URLSearchParams();
-  
+
   if (filters?.clientId) params.append("clientId", filters.clientId.toString());
   if (filters?.areaId) params.append("areaId", filters.areaId.toString());
-  if (filters?.subAreaId) params.append("subAreaId", filters.subAreaId.toString());
+  if (filters?.subAreaId)
+    params.append("subAreaId", filters.subAreaId.toString());
   if (filters?.search) params.append("search", filters.search);
 
-  const url = `/equipment${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = `/equipment${params.toString() ? `?${params.toString()}` : ""}`;
   const response = await api.get<EquipmentResponse>(url);
   const data = response.data.data;
-  
+
   if (Array.isArray(data)) {
     return data.map(mapEquipmentFromBackend);
   }
   return [];
+};
+
+// ⚠️ NUEVO: Desasociar orden de equipo
+export const removeOrderFromEquipmentRequest = async (
+  equipmentId: number,
+  orderId: number,
+): Promise<void> => {
+  await api.delete(`/equipment/${equipmentId}/work-orders/${orderId}`);
 };

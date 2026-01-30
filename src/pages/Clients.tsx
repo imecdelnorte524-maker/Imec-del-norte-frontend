@@ -6,40 +6,56 @@ import ClientModal from "../components/clients/ClientModal";
 import type { Client } from "../interfaces/ClientInterfaces";
 import styles from "../styles/pages/ClientsPage.module.css";
 
+// Helper: contacto principal para la tabla
+function getPrincipalContacto(client: Client) {
+  const contactos = client.usuariosContacto || [];
+  if (contactos.length === 0) return null;
+
+  if (client.contacto) {
+    const contactoNombre = client.contacto.trim().toLowerCase();
+    const match = contactos.find((u) => {
+      const fullName = `${u.nombre} ${u.apellido || ""}`.trim().toLowerCase();
+      return fullName === contactoNombre;
+    });
+    if (match) return match;
+  }
+
+  return contactos[0];
+}
+
 export default function ClientsPage() {
-  const { 
-    clients = [], 
-    isLoading: loading, 
-    error, 
-    deleteClient, 
-    refreshClients 
+  const {
+    clients = [],
+    isLoading: loading,
+    error,
+    deleteClient,
+    refreshClients,
   } = useClients();
-  
+
   const navigate = useNavigate();
 
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter] = useState<"all" | "withAreas" | "withoutAreas">(
-    "all"
+  const [filter] = useState<"all" | "withAreas" | "withoutAreas">("all");
+
+  const filteredClients: Client[] = clients.filter(
+    (client: Client): boolean => {
+      const matchesSearch: boolean =
+        searchTerm === "" ||
+        client.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.contacto.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const hasAreas: boolean = !!(client.areas && client.areas.length > 0);
+      const matchesFilter: boolean =
+        filter === "all" ||
+        (filter === "withAreas" && hasAreas) ||
+        (filter === "withoutAreas" && !hasAreas);
+
+      return matchesSearch && matchesFilter;
+    },
   );
-
-  // Filtrar clientes
-  const filteredClients: Client[] = clients.filter((client: Client): boolean => {
-    const matchesSearch: boolean =
-      searchTerm === "" ||
-      client.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.contacto.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const hasAreas: boolean = !!(client.areas && client.areas.length > 0);
-    const matchesFilter: boolean =
-      filter === "all" ||
-      (filter === "withAreas" && hasAreas) ||
-      (filter === "withoutAreas" && !hasAreas);
-
-    return matchesSearch && matchesFilter;
-  });
 
   const handleCreate = () => {
     setEditingClient(null);
@@ -54,14 +70,13 @@ export default function ClientsPage() {
   const handleDelete = async (client: Client) => {
     if (
       window.confirm(
-        `¿Estás seguro de eliminar a ${client.nombre}?\nEsta acción no se puede deshacer.`
+        `¿Estás seguro de eliminar a ${client.nombre}?\nEsta acción no se puede deshacer.`,
       )
     ) {
       try {
         await deleteClient(client.idCliente);
       } catch (error) {
         console.error("Error al eliminar cliente:", error);
-        // El error ya se maneja en el hook/mutation
       }
     }
   };
@@ -76,7 +91,6 @@ export default function ClientsPage() {
     handleCloseModal();
   };
 
-  // Ir a la página de detalles
   const handleViewDetails = (client: Client) => {
     navigate(`/clients/${client.idCliente}`);
   };
@@ -111,7 +125,7 @@ export default function ClientsPage() {
           </div>
         </header>
 
-        {/* Controls */}
+        {/* Controles */}
         <div className={styles.controls}>
           <div className={styles.searchContainer}>
             <div className={styles.searchWrapper}>
@@ -125,18 +139,6 @@ export default function ClientsPage() {
               <span className={styles.searchIcon}>🔍</span>
             </div>
           </div>
-
-          {/* <div className={styles.controlsRight}>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
-              className={styles.filterSelect}
-            >
-              <option value="all">Todos los clientes</option>
-              <option value="withAreas">Con áreas</option>
-              <option value="withoutAreas">Sin áreas</option>
-            </select>
-          </div> */}
         </div>
 
         {/* Error */}
@@ -144,7 +146,9 @@ export default function ClientsPage() {
           <div className={styles.errorAlert}>
             <span className={styles.errorIcon}>⚠️</span>
             <span className={styles.errorText}>
-              {error instanceof Error ? error.message : "Error al cargar clientes"}
+              {error instanceof Error
+                ? error.message
+                : "Error al cargar clientes"}
             </span>
             <button
               className={styles.errorClose}
@@ -193,8 +197,9 @@ export default function ClientsPage() {
                     <tbody>
                       {filteredClients.map((client) => {
                         const clientLogo = client.images?.find(
-                          (img) => img.isLogo
+                          (img) => img.isLogo,
                         );
+                        const principalContacto = getPrincipalContacto(client);
 
                         return (
                           <tr
@@ -230,7 +235,8 @@ export default function ClientsPage() {
                                       <small>{client.telefono}</small>
                                       <small>{client.email}</small>
                                       <small>
-                                        {client.direccionCompleta || "Dirección no disponible"}
+                                        {client.direccionCompleta ||
+                                          "Dirección no disponible"}
                                       </small>
                                     </div>
                                   </div>
@@ -243,16 +249,14 @@ export default function ClientsPage() {
                               </code>
                             </td>
                             <td>
-                              {client.usuarioContacto ? (
+                              {principalContacto ? (
                                 <div className={styles.userCell}>
                                   <div className={styles.userInfo}>
                                     <strong>
-                                      {client.usuarioContacto.nombre}{" "}
-                                      {client.usuarioContacto.apellido || ""}
+                                      {principalContacto.nombre}{" "}
+                                      {principalContacto.apellido || ""}
                                     </strong>
-                                    <small>
-                                      {client.usuarioContacto.email}
-                                    </small>
+                                    <small>{principalContacto.email}</small>
                                   </div>
                                 </div>
                               ) : (

@@ -1,9 +1,16 @@
 // src/api/mappers.ts
-import type { Client, ClientImage } from '../interfaces/ClientInterfaces';
-import type { Area } from '../interfaces/AreaInterfaces';
-import type { SubArea } from '../interfaces/SubAreaInterfaces';
+import type {
+  Client,
+  ClientImage,
+  UsuarioContacto,
+} from "../interfaces/ClientInterfaces";
+import type { Area } from "../interfaces/AreaInterfaces";
+import type { SubArea } from "../interfaces/SubAreaInterfaces";
 
-// Mapear imágenes del backend
+// ────────────────────────────────────────────────────────────────
+// Imágenes
+// ────────────────────────────────────────────────────────────────
+
 export const mapImageFromBackend = (data: any): ClientImage => ({
   id: data.id,
   url: data.url,
@@ -13,55 +20,89 @@ export const mapImageFromBackend = (data: any): ClientImage => ({
   created_at: data.created_at,
 });
 
-// Mapear CLIENTE desde backend
-export const mapClientFromBackend = (data: any): Client => ({
-  idCliente: data.idCliente,
-  nombre: data.nombre,
-  nit: data.nit,
+// ────────────────────────────────────────────────────────────────
+// CLIENTE
+// ────────────────────────────────────────────────────────────────
 
-  // Dirección desglosada
-  direccionBase: data.direccionBase,
-  barrio: data.barrio,
-  ciudad: data.ciudad,
-  departamento: data.departamento,
-  pais: data.pais,
-  direccionCompleta: data.direccionCompleta,
+export const mapClientFromBackend = (data: any): Client => {
+  // Mapear usuarios contacto (User[] del backend → UsuarioContacto[] del front)
+  const usuariosContacto: UsuarioContacto[] = Array.isArray(
+    data.usuariosContacto,
+  )
+    ? data.usuariosContacto.map((u: any) => ({
+        usuarioId: u.usuarioId,
+        nombre: u.nombre,
+        apellido: u.apellido ?? "",
+        email: u.email,
+        telefono: u.telefono ?? "",
+        role: u.role
+          ? {
+              rolId: u.role.rolId,
+              nombreRol: u.role.nombreRol,
+            }
+          : undefined,
+      }))
+    : [];
 
-  contacto: data.contacto,
-  email: data.email,
-  telefono: data.telefono,
-  localizacion: data.localizacion,
-  fechaCreacionEmpresa:
-    data.fechaCreacionEmpresa ?? data.fecha_creacion_empresa ?? '',
-  idUsuarioContacto: data.idUsuarioContacto,
-  usuarioContacto: data.usuarioContacto
-    ? {
-        usuarioId: data.usuarioContacto.usuarioId,
-        nombre: data.usuarioContacto.nombre,
-        apellido: data.usuarioContacto.apellido,
-        email: data.usuarioContacto.email,
-        telefono: data.usuarioContacto.telefono,
-        role: data.usuarioContacto.role,
-      }
-    : undefined,
-  areas: data.areas?.map(mapAreaFromBackend) ?? [],
-  images: data.images?.map(mapImageFromBackend) ?? [],
-  createdAt: data.createdAt,
-  updatedAt: data.updatedAt,
-});
+  return {
+    idCliente: data.idCliente,
+    nombre: data.nombre,
+    nit: data.nit,
 
-// Mapear ÁREA desde backend
+    // Dirección desglosada
+    direccionBase: data.direccionBase,
+    barrio: data.barrio,
+    ciudad: data.ciudad,
+    departamento: data.departamento,
+    pais: data.pais,
+
+    // Dirección completa
+    direccionCompleta: data.direccionCompleta ?? "",
+
+    contacto: data.contacto ?? "",
+    email: data.email,
+    telefono: data.telefono,
+    localizacion: data.localizacion,
+    // backend la envía como string (YYYY-MM-DD)
+    fechaCreacionEmpresa:
+      data.fechaCreacionEmpresa ?? data.fecha_creacion_empresa ?? "",
+
+    // Lista de usuarios contacto (ManyToMany)
+    usuariosContacto,
+
+    // Áreas e imágenes
+    areas: Array.isArray(data.areas) ? data.areas.map(mapAreaFromBackend) : [],
+    images: Array.isArray(data.images)
+      ? data.images.map(mapImageFromBackend)
+      : [],
+
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  };
+};
+
+// ────────────────────────────────────────────────────────────────
+// ÁREA
+// ────────────────────────────────────────────────────────────────
+
 export const mapAreaFromBackend = (data: any): Area => ({
   idArea: data.idArea,
   nombreArea: data.nombreArea,
   clienteId: data.clienteId,
+  // Si el backend incluye el cliente anidado, podrías mapearlo;
+  // en el JSON que mostraste no viene, así que normalmente será undefined
   cliente: data.cliente ? mapClientFromBackend(data.cliente) : undefined,
-  subAreas: data.subAreas?.map(mapSubAreaFromBackend) ?? [],
+  subAreas: Array.isArray(data.subAreas)
+    ? data.subAreas.map(mapSubAreaFromBackend)
+    : [],
   createdAt: data.createdAt,
   updatedAt: data.updatedAt,
 });
 
-// Mapear SUBÁREA desde backend
+// ────────────────────────────────────────────────────────────────
+// SUBÁREA
+// ────────────────────────────────────────────────────────────────
+
 export const mapSubAreaFromBackend = (data: any): SubArea => ({
   idSubArea: data.idSubArea,
   nombreSubArea: data.nombreSubArea,
@@ -71,7 +112,9 @@ export const mapSubAreaFromBackend = (data: any): SubArea => ({
   parentSubArea: data.parentSubArea
     ? mapSubAreaFromBackend(data.parentSubArea)
     : undefined,
-  children: data.children?.map(mapSubAreaFromBackend) ?? [],
+  children: Array.isArray(data.children)
+    ? data.children.map(mapSubAreaFromBackend)
+    : [],
   createdAt: data.createdAt,
   updatedAt: data.updatedAt,
 });

@@ -458,7 +458,7 @@ export default function EquipmentListPage() {
   };
 
   const handlePlanMantenimientoChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setPlanMantenimiento((prev) => ({

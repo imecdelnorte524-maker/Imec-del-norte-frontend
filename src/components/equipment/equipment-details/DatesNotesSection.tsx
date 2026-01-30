@@ -9,7 +9,6 @@ interface DatesNotesSectionProps {
 export default function DatesNotesSection({
   equipment,
 }: DatesNotesSectionProps) {
-  // Función para formatear fecha de forma segura
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "No especificada";
     try {
@@ -19,7 +18,6 @@ export default function DatesNotesSection({
     }
   };
 
-  // Función para formatear fecha y hora
   const formatDateTime = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleString();
@@ -28,27 +26,48 @@ export default function DatesNotesSection({
     }
   };
 
+  // Nueva: formatear unidad de frecuencia
+  const formatUnidadFrecuencia = () => {
+    const plan = equipment.planMantenimiento;
+    if (!plan || !plan.unidadFrecuencia) return "No especificada";
+
+    switch (plan.unidadFrecuencia) {
+      case "DIA":
+        return "Diaria";
+      case "SEMANA":
+        return "Semanal";
+      case "MES":
+        // Si hay día del mes, lo mostramos
+        if (plan.diaDelMes != null) {
+          return `Mensual (día ${plan.diaDelMes})`;
+        }
+        return "Mensual";
+      default:
+        return plan.unidadFrecuencia;
+    }
+  };
+
   return (
     <div className={styles.section}>
       <h3>Fechas y Observaciones</h3>
-      
+
       {equipment.installationDate && (
         <div className={styles.detailItem}>
           <strong>Fecha de instalación:</strong>
           <span>{formatDate(equipment.installationDate)}</span>
         </div>
       )}
-      
+
       <div className={styles.detailItem}>
         <strong>Creado en el sistema:</strong>
         <span>{formatDateTime(equipment.createdAt)}</span>
       </div>
-      
+
       <div className={styles.detailItem}>
         <strong>Última actualización:</strong>
         <span>{formatDateTime(equipment.updatedAt)}</span>
       </div>
-      
+
       {equipment.notes && (
         <div className={styles.notes}>
           <strong>Observaciones:</strong>
@@ -62,14 +81,18 @@ export default function DatesNotesSection({
           <h4>Plan de Mantenimiento</h4>
           <div className={styles.detailItem}>
             <strong>Frecuencia:</strong>
-            <span>{equipment.planMantenimiento.frecuencia || "No especificada"}</span>
+            <span>{formatUnidadFrecuencia()}</span>
           </div>
+
           {equipment.planMantenimiento.fechaProgramada && (
             <div className={styles.detailItem}>
               <strong>Próximo mantenimiento:</strong>
-              <span>{formatDate(equipment.planMantenimiento.fechaProgramada)}</span>
+              <span>
+                {formatDate(equipment.planMantenimiento.fechaProgramada)}
+              </span>
             </div>
           )}
+
           {equipment.planMantenimiento.notas && (
             <div className={styles.notes}>
               <strong>Notas del plan:</strong>
