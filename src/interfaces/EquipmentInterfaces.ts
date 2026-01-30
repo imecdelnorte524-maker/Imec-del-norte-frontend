@@ -80,9 +80,10 @@ export interface CondenserData {
 }
 
 export interface PlanMantenimientoData {
-  frecuencia?: string;
-  fechaProgramada?: string;
-  notas?: string;
+  unidadFrecuencia?: UnidadFrecuencia;
+  diaDelMes?: number | null;
+  fechaProgramada?: string | null;
+  notas?: string | null;
 }
 
 // ---------- Cliente, Área, Subárea ----------
@@ -215,3 +216,5 @@ export const EquipmentStatus = {
 
 export type EquipmentStatus =
   (typeof EquipmentStatus)[keyof typeof EquipmentStatus];
+
+export type UnidadFrecuencia = "DIA" | "SEMANA" | "MES";

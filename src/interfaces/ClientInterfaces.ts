@@ -28,7 +28,7 @@ export interface Client {
   nombre: string;
   nit: string;
 
-  // Campos desglosados para edición
+  // Dirección desglosada
   direccionBase: string;
   barrio: string;
   ciudad: string;
@@ -37,25 +37,28 @@ export interface Client {
 
   // Campo completo para visualización
   direccionCompleta: string;
+
   contacto: string;
   email: string;
   telefono: string;
   localizacion: string;
   fechaCreacionEmpresa: string;
-  idUsuarioContacto: number;
-  usuarioContacto?: UsuarioContacto;
+
+  // Lista completa de usuarios contacto (ManyToMany)
+  usuariosContacto?: UsuarioContacto[];
+
   areas?: Area[];
   images?: ClientImage[];
   createdAt: string;
   updatedAt: string;
 }
 
-// DTOs para crear/actualizar
+// DTOs para crear/actualizar (frontend → backend)
 export interface CreateClientDto {
   nombre: string;
   nit: string;
 
-  // Nuevos campos obligatorios
+  // Campos obligatorios de dirección
   direccionBase: string;
   barrio: string;
   ciudad: string;
@@ -67,17 +70,18 @@ export interface CreateClientDto {
   telefono: string;
   localizacion: string;
   fechaCreacionEmpresa: string;
-  idUsuarioContacto?: number;
+
+  // IDs de usuarios contacto (ManyToMany)
+  usuariosContactoIds?: number[];
 }
 
 export interface UpdateClientDto extends Partial<CreateClientDto> {}
 
-// Para formularios paso a paso
+// Para formularios paso a paso (solo UI)
 export interface ClientFormData {
   nombre: string;
   nit: string;
 
-  // Campos de formulario separados
   direccionBase: string;
   barrio: string;
   ciudad: string;
@@ -88,7 +92,7 @@ export interface ClientFormData {
   email: string;
   telefono: string;
   localizacion: string;
-  idUsuarioContacto: number | null;
+  idUsuarioContacto: number | null; // sólo para marcar principal en UI
   fecha_creacion: string;
   areas: AreaFormData[];
 }

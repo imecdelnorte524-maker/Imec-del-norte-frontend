@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+// src/components/clients/ClientModal.tsx
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { clients as clientsAPI } from "../../api/clients";
 import { areas as areasAPI } from "../../api/areas";
 import { subAreas as subAreasAPI } from "../../api/subAreas";
@@ -44,6 +45,11 @@ export default function ClientModal({
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
+  // IDs de usuarios contacto seleccionados (múltiples)
+  const [selectedContactUserIds, setSelectedContactUserIds] = useState<
+    number[]
+  >([]);
+
   // Nueva área
   const [newAreaName, setNewAreaName] = useState("");
   // Nueva subárea
@@ -59,7 +65,6 @@ export default function ClientModal({
   const [formData, setFormData] = useState<ClientFormData>({
     nombre: "",
     nit: "",
-    // Campos de dirección separados
     direccionBase: "",
     barrio: "",
     ciudad: "",
@@ -74,49 +79,47 @@ export default function ClientModal({
     areas: [],
   });
 
-  // Función para generar URL de Google Maps
-  const generateGoogleMapsURL = (addressData: {
-    nombre: string;
-    direccionBase: string;
-    barrio: string;
-    ciudad: string;
-    departamento: string;
-    pais: string;
-  }): string => {
-    const { nombre, direccionBase, barrio, ciudad, departamento, pais } = addressData;
+  // Generar URL de Google Maps
+  const generateGoogleMapsURL = useCallback(
+    (addressData: {
+      nombre: string;
+      direccionBase: string;
+      barrio: string;
+      ciudad: string;
+      departamento: string;
+      pais: string;
+    }): string => {
+      const { nombre, direccionBase, barrio, ciudad, departamento, pais } =
+        addressData;
 
-    // Verificar campos mínimos requeridos
-    if ( !nombre || !direccionBase || !ciudad) {
-      return "";
-    }
+      if (!nombre || !direccionBase || !ciudad) {
+        return "";
+      }
 
-    // Construir dirección de forma inteligente
-    const parts = [];
+      const parts: string[] = [];
 
-    if (nombre.trim()) parts.push(nombre.trim());
-    if (direccionBase.trim()) parts.push(direccionBase.trim());
-    if (barrio.trim()) parts.push(barrio.trim());
-    if (ciudad.trim()) parts.push(ciudad.trim());
-    if (departamento.trim()) parts.push(departamento.trim());
-    if (pais.trim()) parts.push(pais.trim());
+      if (nombre.trim()) parts.push(nombre.trim());
+      if (direccionBase.trim()) parts.push(direccionBase.trim());
+      if (barrio.trim()) parts.push(barrio.trim());
+      if (ciudad.trim()) parts.push(ciudad.trim());
+      if (departamento.trim()) parts.push(departamento.trim());
+      if (pais.trim()) parts.push(pais.trim());
 
-    // Eliminar duplicados consecutivos
-    const cleanParts = parts.filter((part, index, arr) => {
-      return index === 0 || part !== arr[index - 1];
-    });
+      const cleanParts = parts.filter((part, index, arr) => {
+        return index === 0 || part !== arr[index - 1];
+      });
 
-    const fullAddress = cleanParts.join(", ");
+      const fullAddress = cleanParts.join(", ");
 
-    if (!fullAddress) return "";
+      if (!fullAddress) return "";
 
-    // Codificar para URL
-    const encodedAddress = encodeURIComponent(fullAddress);
+      const encodedAddress = encodeURIComponent(fullAddress);
+      return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    },
+    [],
+  );
 
-    // Retornar URL de Google Maps
-    return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-  };
-
-  // Efecto para generar automáticamente la URL de Google Maps
+  // Generar automáticamente la URL de Google Maps cuando cambian dirección o nombre
   useEffect(() => {
     const url = generateGoogleMapsURL({
       nombre: formData.nombre,
@@ -134,11 +137,13 @@ export default function ClientModal({
       }));
     }
   }, [
+    formData.nombre,
     formData.direccionBase,
     formData.barrio,
     formData.ciudad,
     formData.departamento,
     formData.pais,
+    generateGoogleMapsURL,
   ]);
 
   const resetForm = () => {
@@ -168,6 +173,7 @@ export default function ClientModal({
     setIsSubareaModalOpen(false);
     setStep(1);
     setError(null);
+    setSelectedContactUserIds([]);
   };
 
   const loadUsers = async () => {
@@ -179,7 +185,7 @@ export default function ClientModal({
     }
   };
 
-  // Inicializar datos al abrir o cambiar cliente/rol
+  // Inicializar datos al abrir / cambiar cliente/rol
   useEffect(() => {
     if (!isOpen) return;
 
@@ -189,7 +195,6 @@ export default function ClientModal({
       setFormData({
         nombre: editingClient.nombre,
         nit: editingClient.nit,
-        // Cargar campos de dirección desglosados
         direccionBase: editingClient.direccionBase || "",
         barrio: editingClient.barrio || "",
         ciudad: editingClient.ciudad || "",
@@ -198,7 +203,6 @@ export default function ClientModal({
         contacto: editingClient.contacto,
         email: editingClient.email,
         telefono: editingClient.telefono,
-        // Generar URL inicial o usar la existente
         localizacion:
           editingClient.localizacion ||
           generateGoogleMapsURL({
@@ -210,7 +214,7 @@ export default function ClientModal({
             pais: editingClient.pais || "Colombia",
           }),
         fecha_creacion: editingClient.fechaCreacionEmpresa || "",
-        idUsuarioContacto: editingClient.idUsuarioContacto,
+        idUsuarioContacto: null,
         areas:
           editingClient.areas?.map((area, index) => ({
             id: area.idArea || -(index + 1),
@@ -225,15 +229,57 @@ export default function ClientModal({
           })) || [],
       });
 
-      if (editingClient.usuarioContacto) {
-        const u = editingClient.usuarioContacto;
-        setUserSearch(`${u.nombre} ${u.apellido || ""}`);
+      // Si el backend devuelve usuariosContacto, los usamos
+      if (
+        editingClient.usuariosContacto &&
+        editingClient.usuariosContacto.length > 0
+      ) {
+        const contactos = editingClient.usuariosContacto;
+
+        // 1) Intentar encontrar el principal según el campo "contacto"
+        let principal = contactos[0];
+        if (editingClient.contacto) {
+          const contactoNombre = editingClient.contacto.trim().toLowerCase();
+          const match = contactos.find((u) => {
+            const fullName = `${u.nombre} ${u.apellido || ""}`
+              .trim()
+              .toLowerCase();
+            return fullName === contactoNombre;
+          });
+          if (match) {
+            principal = match;
+          }
+        }
+
+        const principalFullName =
+          `${principal.nombre} ${principal.apellido || ""}`.trim();
+
+        // 2) Poner el principal en formData y en el buscador
+        setFormData((prev) => ({
+          ...prev,
+          idUsuarioContacto: principal.usuarioId,
+          contacto: editingClient.contacto || principalFullName,
+        }));
+        setUserSearch(principalFullName);
+
+        // 3) Ordenar los IDs para que el principal vaya primero en la lista
+        const allIds = contactos.map((u) => u.usuarioId);
+        const orderedIds = [
+          principal.usuarioId,
+          ...allIds.filter((id) => id !== principal.usuarioId),
+        ];
+        setSelectedContactUserIds(orderedIds);
+      } else {
+        setSelectedContactUserIds([]);
+        setUserSearch("");
       }
 
       // Cargar logo si existe
       const logo = editingClient.images?.find((img) => img.isLogo);
       if (logo) {
         setLogoPreview(logo.url);
+      } else {
+        setLogoPreview(null);
       }
     } else {
       resetForm();
@@ -247,30 +293,33 @@ export default function ClientModal({
           contacto: fullName,
         }));
         setUserSearch(fullName);
+        setSelectedContactUserIds([user.usuarioId]);
+      } else {
+        setSelectedContactUserIds([]);
       }
     }
 
-    // Solo Admin/Secretaria cargan usuarios
     if (!isCliente) {
       loadUsers();
     }
-  }, [isOpen, editingClient, isCliente, user]);
+  }, [isOpen, editingClient, isCliente, user, generateGoogleMapsURL]);
 
-  // Filtrar usuarios
+  // Filtrar usuarios para el autocomplete
   useEffect(() => {
     if (!userSearch.trim() || isCliente) {
       setFilteredUsers([]);
       return;
     }
 
+    const query = userSearch.toLowerCase();
+
     const filtered = users.filter(
       (u) =>
-        `${u.nombre} ${u.apellido || ""}`
-          .toLowerCase()
-          .includes(userSearch.toLowerCase()) ||
-        u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.username.toLowerCase().includes(userSearch.toLowerCase()),
+        `${u.nombre} ${u.apellido || ""}`.toLowerCase().includes(query) ||
+        u.email.toLowerCase().includes(query) ||
+        u.username.toLowerCase().includes(query),
     );
+
     setFilteredUsers(filtered.slice(0, 10));
   }, [userSearch, users, isCliente]);
 
@@ -281,12 +330,18 @@ export default function ClientModal({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Selección de usuario contacto (múltiple, marcando uno como principal)
   const handleUserSelect = (userId: number, userName: string) => {
     setFormData((prev) => ({
       ...prev,
-      idUsuarioContacto: userId,
-      contacto: userName,
+      idUsuarioContacto: prev.idUsuarioContacto ?? userId,
+      contacto: prev.idUsuarioContacto ? prev.contacto : userName,
     }));
+
+    setSelectedContactUserIds((prev) =>
+      prev.includes(userId) ? prev : [...prev, userId],
+    );
+
     setUserSearch(userName);
     setShowUserList(false);
   };
@@ -296,14 +351,12 @@ export default function ClientModal({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo de archivo
     const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!validTypes.includes(file.type)) {
       setError("Por favor, sube una imagen válida (JPEG, PNG, GIF, WebP)");
       return;
     }
 
-    // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError("La imagen es demasiado grande. Máximo 5MB");
       return;
@@ -311,7 +364,6 @@ export default function ClientModal({
 
     setLogoFile(file);
 
-    // Crear preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setLogoPreview(reader.result as string);
@@ -332,7 +384,7 @@ export default function ClientModal({
     if (!newAreaName.trim()) return;
 
     const newArea: AreaFormData = {
-      id: -(formData.areas.length + 1), // ID temporal negativo
+      id: -(formData.areas.length + 1),
       nombreArea: newAreaName.trim(),
       subAreas: [],
     };
@@ -355,7 +407,7 @@ export default function ClientModal({
     }
   };
 
-  // ========== MANEJO DE SUBÁREAS (incluye jerarquía) ==========
+  // ========== MANEJO DE SUBÁREAS ==========
   const handleAddSubarea = () => {
     if (!newSubareaName.trim() || selectedAreaForSubarea === null) return;
 
@@ -367,7 +419,7 @@ export default function ClientModal({
           const newSub: SubAreaFormData = {
             id: newId,
             nombreSubArea: newSubareaName.trim(),
-            areaId: area.id, // temporal o real
+            areaId: area.id,
             parentSubAreaId: selectedParentSubarea ?? undefined,
           };
           return {
@@ -382,7 +434,6 @@ export default function ClientModal({
     setIsSubareaModalOpen(false);
   };
 
-  // Eliminar una subárea y todos sus descendientes
   const handleRemoveSubarea = (areaId: number, subareaId: number) => {
     setFormData((prev) => ({
       ...prev,
@@ -419,7 +470,6 @@ export default function ClientModal({
     }));
   };
 
-  // Iniciar creación de subárea dentro de un área (nivel 1)
   const startAddSubareaForArea = (areaId: number) => {
     setSelectedAreaForSubarea(areaId);
     setSelectedParentSubarea(null);
@@ -427,7 +477,6 @@ export default function ClientModal({
     setIsSubareaModalOpen(true);
   };
 
-  // Iniciar creación de subárea hija de otra subárea (nivel N)
   const startAddSubareaForSubarea = (
     areaId: number,
     parentSubareaId: number,
@@ -480,7 +529,6 @@ export default function ClientModal({
       }
     }
 
-    // Validar que la URL de Google Maps se haya generado
     if (
       !formData.localizacion ||
       !formData.localizacion.startsWith("https://www.google.com/maps/")
@@ -492,7 +540,6 @@ export default function ClientModal({
       return false;
     }
 
-    // Fecha de creación
     if (formData.fecha_creacion) {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(formData.fecha_creacion)) {
@@ -502,7 +549,6 @@ export default function ClientModal({
       }
     }
 
-    // Email opcional
     const emailTrimmed = formData.email.trim();
     if (emailTrimmed) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -513,7 +559,6 @@ export default function ClientModal({
       }
     }
 
-    // Teléfono
     const phoneTrimmed = formData.telefono.trim();
     const phoneRegex = /^[\d\s\-\+\(\)]{7,}$/;
     if (!phoneRegex.test(phoneTrimmed.replace(/\s/g, ""))) {
@@ -546,7 +591,6 @@ export default function ClientModal({
     setStep(1);
   };
 
-  // Crear subáreas en el backend respetando la jerarquía
   const createSubareasForArea = async (
     area: AreaFormData,
     dbAreaId: number,
@@ -612,7 +656,6 @@ export default function ClientModal({
       const clientData: CreateClientDto = {
         nombre: formData.nombre,
         nit: formData.nit,
-        // Enviar campos desglosados
         direccionBase: formData.direccionBase,
         barrio: formData.barrio,
         ciudad: formData.ciudad,
@@ -625,34 +668,29 @@ export default function ClientModal({
         fechaCreacionEmpresa: formData.fecha_creacion,
       };
 
-      if (formData.idUsuarioContacto) {
-        clientData.idUsuarioContacto = formData.idUsuarioContacto;
+      if (selectedContactUserIds.length > 0) {
+        clientData.usuariosContactoIds = selectedContactUserIds;
       }
 
       let savedClient: Client;
 
       if (editingClient) {
-        // Actualizar cliente
         await clientsAPI.updateClient(editingClient.idCliente, clientData);
 
-        // Manejo de áreas existentes vs nuevas
         const existingAreaIds = editingClient.areas?.map((a) => a.idArea) || [];
         const currentAreaIds =
           formData.areas
             .filter((a) => a.id !== undefined && a.id > 0)
             .map((a) => a.id as number) || [];
 
-        // Eliminar áreas que ya no están
         for (const areaId of existingAreaIds) {
           if (!currentAreaIds.includes(areaId)) {
             await areasAPI.deleteArea(areaId);
           }
         }
 
-        // Crear/actualizar áreas y subáreas
         for (const area of formData.areas) {
           if (area.id !== undefined && area.id < 0) {
-            // Área nueva
             const createdArea = await areasAPI.createArea({
               nombreArea: area.nombreArea,
               clienteId: editingClient.idCliente,
@@ -660,7 +698,6 @@ export default function ClientModal({
 
             await createSubareasForArea(area, createdArea.idArea);
           } else if (area.id !== undefined && area.id > 0) {
-            // Área existente: eliminar subáreas quitadas y crear nuevas
             const existingArea = editingClient.areas?.find(
               (a) => a.idArea === area.id,
             );
@@ -671,7 +708,6 @@ export default function ClientModal({
                 .filter((s) => s.id !== undefined && s.id > 0)
                 .map((s) => s.id as number) || [];
 
-            // Eliminar subáreas que ya no están
             for (const subId of existingSubareaIds) {
               if (!currentSubareaIds.includes(subId)) {
                 await subAreasAPI.deleteSubArea(subId);
@@ -684,10 +720,8 @@ export default function ClientModal({
 
         savedClient = await clientsAPI.getClientById(editingClient.idCliente);
       } else {
-        // Crear cliente
         const newClient = await clientsAPI.createClient(clientData);
 
-        // Crear áreas + subáreas
         for (const area of formData.areas) {
           const createdArea = await areasAPI.createArea({
             nombreArea: area.nombreArea,
@@ -700,13 +734,11 @@ export default function ClientModal({
         savedClient = await clientsAPI.getClientById(newClient.idCliente);
       }
 
-      // Subir logo si hay uno seleccionado
       if (logoFile && savedClient) {
         try {
           await imagesApi.uploadClientLogo(savedClient.idCliente, logoFile);
         } catch (uploadError: any) {
           console.error("Error subiendo logo:", uploadError);
-          // No detenemos el flujo si falla la subida del logo
           setError(
             `Cliente guardado, pero error al subir logo: ${uploadError.message}`,
           );
@@ -726,12 +758,10 @@ export default function ClientModal({
 
   if (!isOpen) return null;
 
-  // Área actualmente seleccionada para agregar subárea
   const currentAreaForSubarea = formData.areas.find(
     (a) => a.id === selectedAreaForSubarea,
   );
 
-  // Subárea padre actualmente seleccionada (si hay)
   const currentParentSubarea =
     currentAreaForSubarea && selectedParentSubarea != null
       ? currentAreaForSubarea.subAreas.find(
@@ -739,7 +769,6 @@ export default function ClientModal({
         ) || null
       : null;
 
-  // Render recursivo de subáreas como árbol
   const renderSubareasTree = (
     area: AreaFormData,
     parentId: number | null = null,
@@ -759,7 +788,6 @@ export default function ClientModal({
           <span className={styles.subareaName}>📂 {sub.nombreSubArea}</span>
 
           <div className={styles.subareaActions}>
-            {/* + hija de esta subárea */}
             <button
               type="button"
               onClick={() =>
@@ -831,7 +859,7 @@ export default function ClientModal({
             </div>
           )}
 
-          {/* ========== PASO 1: Información del Cliente ========== */}
+          {/* PASO 1 */}
           {step === 1 && (
             <div className={styles.step}>
               <h3 className={styles.stepTitle}>
@@ -869,7 +897,7 @@ export default function ClientModal({
                   />
                 </div>
 
-                {/* Logo de la Empresa */}
+                {/* Logo */}
                 <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                   <label className={styles.formLabel}>
                     Logo de la Empresa (Opcional)
@@ -925,7 +953,7 @@ export default function ClientModal({
                     onChange={handleInputChange}
                     placeholder="Se autocompletará al seleccionar usuario"
                     className={styles.formInput}
-                    disabled={true}
+                    disabled
                   />
                 </div>
 
@@ -970,20 +998,12 @@ export default function ClientModal({
                   />
                 </div>
 
-                {/* --- SECCIÓN DE DIRECCIÓN DESGLOSADA --- */}
+                {/* Dirección */}
                 <div
                   className={`${styles.formGroup} ${styles.fullWidth}`}
-                  style={{
-                    gridColumn: "1 / -1",
-                  }}
+                  style={{ gridColumn: "1 / -1" }}
                 >
-                  <label
-                    className={styles.formLabel}
-                    style={{
-                      marginBottom: "0.5rem",
-                      display: "block",
-                    }}
-                  >
+                  <label className={styles.formLabel}>
                     Dirección de la Empresa *
                   </label>
                   <div
@@ -993,7 +1013,6 @@ export default function ClientModal({
                       gap: "1rem",
                     }}
                   >
-                    {/* Dirección Base */}
                     <div style={{ gridColumn: "1 / -1" }}>
                       <input
                         type="text"
@@ -1006,7 +1025,6 @@ export default function ClientModal({
                       />
                     </div>
 
-                    {/* Barrio */}
                     <div>
                       <input
                         type="text"
@@ -1019,7 +1037,6 @@ export default function ClientModal({
                       />
                     </div>
 
-                    {/* Ciudad */}
                     <div>
                       <input
                         type="text"
@@ -1032,7 +1049,6 @@ export default function ClientModal({
                       />
                     </div>
 
-                    {/* Departamento */}
                     <div>
                       <input
                         type="text"
@@ -1045,7 +1061,6 @@ export default function ClientModal({
                       />
                     </div>
 
-                    {/* País */}
                     <div>
                       <input
                         type="text"
@@ -1058,7 +1073,7 @@ export default function ClientModal({
                       />
                     </div>
                   </div>
-                  {/* URL de Google Maps generada automáticamente */}
+
                   {formData.localizacion && (
                     <div style={{ marginTop: "1rem" }}>
                       <div className={styles.formGroup}>
@@ -1082,13 +1097,14 @@ export default function ClientModal({
                   )}
                 </div>
 
-                {/* Usuario contacto (solo Admin/Secretaria) */}
+                {/* Usuarios contacto (solo Admin/Secretaria) */}
                 {!isCliente && (
                   <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                     <label className={styles.formLabel}>
-                      Buscar Usuario Contacto (opcional)
+                      Buscar Usuarios Contacto (opcional)
                       <span className={styles.fieldNote}>
-                        (Autocompleta el nombre de contacto)
+                        Selecciona uno o más usuarios; el primero será el
+                        principal.
                       </span>
                     </label>
                     <div className={styles.autocompleteWrapper}>
@@ -1144,8 +1160,10 @@ export default function ClientModal({
                       <div className={styles.selectedUser}>
                         <span className={styles.checkmark}>✓</span>
                         <div className={styles.selectedUserInfo}>
-                          <strong>Usuario contacto seleccionado</strong>
-                          <small>Nombre de contacto autocompletado</small>
+                          <strong>Usuario contacto principal</strong>
+                          <small>
+                            El nombre de contacto se autocompleta arriba.
+                          </small>
                         </div>
                         <button
                           className={styles.clearUserButton}
@@ -1156,6 +1174,7 @@ export default function ClientModal({
                               contacto: "",
                             }));
                             setUserSearch("");
+                            setSelectedContactUserIds([]);
                           }}
                           disabled={loading}
                         >
@@ -1163,10 +1182,64 @@ export default function ClientModal({
                         </button>
                       </div>
                     )}
+
+                    {selectedContactUserIds.length > 0 && (
+                      <div className={styles.selectedContactsList}>
+                        <strong>Usuarios contacto seleccionados:</strong>
+                        <ul className={styles.selectedContactsUl}>
+                          {selectedContactUserIds.map((id) => {
+                            // 1) Intentar encontrarlo en la lista global de usuarios
+                            let u = users.find((usr) => usr.usuarioId === id);
+
+                            // 2) Si no está (p.ej. aún no cargó users), usar el cliente en edición
+                            if (!u && editingClient?.usuariosContacto) {
+                              u = editingClient.usuariosContacto.find(
+                                (usr: any) => usr.usuarioId === id,
+                              ) as any;
+                            }
+
+                            if (!u) return null; // último fallback
+
+                            const isPrincipal =
+                              formData.idUsuarioContacto === id;
+
+                            return (
+                              <li
+                                key={id}
+                                className={styles.selectedContactItem}
+                              >
+                                <span>
+                                  {u.nombre} {u.apellido || ""}{" "}
+                                  {isPrincipal && <em>(principal)</em>}
+                                </span>
+                                {!isPrincipal && (
+                                  <button
+                                    type="button"
+                                    className={styles.removeContactButton}
+                                    onClick={() =>
+                                      setSelectedContactUserIds((prev) =>
+                                        prev.filter((x) => x !== id),
+                                      )
+                                    }
+                                    disabled={loading}
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        <small className={styles.fieldNote}>
+                          El primer usuario seleccionado se usará como contacto
+                          principal.
+                        </small>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Cliente: info de su usuario */}
+                {/* Cliente logueado como contacto */}
                 {isCliente && user && (
                   <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                     <div className={styles.selectedUser}>
@@ -1185,7 +1258,7 @@ export default function ClientModal({
             </div>
           )}
 
-          {/* ========== PASO 2: Áreas y Subáreas ========== */}
+          {/* PASO 2: Áreas y Subáreas */}
           {step === 2 && (
             <div className={styles.step}>
               <h3 className={styles.stepTitle}>
@@ -1254,7 +1327,6 @@ export default function ClientModal({
                           </div>
 
                           <div className={styles.areaActions}>
-                            {/* + subárea nivel 1 */}
                             <button
                               type="button"
                               onClick={() =>
@@ -1267,7 +1339,6 @@ export default function ClientModal({
                               +
                             </button>
 
-                            {/* eliminar área */}
                             <button
                               type="button"
                               onClick={() =>
@@ -1282,7 +1353,6 @@ export default function ClientModal({
                           </div>
                         </div>
 
-                        {/* Subáreas como árbol */}
                         {area.subAreas.length > 0 && (
                           <div className={styles.subareasList}>
                             {renderSubareasTree(area, null)}
@@ -1359,7 +1429,7 @@ export default function ClientModal({
           </div>
         </div>
 
-        {/* Mini-modal para crear subárea */}
+        {/* Mini-modal para subárea */}
         {isSubareaModalOpen && currentAreaForSubarea && (
           <div
             className={styles.subareaModalOverlay}

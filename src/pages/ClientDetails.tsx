@@ -5,12 +5,35 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import { clients as clientsAPI } from "../api/clients";
 import { imagesApi } from "../api/images";
 import { getEquipmentByClientRequest } from "../api/equipment";
-import type { Client, ClientImage } from "../interfaces/ClientInterfaces";
+import type {
+  Client,
+  ClientImage,
+  UsuarioContacto,
+} from "../interfaces/ClientInterfaces";
 import type { Equipment } from "../interfaces/EquipmentInterfaces";
 import styles from "../styles/pages/ClientDetailsPage.module.css";
 import type { SubArea } from "../interfaces/SubAreaInterfaces";
 
 type TabType = "info" | "areas" | "gallery";
+
+// Helper para obtener el contacto principal desde usuariosContacto + campo contacto
+function getPrincipalContacto(client: Client): UsuarioContacto | null {
+  const contactos = client.usuariosContacto || [];
+  if (contactos.length === 0) return null;
+
+  // 1) Intentar matchear por el campo de texto "contacto"
+  if (client.contacto) {
+    const contactoNombre = client.contacto.trim().toLowerCase();
+    const match = contactos.find((u) => {
+      const fullName = `${u.nombre} ${u.apellido || ""}`.trim().toLowerCase();
+      return fullName === contactoNombre;
+    });
+    if (match) return match;
+  }
+
+  // 2) Fallback: primer usuario de la lista
+  return contactos[0];
+}
 
 export default function ClientDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -59,7 +82,7 @@ export default function ClientDetailsPage() {
         const clientData = await clientsAPI.getClientById(clientId);
         setClient(clientData);
 
-        // 2. Cargar logo del cliente (separado)
+        // 2. Cargar logo del cliente
         try {
           const logo = await imagesApi.getClientLogo(clientId);
           setClientLogo(logo);
@@ -68,7 +91,7 @@ export default function ClientDetailsPage() {
           setClientLogo(null);
         }
 
-        // 3. Cargar imágenes de galería del cliente
+        // 3. Cargar imágenes de galería
         try {
           setImagesLoading(true);
           const images = await imagesApi.getClientImages(clientId);
@@ -108,7 +131,7 @@ export default function ClientDetailsPage() {
     loadClientData();
   }, [id]);
 
-  // Hook para detectar clics fuera del contenedor del logo
+  // Click outside para cerrar overlay del logo
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -125,17 +148,14 @@ export default function ClientDetailsPage() {
     };
   }, []);
 
-  // Función helper para manejar mouse leave de forma segura
   const handleLogoMouseLeave = (e: React.MouseEvent) => {
     const relatedTarget = e.relatedTarget as Node;
 
-    // Verificar que relatedTarget sea válido antes de usar .contains()
     if (!relatedTarget || !(relatedTarget instanceof Node)) {
       setLogoHover(false);
       return;
     }
 
-    // Verificar que el contenedor exista y que relatedTarget no esté dentro de él
     if (!logoMenuRef.current || !logoMenuRef.current.contains(relatedTarget)) {
       setLogoHover(false);
     }
@@ -169,7 +189,7 @@ export default function ClientDetailsPage() {
     }
   };
 
-  // Función para manejar la carga de logo
+  // Logo upload
   const handleLogoUpload = async (file: File) => {
     if (!client || !id) return;
 
@@ -177,7 +197,6 @@ export default function ClientDetailsPage() {
       setUploadingLogo(true);
       const clientId = parseInt(id, 10);
 
-      // Validar archivo
       const validationError = imagesApi.validateFile(file, 5, [
         "image/jpeg",
         "image/png",
@@ -199,18 +218,14 @@ export default function ClientDetailsPage() {
     }
   };
 
-  // Función para manejar la carga de imágenes de galería
   const handleGalleryUpload = async (files: FileList) => {
     if (!client || !id) return;
 
     try {
       setUploadingGallery(true);
       const clientId = parseInt(id, 10);
-
-      // Convertir FileList a array
       const filesArray = Array.from(files);
 
-      // Validar archivos
       for (const file of filesArray) {
         const validationError = imagesApi.validateFile(file, 5, [
           "image/jpeg",
@@ -223,13 +238,11 @@ export default function ClientDetailsPage() {
         }
       }
 
-      // Subir imágenes
       const uploadedImages = await imagesApi.uploadClientImages(
         clientId,
         filesArray,
       );
 
-      // Actualizar galería
       setClientImages((prev) => [...prev, ...uploadedImages]);
       setError(null);
     } catch (err: any) {
@@ -243,10 +256,7 @@ export default function ClientDetailsPage() {
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     handleLogoUpload(file);
-
-    // Resetear el input
     if (logoFileInputRef.current) {
       logoFileInputRef.current.value = "";
     }
@@ -255,16 +265,12 @@ export default function ClientDetailsPage() {
   const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     handleGalleryUpload(files);
-
-    // Resetear el input
     if (galleryFileInputRef.current) {
       galleryFileInputRef.current.value = "";
     }
   };
 
-  // Función para eliminar logo
   const handleDeleteLogo = async () => {
     if (!client || !id || !clientLogo) return;
 
@@ -283,7 +289,6 @@ export default function ClientDetailsPage() {
     }
   };
 
-  // Función para eliminar imagen de galería
   const handleDeleteGalleryImage = async (imageId: number) => {
     if (!window.confirm("¿Estás seguro de que quieres eliminar esta imagen?")) {
       return;
@@ -291,15 +296,10 @@ export default function ClientDetailsPage() {
 
     try {
       await imagesApi.deleteImage(imageId);
-
-      // Actualizar las imágenes
       setClientImages((prev) => prev.filter((img) => img.id !== imageId));
-
-      // Ajustar el índice si es necesario
       if (currentImageIndex >= clientImages.length - 1) {
         setCurrentImageIndex(Math.max(0, clientImages.length - 2));
       }
-
       setError(null);
     } catch (err: any) {
       console.error("Error eliminando imagen:", err);
@@ -307,7 +307,6 @@ export default function ClientDetailsPage() {
     }
   };
 
-  // Navegación del carrusel
   const nextImage = () => {
     setCurrentImageIndex((prev) =>
       prev === clientImages.length - 1 ? 0 : prev + 1,
@@ -320,7 +319,7 @@ export default function ClientDetailsPage() {
     );
   };
 
-  // Función recursiva para organizar subáreas en árbol
+  // Árbol de subáreas
   const organizeSubareasTree = (
     subareas: SubArea[],
     parentId: number | null = null,
@@ -341,7 +340,6 @@ export default function ClientDetailsPage() {
     return result;
   };
 
-  // Función recursiva para renderizar subáreas como árbol
   const renderSubareasTree = (
     subareas: SubArea[],
     depth: number = 0,
@@ -372,10 +370,9 @@ export default function ClientDetailsPage() {
             </span>
           </div>
 
-          {/* Mostrar equipos de esta subárea */}
+          {/* Equipos de esta subárea */}
           {renderSubareaEquipment(subarea)}
 
-          {/* Renderizar hijos recursivamente */}
           {subarea.children && subarea.children.length > 0 && (
             <div className={styles.subareaChildren}>
               {renderSubareasTree(subarea.children, depth + 1)}
@@ -386,7 +383,6 @@ export default function ClientDetailsPage() {
     ));
   };
 
-  // Función para renderizar equipos de una subárea
   const renderSubareaEquipment = (subarea: SubArea): JSX.Element | null => {
     const subareaEquipments = equipmentList.filter(
       (eq) => eq.subArea?.idSubArea === subarea.idSubArea,
@@ -408,7 +404,6 @@ export default function ClientDetailsPage() {
     );
   };
 
-  // Función para renderizar equipos directos del área
   const renderAreaEquipment = (areaId: number): JSX.Element | null => {
     const areaEquipments = equipmentList.filter(
       (eq) => eq.area?.idArea === areaId && !eq.subArea?.idSubArea,
@@ -468,6 +463,7 @@ export default function ClientDetailsPage() {
 
   const areas = client.areas || [];
   const totalEquipments = equipmentList.length;
+  const principalContacto = getPrincipalContacto(client);
 
   return (
     <DashboardLayout>
@@ -498,7 +494,6 @@ export default function ClientDetailsPage() {
                       alt={`Logo de ${client.nombre}`}
                       className={styles.clientLogo}
                       onError={(e) => {
-                        // Si falla la imagen, mostrar placeholder
                         const target = e.target as HTMLImageElement;
                         target.style.display = "none";
                         const wrapper = target.closest(
@@ -526,7 +521,6 @@ export default function ClientDetailsPage() {
                 {logoHover && (
                   <div className={styles.logoOverlay}>
                     <div className={styles.logoActions}>
-                      {/* Botón para subir nuevo logo */}
                       <input
                         type="file"
                         ref={logoFileInputRef}
@@ -544,7 +538,6 @@ export default function ClientDetailsPage() {
                         {uploadingLogo ? "⏳" : "📷"}
                       </button>
 
-                      {/* Botón para eliminar logo (solo si existe) */}
                       {clientLogo && (
                         <button
                           className={`${styles.logoActionBtn} ${styles.deleteLogoBtn}`}
@@ -626,7 +619,6 @@ export default function ClientDetailsPage() {
           </nav>
         </header>
 
-        {/* Mostrar errores generales */}
         {error && (
           <div className={styles.errorAlert}>
             <span className={styles.errorIcon}>⚠️</span>
@@ -645,7 +637,7 @@ export default function ClientDetailsPage() {
           {/* TAB: INFORMACIÓN */}
           {activeTab === "info" && (
             <section className={styles.infoSection}>
-              {/* Contacto */}
+              {/* Contacto básico */}
               <div className={styles.infoCard}>
                 <h3 className={styles.cardTitle}>
                   <span className={styles.cardIcon}>👤</span>
@@ -693,8 +685,8 @@ export default function ClientDetailsPage() {
                 </div>
               </div>
 
-              {/* Usuario contacto del sistema */}
-              {client.usuarioContacto && (
+              {/* Usuario contacto del sistema (principal) */}
+              {principalContacto && (
                 <div className={styles.infoCard}>
                   <h3 className={styles.cardTitle}>
                     <span className={styles.cardIcon}>🔗</span>
@@ -702,33 +694,33 @@ export default function ClientDetailsPage() {
                   </h3>
                   <div className={styles.userContactCard}>
                     <div className={styles.userAvatar}>
-                      {client.usuarioContacto.nombre.charAt(0).toUpperCase()}
+                      {principalContacto.nombre.charAt(0).toUpperCase()}
                     </div>
                     <div className={styles.userContactInfo}>
                       <span className={styles.userName}>
-                        {client.usuarioContacto.nombre}{" "}
-                        {client.usuarioContacto.apellido || ""}
+                        {principalContacto.nombre}{" "}
+                        {principalContacto.apellido || ""}
                       </span>
                       <span className={styles.userEmail}>
-                        {client.usuarioContacto.email}
+                        {principalContacto.email}
                       </span>
-                      {client.usuarioContacto.telefono && (
+                      {principalContacto.telefono && (
                         <span className={styles.userPhone}>
-                          {client.usuarioContacto.telefono}
+                          {principalContacto.telefono}
                         </span>
                       )}
                     </div>
-                    {client.usuarioContacto.role && (
+                    {principalContacto.role && (
                       <span
                         className={`${styles.roleBadge} ${
                           styles[
-                            client.usuarioContacto.role.nombreRol
+                            principalContacto.role.nombreRol
                               .toLowerCase()
                               .replace(/\s+/g, "")
                           ] || ""
                         }`}
                       >
-                        {client.usuarioContacto.role.nombreRol}
+                        {principalContacto.role.nombreRol}
                       </span>
                     )}
                   </div>
