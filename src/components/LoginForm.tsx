@@ -77,7 +77,7 @@ export default function LoginForm() {
       <div className={styles.leftSection}>
         <div className={styles.logoContainer}>
           <img
-            src="/Assets/images/LOGO_IMEC.png"
+            src="/Assets/images/IMEC-DEL-NORTE.jpeg"
             alt="IMEC del Norte"
             className={styles.logo}
           />

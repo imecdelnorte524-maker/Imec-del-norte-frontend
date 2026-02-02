@@ -4,13 +4,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-500);
   padding: 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .content {
-  background: white;
+  background: var(--primary-50);
   border-radius: 20px;
   padding: 40px;
   text-align: center;
@@ -129,7 +129,7 @@
   padding: 12px 24px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
-  background: white;
+  background: var(--primary-50);
   color: #4a5568;
   font-weight: 600;
   cursor: pointer;
@@ -148,13 +148,13 @@
 .primary {
   background: #4299e1;
   border-color: #4299e1;
-  color: white;
+  color: var(--primary-50);
 }
 
 .primary:hover {
   background: #3182ce;
   border-color: #3182ce;
-  color: white;
+  color: var(--primary-50);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
 }

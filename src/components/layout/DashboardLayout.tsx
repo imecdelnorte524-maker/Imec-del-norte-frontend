@@ -557,7 +557,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className={styles.sidebarHeader}>
           <div className={styles.logoContainer}>
             <img
-              src="/Assets/images/LOGO_IMEC.png"
+              src="/Assets/icons/favicon-imec.png"
               alt="IMEC del Norte"
               className={styles.logoIcon}
             />
