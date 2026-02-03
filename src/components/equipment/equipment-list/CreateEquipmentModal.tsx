@@ -1,4 +1,3 @@
-// src/components/equipment/equipment-list/CreateEquipmentModal.tsx
 import { useEffect, useRef, useCallback, useState } from "react";
 import HierarchicalAreaSelector from "./HierarchicalAreaSelector";
 import { EvaporatorForm, CondenserForm } from "./forms";
@@ -214,14 +213,18 @@ export default function CreateEquipmentModal({
 
   const canHaveMultipleComponents = allowsMultipleComponents();
 
+  const evapCount = evaporators.length;
+  const condCount = condensers.length;
+
   const canAddMoreEvaporators =
-    canHaveMultipleComponents || evaporators.length === 0;
+    canHaveMultipleComponents || evapCount === 0;
   const canAddMoreCondensers =
-    canHaveMultipleComponents || condensers.length === 0;
+    canHaveMultipleComponents || condCount === 0;
 
   const canRemoveEvaporator =
-    canHaveMultipleComponents && evaporators.length > 1;
-  const canRemoveCondenser = canHaveMultipleComponents && condensers.length > 1;
+    canHaveMultipleComponents && evapCount > 1;
+  const canRemoveCondenser =
+    canHaveMultipleComponents && condCount > 1;
 
   const handleAcTypeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -244,11 +247,9 @@ export default function CreateEquipmentModal({
     const file = e.target.files && e.target.files[0];
 
     if (file) {
-      // Solo nos quedamos con el primer archivo
       setPhotoFiles([file]);
       setPhotoError(null);
 
-      // Generar preview para mostrar en el modal de creación
       const reader = new FileReader();
       reader.onloadend = () => {
         setPhotoPreview(reader.result as string);
@@ -396,7 +397,6 @@ export default function CreateEquipmentModal({
           </div>
 
           {/* FOTO PRINCIPAL CON MODAL (UNA SOLA) */}
-          {/* FOTO PRINCIPAL CON MODAL (UNA SOLA) */}
           <div className={styles.formRow}>
             <label>Foto principal del equipo (opcional)</label>
             <div className={styles.photoMainRow}>
@@ -502,7 +502,9 @@ export default function CreateEquipmentModal({
                       return (
                         <div
                           key={order.orden_id}
-                          className={`${styles.orderOption} ${isSelected ? styles.selected : ""}`}
+                          className={`${styles.orderOption} ${
+                            isSelected ? styles.selected : ""
+                          }`}
                         >
                           <label>
                             <input
@@ -528,7 +530,13 @@ export default function CreateEquipmentModal({
                                   ).toLocaleDateString()}
                                 </small>
                                 <span
-                                  className={`${styles.orderStatus} ${styles[order.estado.toLowerCase().replace(" ", "")]}`}
+                                  className={`${styles.orderStatus} ${
+                                    styles[
+                                      order.estado
+                                        .toLowerCase()
+                                        .replace(" ", "")
+                                    ]
+                                  }`}
                                 >
                                   {order.estado}
                                 </span>
@@ -633,7 +641,11 @@ export default function CreateEquipmentModal({
               {/* EVAPORADORES */}
               <div className={styles.componentGroup}>
                 <div className={styles.groupHeader}>
-                  <h5>Evaporadores</h5>
+                  <h5>
+                    {evapCount === 1
+                      ? "Evaporador"
+                      : `Evaporadores (${evapCount})`}
+                  </h5>
                   {canAddMoreEvaporators && (
                     <button
                       type="button"
@@ -653,7 +665,11 @@ export default function CreateEquipmentModal({
                   evaporators.map((evaporator, index) => (
                     <div key={index} className={styles.componentItem}>
                       <div className={styles.componentItemHeader}>
-                        <h6>Evaporador {index + 1}</h6>
+                        <h6>
+                          {evapCount === 1
+                            ? "Evaporador"
+                            : `Evaporador ${index + 1}`}
+                        </h6>
                         {canRemoveEvaporator && (
                           <button
                             type="button"
@@ -678,7 +694,11 @@ export default function CreateEquipmentModal({
               {/* CONDENSADORAS */}
               <div className={styles.componentGroup}>
                 <div className={styles.groupHeader}>
-                  <h5>Condensadoras</h5>
+                  <h5>
+                    {condCount === 1
+                      ? "Condensadora"
+                      : `Condensadoras (${condCount})`}
+                  </h5>
                   {canAddMoreCondensers && (
                     <button
                       type="button"
@@ -698,7 +718,11 @@ export default function CreateEquipmentModal({
                   condensers.map((condenser, index) => (
                     <div key={index} className={styles.componentItem}>
                       <div className={styles.componentItemHeader}>
-                        <h6>Condensadora {index + 1}</h6>
+                        <h6>
+                          {condCount === 1
+                            ? "Condensadora"
+                            : `Condensadora ${index + 1}`}
+                        </h6>
                         {canRemoveCondenser && (
                           <button
                             type="button"
