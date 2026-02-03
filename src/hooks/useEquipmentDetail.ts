@@ -49,8 +49,6 @@ export function useEquipmentDetail(equipmentId: number | null) {
     setError(null);
     
     try {
-      // Solo enviar los campos que queremos actualizar
-      // No es necesario enviar todo el equipo, solo los cambios
       const updated = await updateEquipmentRequest(equipmentId, updateData);
       setEquipment(updated);
       return true;
@@ -67,7 +65,6 @@ export function useEquipmentDetail(equipmentId: number | null) {
     }
   };
 
-  // Funciones específicas para actualizar campos comunes
   const updateBasicInfo = async (data: {
     areaId?: number | null;
     subAreaId?: number | null;
