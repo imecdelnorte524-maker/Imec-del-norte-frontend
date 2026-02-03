@@ -136,3 +136,49 @@
     padding: var(--spacing-sm);
   }
 }
+
+/* Contenedor para el select + botón tuerca */
+.withManageButton {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* El select ocupa todo el ancho disponible menos el botón */
+.withManageButton select {
+  flex: 1 1 auto;
+}
+
+/* Botón de gestión (tuerca) */
+.manageButton {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--gray-300);
+  background-color: var(--white);
+  color: var(--gray-600);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.manageButton:hover {
+  background-color: var(--gray-50);
+  border-color: var(--primary-400);
+  color: var(--primary-600);
+  box-shadow: 0 0 0 2px var(--primary-100);
+}
+
+.manageButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: var(--gray-100);
+  border-color: var(--gray-200);
+  box-shadow: none;
+}

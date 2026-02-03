@@ -1,4 +1,4 @@
-// src/components/equipment/equipment-details/AddPhotoModal.tsx
+import { useEffect, useState } from "react";
 import styles from "../../../styles/components/equipment/equipment-details/AddPhotoModal.module.css";
 
 interface AddPhotoModalProps {
@@ -8,6 +8,8 @@ interface AddPhotoModalProps {
   onFileSelection: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
+  multiple?: boolean; // nuevo: permitir múltiple o solo una
+  title?: string; // nuevo: personalizar título
 }
 
 export default function AddPhotoModal({
@@ -17,12 +19,26 @@ export default function AddPhotoModal({
   onFileSelection,
   onSubmit,
   onClose,
+  multiple = true,
+  title = "Agregar nuevas fotos",
 }: AddPhotoModalProps) {
+  const [previews, setPreviews] = useState<string[]>([]);
+
+  // Generar URLs de preview para los archivos seleccionados
+  useEffect(() => {
+    const urls = photoFiles.map((file) => URL.createObjectURL(file));
+    setPreviews(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [photoFiles]);
+
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.addPhotoModal}>
         <div className={styles.modalHeaderRow}>
-          <h4>Agregar nuevas fotos</h4>
+          <h4>{title}</h4>
           <button
             type="button"
             className={styles.modalCloseButton}
@@ -41,10 +57,11 @@ export default function AddPhotoModal({
             <input
               type="file"
               accept="image/*"
-              multiple
+              multiple={multiple}
               onChange={onFileSelection}
-              required
+              required={photoFiles.length === 0}
               disabled={photoLoading}
+              className={styles.fileInput}
             />
           </div>
 
@@ -55,7 +72,16 @@ export default function AddPhotoModal({
               </p>
               <ul>
                 {photoFiles.map((file, index) => (
-                  <li key={index}>📷 {file.name}</li>
+                  <li key={index}>
+                    {previews[index] && (
+                      <img
+                        src={previews[index]}
+                        alt={file.name}
+                        className={styles.previewImage}
+                      />
+                    )}
+                    <span>📷 {file.name}</span>
+                  </li>
                 ))}
               </ul>
             </div>

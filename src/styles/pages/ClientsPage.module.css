@@ -1,7 +1,5 @@
 /* ===== VARIABLES Y ESTILOS BASE ===== */
 :root {
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --primary-color: #4f46e5;
   --secondary-color: #6b7280;
   --danger-color: #dc2626;
   --success-color: #10b981;
@@ -69,7 +67,7 @@
 }
 
 .createButton {
-  background: var(--primary-gradient);
+  background: var(--primary-600);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -358,7 +356,7 @@
 
 .clientTableLogoPlaceholder,
 .clientLogoPlaceholderMobile {
-  background: var(--primary-gradient);
+  background: var(--primary-600);
   color: white;
   display: flex;
   align-items: center;
@@ -615,7 +613,7 @@
 }
 
 .emptyButton {
-  background: var(--primary-gradient);
+  background: var(--primary-600);
   color: white;
   border: none;
   padding: 12px 32px;

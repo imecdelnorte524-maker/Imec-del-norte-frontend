@@ -16,7 +16,9 @@
 .addPhotoModal {
   background: var(--white);
   border-radius: var(--border-radius-lg);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   max-width: 550px;
   width: 100%;
   padding: var(--spacing-lg);
@@ -199,4 +201,44 @@
   .addPhotoModal {
     padding: var(--spacing-md);
   }
+}
+
+.formRow input[type="file"],
+.fileInput {
+  border: 2px dashed var(--gray-300);
+  background: var(--gray-50);
+  padding: var(--spacing-md);
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  border-radius: var(--border-radius);
+}
+
+.fileInput:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+}
+
+.selectedFilesList li {
+  padding: 4px 0;
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  border-bottom: 1px dashed var(--gray-100);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selectedFilesList li:last-child {
+  border-bottom: none;
+}
+
+.previewImage {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
 }

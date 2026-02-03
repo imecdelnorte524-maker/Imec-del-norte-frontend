@@ -125,7 +125,7 @@
 }
 
 .smallBtn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: #fff;
 }
 
@@ -325,7 +325,7 @@
 
 .saveBtn {
   padding: 10px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: #fff;
   border: none;
   border-radius: 8px;

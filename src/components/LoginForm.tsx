@@ -81,9 +81,6 @@ export default function LoginForm() {
             alt="IMEC del Norte"
             className={styles.logo}
           />
-          <p className={styles.tagline}>
-            Sistema de Gestión de Mantenimiento Industrial
-          </p>
         </div>
       </div>
 

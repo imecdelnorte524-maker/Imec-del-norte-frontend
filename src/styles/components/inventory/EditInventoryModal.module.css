@@ -58,7 +58,7 @@
   align-items: center;
   padding: clamp(16px, 3vw, 24px);
   border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
   border-radius: clamp(8px, 2vw, 12px) clamp(8px, 2vw, 12px) 0 0;
   position: sticky;
@@ -337,7 +337,7 @@
 }
 
 .btnPrimary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
   border: none;
   padding: clamp(10px, 2vw, 12px) clamp(16px, 3vw, 20px);

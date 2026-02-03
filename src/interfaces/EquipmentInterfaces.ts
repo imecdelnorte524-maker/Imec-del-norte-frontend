@@ -125,6 +125,7 @@ export interface Equipment {
   installationDate?: string | null;
   notes?: string | null;
   createdAt: string;
+  createdBy: string;
   updatedAt: string;
   photos: EquipmentPhoto[];
   evaporators?: EvaporatorData[];

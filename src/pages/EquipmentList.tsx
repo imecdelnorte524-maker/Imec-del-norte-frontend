@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import {
   getEquipmentByClientRequest,
   createEquipmentRequest,
+  addEquipmentPhotoRequest, // ⬅️ IMPORTADO
 } from "../api/equipment";
 import {
   addEquipmentToOrderRequest,
@@ -458,7 +459,9 @@ export default function EquipmentListPage() {
   };
 
   const handlePlanMantenimientoChange = (
-    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<
+      HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
     setPlanMantenimiento((prev) => ({
@@ -608,8 +611,11 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Crear equipo con asociación a órdenes
-  const handleSubmitCreate = async (e: React.FormEvent) => {
+  // Crear equipo con asociación a órdenes y foto principal
+  const handleSubmitCreate = async (
+    e: React.FormEvent<HTMLFormElement>,
+    mainPhoto?: File | null,
+  ) => {
     e.preventDefault();
 
     if (!selectedClientId || !selectedClient) {
@@ -651,7 +657,12 @@ export default function EquipmentListPage() {
       // 1. Crear el equipo
       const newEquipment = await createEquipmentRequest(payload);
 
-      // 2. Asociar a órdenes seleccionadas (si hay)
+      // 2. Subir foto principal si existe
+      if (mainPhoto) {
+        await addEquipmentPhotoRequest(newEquipment.equipmentId, mainPhoto);
+      }
+
+      // 3. Asociar a órdenes seleccionadas (si hay)
       if (selectedOrderIds.length > 0) {
         try {
           await Promise.all(
@@ -665,12 +676,12 @@ export default function EquipmentListPage() {
         }
       }
 
-      // 3. Recargar equipos
+      // 4. Recargar equipos
       const equipments = await getEquipmentByClientRequest(selectedClientId);
       setAllEquipments(equipments);
       setEquipmentList(equipments);
 
-      // 4. Resetear todo
+      // 5. Resetear todo
       setShowCreateForm(false);
       setSelectedOrderIds([]);
       setCreateForm({

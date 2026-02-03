@@ -959,3 +959,27 @@
   color: #2b6cb0;
   font-weight: bold;
 }
+.photoMainRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.photoPreviewContainer {
+  margin-top: 0.5rem;
+  max-width: 100vw;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 4px;
+  background: #f9fafb;
+}
+
+.photoPreviewImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  object-fit: cover;
+}
