@@ -69,6 +69,7 @@ export default function UserModal({
     tipoCedula: TIPOS_CEDULA.CC,
     cedula: "",
     rolId: 0,
+    position: "",
   });
 
   // Estado separado para día y mes
@@ -77,6 +78,10 @@ export default function UserModal({
 
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Rol actualmente seleccionado (según rolId)
+  const selectedRole = roles.find((rol) => rol.rolId === formData.rolId);
+  const isClienteRole = selectedRole?.nombreRol === "Cliente";
 
   useEffect(() => {
     if (isOpen) {
@@ -89,26 +94,19 @@ export default function UserModal({
         let month = "";
         if (editingUser.fechaNacimiento) {
           try {
-            // SOLUCIÓN: Manejo correcto de zona horaria
             const dateString = editingUser.fechaNacimiento;
-            
-            // Si la fecha ya tiene timestamp (viene con T)
-            if (dateString.includes('T')) {
+
+            if (dateString.includes("T")) {
               const date = new Date(dateString);
-              // Usar getUTCDate() para evitar problemas de zona horaria
               day = date.getUTCDate().toString();
               month = (date.getUTCMonth() + 1).toString();
             } else {
-              // Si viene solo como fecha "2000-01-15"
-              // Opción 1: Parsear directamente de la cadena (RECOMENDADO)
-              const parts = dateString.split('-');
+              const parts = dateString.split("-");
               if (parts.length === 3) {
-                // parts[0] = año, parts[1] = mes, parts[2] = día
                 day = parseInt(parts[2], 10).toString();
                 month = parseInt(parts[1], 10).toString();
               } else {
-                // Opción 2: Usar Date con tiempo local
-                const date = new Date(dateString + 'T12:00:00');
+                const date = new Date(dateString + "T12:00:00");
                 day = date.getDate().toString();
                 month = (date.getMonth() + 1).toString();
               }
@@ -126,7 +124,7 @@ export default function UserModal({
           email: editingUser.email,
           genero: editingUser.genero || "",
           fechaNacimiento: editingUser.fechaNacimiento || "",
-          password: "", // No mostrar password actual
+          password: "",
           nombre: editingUser.nombre,
           apellido: editingUser.apellido,
           telefono: editingUser.telefono || "",
@@ -134,12 +132,11 @@ export default function UserModal({
           cedula: editingUser.cedula,
           rolId: editingUser.role.rolId,
           activo: editingUser.activo,
+          position: (editingUser as any).position || "",
         });
       } else {
-        // Si no hay roles disponibles, usar 0 como valor temporal
         const defaultRolId = roles.length > 0 ? roles[0].rolId : 0;
 
-        // Limpiar los selectores de fecha
         setBirthDay("");
         setBirthMonth("");
 
@@ -156,6 +153,7 @@ export default function UserModal({
           cedula: "",
           rolId: defaultRolId,
           activo: true,
+          position: "",
         });
       }
     }
@@ -164,21 +162,19 @@ export default function UserModal({
   // Actualizar fechaNacimiento cuando cambia día o mes
   useEffect(() => {
     if (birthDay && birthMonth) {
-      // Usar un año fijo (2000) ya que solo necesitamos día y mes
       const year = 2000;
       const formattedMonth = birthMonth.padStart(2, "0");
       const formattedDay = birthDay.padStart(2, "0");
-      // Enviar al backend con timestamp para evitar problemas de zona horaria
       const fechaNacimiento = `${year}-${formattedMonth}-${formattedDay}T00:00:00.000Z`;
-      
-      setFormData(prev => ({
+
+      setFormData((prev) => ({
         ...prev,
-        fechaNacimiento
+        fechaNacimiento,
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        fechaNacimiento: ""
+        fechaNacimiento: "",
       }));
     }
   }, [birthDay, birthMonth]);
@@ -188,13 +184,12 @@ export default function UserModal({
     setLocalError(null);
     setLoading(true);
 
-    // Validaciones básicas
+    // Validaciones básicas (sin cédula aquí)
     if (
       !formData.username ||
       !formData.email ||
       !formData.nombre ||
       !formData.apellido ||
-      !formData.cedula ||
       !formData.rolId
     ) {
       setLocalError("Por favor complete todos los campos obligatorios (*)");
@@ -202,14 +197,22 @@ export default function UserModal({
       return;
     }
 
-    // Validar fecha de nacimiento (opcional pero si se llena debe ser válida)
-    if (formData.fechaNacimiento && (!birthDay || !birthMonth)) {
-      setLocalError("Por favor complete el día y mes de nacimiento si desea agregarlo");
+    // Cédula obligatoria solo si el rol NO es Cliente
+    if (!isClienteRole && !formData.cedula) {
+      setLocalError("La cédula es obligatoria para este tipo de usuario");
       setLoading(false);
       return;
     }
 
-    // Validar fecha válida si se proporciona
+    // Validar fecha de nacimiento
+    if (formData.fechaNacimiento && (!birthDay || !birthMonth)) {
+      setLocalError(
+        "Por favor complete el día y mes de nacimiento si desea agregarlo",
+      );
+      setLoading(false);
+      return;
+    }
+
     if (birthDay && birthMonth && !validateDayMonth(birthDay, birthMonth)) {
       setLocalError("Por favor ingrese una fecha válida");
       setLoading(false);
@@ -228,21 +231,27 @@ export default function UserModal({
       return;
     }
 
-    // Validar que tipoCedula sea válido
-    if (!Object.values(TIPOS_CEDULA).includes(formData.tipoCedula as any)) {
+    // Validar tipoCedula solo si NO es Cliente
+    if (
+      !isClienteRole &&
+      !Object.values(TIPOS_CEDULA).includes(formData.tipoCedula as any)
+    ) {
       setLocalError("El tipo de cédula debe ser CC o PPT");
       setLoading(false);
       return;
     }
 
-    // Validar que el género sea válido si se proporciona
-    if (formData.genero && !Object.values(GENEROS).includes(formData.genero as any)) {
+    // Validar género si se proporciona
+    if (
+      formData.genero &&
+      !Object.values(GENEROS).includes(formData.genero as any)
+    ) {
       setLocalError("El género debe ser MASCULINO, FEMENINO o NO_BINARIO");
       setLoading(false);
       return;
     }
 
-    // Validar que se haya seleccionado un rol válido
+    // Validar rol válido
     if (!roles.find((rol) => rol.rolId === formData.rolId)) {
       setLocalError("Por favor seleccione un rol válido");
       setLoading(false);
@@ -251,7 +260,6 @@ export default function UserModal({
 
     try {
       if (editingUser) {
-        // Para actualizar, solo enviamos los campos que han cambiado
         const updateData: UpdateUsuarioDto = {
           nombre: formData.nombre,
           apellido: formData.apellido,
@@ -264,21 +272,24 @@ export default function UserModal({
           activo: formData.activo,
           genero: formData.genero || undefined,
           fechaNacimiento: formData.fechaNacimiento || undefined,
+          position: isClienteRole ? formData.position || undefined : undefined,
         };
 
-        // Solo agregar password si se proporcionó uno nuevo
         if (formData.password && formData.password.trim() !== "") {
           updateData.password = formData.password;
         }
 
         await onUpdateUser(editingUser.usuarioId, updateData);
       } else {
-        // Para creación, enviamos todos los campos
         const createData: CreateUsuarioDto = {
           ...formData,
           fechaNacimiento: formData.fechaNacimiento || undefined,
           genero: formData.genero || undefined,
+          // Para creación, si es Cliente dejamos tipo/cedula con su valor por defecto
+          // y position con lo que haya escrito
+          position: isClienteRole ? formData.position : "",
         };
+
         await onCreateUser(createData);
       }
 
@@ -293,7 +304,7 @@ export default function UserModal({
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
 
@@ -318,7 +329,7 @@ export default function UserModal({
   const handleDayChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setBirthDay(value);
-    
+
     if (birthMonth && value) {
       validateDayMonth(value, birthMonth);
     }
@@ -327,7 +338,7 @@ export default function UserModal({
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setBirthMonth(value);
-    
+
     if (birthDay && value) {
       validateDayMonth(birthDay, value);
     }
@@ -336,12 +347,22 @@ export default function UserModal({
   const validateDayMonth = (day: string, month: string): boolean => {
     const dayNum = parseInt(day, 10);
     const monthNum = parseInt(month, 10);
-    
+
     const daysInMonth: { [key: number]: number } = {
-      1: 31, 2: 29, 3: 31, 4: 30, 5: 31, 6: 30,
-      7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
+      1: 31,
+      2: 29,
+      3: 31,
+      4: 30,
+      5: 31,
+      6: 30,
+      7: 31,
+      8: 31,
+      9: 30,
+      10: 31,
+      11: 30,
+      12: 31,
     };
-    
+
     return dayNum <= (daysInMonth[monthNum] || 31);
   };
 
@@ -361,8 +382,9 @@ export default function UserModal({
       cedula: "",
       rolId: defaultRolId,
       activo: true,
+      position: "",
     });
-    
+
     setBirthDay("");
     setBirthMonth("");
     setLocalError(null);
@@ -377,8 +399,8 @@ export default function UserModal({
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
           <h2>{editingUser ? "Editar Usuario" : "Crear Nuevo Usuario"}</h2>
-          <button 
-            className={styles.closeButton} 
+          <button
+            className={styles.closeButton}
             onClick={handleClose}
             type="button"
             aria-label="Cerrar"
@@ -425,41 +447,73 @@ export default function UserModal({
             </div>
           </div>
 
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label htmlFor="tipoCedula">Tipo Cédula *</label>
-              <select
-                id="tipoCedula"
-                name="tipoCedula"
-                value={formData.tipoCedula}
-                onChange={handleChange}
-                className={styles.select}
-                required
-                disabled={loading}
-              >
-                <option value={TIPOS_CEDULA.CC}>Cédula de Ciudadanía</option>
-                <option value={TIPOS_CEDULA.PPT}>
-                  Permiso por Protección Temporal
-                </option>
-              </select>
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="cedula">Cédula *</label>
-              <input
-                type="text"
-                id="cedula"
-                name="cedula"
-                value={formData.cedula}
-                onChange={handleChange}
-                placeholder="Ej: 123456789"
-                className={styles.input}
-                required
-                minLength={8}
-                maxLength={10}
-                disabled={loading}
-              />
-            </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="rolId">Rol *</label>
+            <select
+              id="rolId"
+              name="rolId"
+              value={formData.rolId}
+              onChange={handleChange}
+              className={styles.select}
+              required
+              disabled={loading || roles.length === 0}
+            >
+              {roles.length === 0 ? (
+                <option value="">Cargando roles...</option>
+              ) : (
+                <>
+                  <option value="">Seleccione un rol</option>
+                  {roles.map((rol) => (
+                    <option key={rol.rolId} value={rol.rolId}>
+                      {rol.nombreRol}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+            {roles.length === 0 && (
+              <small className={styles.helpText}>
+                No se pudieron cargar los roles
+              </small>
+            )}
           </div>
+
+          {/* Tipo y número de cédula solo si NO es rol Cliente */}
+          {!isClienteRole && (
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
+                <label htmlFor="tipoCedula">Tipo Cédula *</label>
+                <select
+                  id="tipoCedula"
+                  name="tipoCedula"
+                  value={formData.tipoCedula}
+                  onChange={handleChange}
+                  className={styles.select}
+                  disabled={loading}
+                >
+                  <option value={TIPOS_CEDULA.CC}>Cédula de Ciudadanía</option>
+                  <option value={TIPOS_CEDULA.PPT}>
+                    Permiso por Protección Temporal
+                  </option>
+                </select>
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="cedula">Cédula *</label>
+                <input
+                  type="text"
+                  id="cedula"
+                  name="cedula"
+                  value={formData.cedula}
+                  onChange={handleChange}
+                  placeholder="Ej: 123456789"
+                  className={styles.input}
+                  minLength={8}
+                  maxLength={10}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          )}
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
@@ -561,42 +615,27 @@ export default function UserModal({
                 disabled={loading}
               />
             </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="rolId">Rol *</label>
-              <select
-                id="rolId"
-                name="rolId"
-                value={formData.rolId}
-                onChange={handleChange}
-                className={styles.select}
-                required
-                disabled={loading || roles.length === 0}
-              >
-                {roles.length === 0 ? (
-                  <option value="">Cargando roles...</option>
-                ) : (
-                  <>
-                    <option value="">Seleccione un rol</option>
-                    {roles.map((rol) => (
-                      <option key={rol.rolId} value={rol.rolId}>
-                        {rol.nombreRol}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              {roles.length === 0 && (
-                <small className={styles.helpText}>
-                  No se pudieron cargar los roles
-                </small>
-              )}
-            </div>
+
+            {/* position solo si el rol es Cliente */}
+            {isClienteRole && (
+              <div className={styles.formGroup}>
+                <label htmlFor="position">Cargo</label>
+                <input
+                  type="text"
+                  id="position"
+                  name="position"
+                  placeholder="Ej: Supervisor de Planta"
+                  value={formData.position || ""}
+                  onChange={handleChange}
+                  className={styles.input}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
 
           <div className={styles.formGroup}>
-            <label htmlFor="password">
-              Contraseña {!editingUser && "*"}
-            </label>
+            <label htmlFor="password">Contraseña {!editingUser && "*"}</label>
             <input
               type="password"
               id="password"
@@ -654,8 +693,8 @@ export default function UserModal({
               {loading
                 ? "Procesando..."
                 : editingUser
-                ? "Actualizar Usuario"
-                : "Crear Usuario"}
+                  ? "Actualizar Usuario"
+                  : "Crear Usuario"}
             </button>
           </div>
         </form>

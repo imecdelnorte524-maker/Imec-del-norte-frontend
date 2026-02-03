@@ -5,6 +5,7 @@ interface EquipmentInfoSectionProps {
   equipment: Equipment;
 }
 
+
 export default function EquipmentInfoSection({
   equipment,
 }: EquipmentInfoSectionProps) {
@@ -27,7 +28,10 @@ export default function EquipmentInfoSection({
       {equipment.workOrders && equipment.workOrders.length > 0 && (
         <div className={styles.detailItem}>
           <strong>Órdenes asociadas:</strong>
-          <span>{equipment.workOrders.length} {equipment.workOrders.length > 1 ? "órdenes" : "Órden"}</span>
+          <span>
+            {equipment.workOrders.length}{" "}
+            {equipment.workOrders.length > 1 ? "órdenes" : "Órden"}
+          </span>
         </div>
       )}
 
@@ -61,6 +65,10 @@ export default function EquipmentInfoSection({
           <span>{equipment.subArea.nombreSubArea}</span>
         </div>
       )}
+      <div className={styles.detailItem}>
+        <strong>Creado por:</strong>
+        <span>{equipment.createdBy}</span>
+      </div>
     </div>
   );
 }

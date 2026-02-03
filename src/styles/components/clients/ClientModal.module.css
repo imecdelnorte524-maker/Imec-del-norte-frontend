@@ -1,16 +1,15 @@
 /* Overlay */
 .modalOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed;              /* antes: absolute -> ahora siempre cubre el viewport */
+  inset: 0;                     /* top, right, bottom, left = 0 */
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1200;                /* un poco más alto para convivir con otros modales */
   padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;             /* si el contenido crece, se hace scroll en el overlay */
   animation: fadeIn 0.2s ease;
 }
 
@@ -35,6 +34,7 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 @keyframes slideUp {
@@ -55,7 +55,7 @@
   align-items: center;
   padding: 24px 32px;
   border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
 }
 
@@ -77,6 +77,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
+  flex-wrap: wrap;
 }
 
 .stepIndicator span {
@@ -86,7 +87,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--primary-800);
   font-weight: 500;
 }
 
@@ -203,7 +204,7 @@
 }
 
 .stepNumber {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
   width: 36px;
   height: 36px;
@@ -524,7 +525,7 @@
   cursor: not-allowed;
 }
 
-/* ⚠️ NUEVO: lista de usuarios contacto seleccionados */
+/* Lista de usuarios contacto seleccionados */
 .selectedContactsList {
   margin-top: 8px;
   padding: 8px 12px;
@@ -605,7 +606,7 @@
 }
 
 .addButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
   border: none;
   padding: 12px 20px;
@@ -691,12 +692,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  gap: 8px;
 }
 
 .areaInfo {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .areaName {
@@ -728,6 +731,7 @@
   gap: 6px;
 }
 
+/* Botones eliminar */
 .removeButton {
   background: #fee2e2;
   color: #dc2626;
@@ -856,7 +860,9 @@
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.35);
-  z-index: 1100;
+  z-index: 1300;
+  box-sizing: border-box;
+  padding: 16px;
 }
 
 .subareaModal {
@@ -866,6 +872,7 @@
   max-width: 360px;
   width: 100%;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
 }
 
 .subareaModalTitle {
@@ -981,7 +988,7 @@
 }
 
 .nextButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
 }
 
@@ -1053,8 +1060,14 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .modalOverlay {
+    padding: 16px;
+    align-items: flex-start;
+  }
+
   .modal {
     max-height: 95vh;
+    border-radius: 12px;
   }
 
   .modalHeader {
@@ -1062,7 +1075,7 @@
   }
 
   .modalBody {
-    padding: 24px;
+    padding: 20px;
   }
 
   .modalFooter {
@@ -1076,6 +1089,7 @@
 
   .areaInputGroup {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .addButton {
@@ -1117,5 +1131,13 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+
+  .modalBody {
+    padding: 16px;
+  }
+
+  .areasSection {
+    gap: 16px;
   }
 }

@@ -18,7 +18,7 @@
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 12px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -47,7 +47,9 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   box-sizing: border-box;
 }
 
@@ -133,7 +135,7 @@
 }
 
 .btnPrimary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -306,7 +308,7 @@
 }
 
 .userNameDesktop:hover::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -358,7 +360,7 @@
 }
 
 .role:hover::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -437,7 +439,7 @@
 
 .emailCell:hover::before,
 .phoneCell:hover::before {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 100%;
   left: 50%;
@@ -516,7 +518,9 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   padding: 20px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   box-sizing: border-box;
   position: relative;
 }
@@ -734,11 +738,11 @@
   .page {
     padding: 18px;
   }
-  
+
   .header h1 {
     font-size: 2rem;
   }
-  
+
   .stats {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -758,21 +762,21 @@
   .table td:nth-child(5) {
     display: none;
   }
-  
+
   .stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   /* Ajustar anchos en tablet */
   .userNameDesktop {
     max-width: 150px;
   }
-  
+
   .emailCell,
   .phoneCell {
     max-width: 140px;
   }
-  
+
   .role {
     max-width: 100px;
     min-width: 80px;
@@ -912,42 +916,42 @@
   .page {
     padding: 12px;
   }
-  
+
   .header h1 {
     font-size: 1.5rem;
   }
-  
+
   .header p {
     font-size: 0.95rem;
   }
-  
+
   .statCard h3 {
     font-size: 0.85rem;
   }
-  
+
   .statNumber {
     font-size: 1.75rem;
   }
-  
+
   .userNameMobile {
     font-size: 1.1rem;
   }
-  
+
   .mobileCard {
     padding: 16px;
   }
-  
+
   .btnAction {
     min-width: 40px;
     min-height: 40px;
     font-size: 1.1rem;
   }
-  
+
   .paginationInfo {
     font-size: 0.85rem;
     padding: 14px;
   }
-  
+
   .truncatedText {
     max-width: 120px;
   }
@@ -958,43 +962,43 @@
   .page {
     padding: 10px;
   }
-  
+
   .header h1 {
     font-size: 1.3rem;
   }
-  
+
   .header p {
     font-size: 0.9rem;
   }
-  
+
   .filterSelect,
   .searchInput {
     padding: 14px 12px;
   }
-  
+
   .mobileCard {
     padding: 14px;
   }
-  
+
   .userNameMobile {
     font-size: 1rem;
   }
-  
+
   .userEmail {
     font-size: 0.85rem;
   }
-  
+
   .detailLabel,
   .detailValue {
     font-size: 0.85rem;
   }
-  
+
   .role,
   .status {
     font-size: 0.75rem;
     padding: 6px 10px;
   }
-  
+
   .truncatedText {
     max-width: 100px;
   }
@@ -1027,18 +1031,18 @@
     background: none;
     color: inherit;
   }
-  
+
   /* Mejor feedback táctil */
   .btnPrimary:active,
   .btnSecondary:active {
     opacity: 0.8;
     transform: scale(0.98);
   }
-  
+
   .btnAction:active {
     background: #f3f4f6;
   }
-  
+
   /* Tooltips en hover no funcionan en táctil */
   .userNameDesktop:hover::after,
   .userNameDesktop:hover::before,

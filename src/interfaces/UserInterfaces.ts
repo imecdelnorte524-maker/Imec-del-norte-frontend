@@ -40,8 +40,8 @@ export interface Usuario {
 export interface CreateUsuarioDto {
   nombre: string;
   apellido: string;
-  tipoCedula: string;
-  cedula: string;
+  tipoCedula?: string;
+  cedula?: string;
   email: string;
   username: string;
   password: string;
@@ -59,6 +59,7 @@ export interface CreateUsuarioDto {
   contactoEmergenciaNombre?: string;
   contactoEmergenciaTelefono?: string;
   contactoEmergenciaParentesco?: string;
+  position?: string;
 }
 
 /**
@@ -77,6 +78,7 @@ export interface UpdateUsuarioDto {
   activo?: boolean;
   fechaNacimiento?: string | null;
   genero?: string | null;
+  position?: string | null;
 
   // Nuevos campos opcionales (permitir null para limpiar)
   ubicacionResidencia?: string | null;

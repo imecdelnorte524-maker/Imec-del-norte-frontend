@@ -33,13 +33,13 @@ export default function DatesNotesSection({
 
     switch (plan.unidadFrecuencia) {
       case "DIA":
-        return "Diaria";
+        return `Diaria (Cada ${plan.diaDelMes} dias)`;
       case "SEMANA":
-        return "Semanal";
+        return `Semanal (cada ${plan.diaDelMes} semanas)`;
       case "MES":
         // Si hay día del mes, lo mostramos
         if (plan.diaDelMes != null) {
-          return `Mensual (día ${plan.diaDelMes})`;
+          return `Mensual (cada ${plan.diaDelMes} meses)`;
         }
         return "Mensual";
       default:

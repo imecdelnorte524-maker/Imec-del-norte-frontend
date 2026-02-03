@@ -50,7 +50,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: #1f2937;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -159,7 +159,7 @@
 }
 
 .btnPrimary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-600);
   color: white;
   border: none;
   padding: 12px 24px;

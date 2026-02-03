@@ -148,6 +148,7 @@ export const mapEquipmentFromBackend = (data: any): Equipment => ({
   installationDate: data.installationDate,
   notes: data.notes,
   createdAt: data.createdAt,
+  createdBy: data.createdBy,
   updatedAt: data.updatedAt,
   photos: Array.isArray(data.photos) ? data.photos.map(mapPhoto) : [],
   evaporators: Array.isArray(data.evaporators)

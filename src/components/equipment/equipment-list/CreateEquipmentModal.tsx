@@ -1,8 +1,10 @@
-import { useEffect, useRef, useCallback } from "react";
+// src/components/equipment/equipment-list/CreateEquipmentModal.tsx
+import { useEffect, useRef, useCallback, useState } from "react";
 import HierarchicalAreaSelector from "./HierarchicalAreaSelector";
 import { EvaporatorForm, CondenserForm } from "./forms";
 import styles from "../../../styles/components/equipment/equipment-list/CreateEquipmentModal.module.css";
 import detailStyles from "../../../styles/pages/EquipmentDetailPage.module.css";
+
 import type {
   AirConditionerTypeOption,
   EvaporatorData,
@@ -11,6 +13,9 @@ import type {
 } from "../../../interfaces/EquipmentInterfaces";
 import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
 import type { Order } from "../../../interfaces/OrderInterfaces";
+
+// Reutilizamos la misma modal que en EquipmentDetailPage
+import { AddPhotoModal } from "../equipment-details";
 
 // Tipos de aire acondicionado que permiten múltiples componentes
 const MULTIPLE_COMPONENT_TYPES = [
@@ -47,7 +52,7 @@ interface CreateEquipmentModalProps {
   selectedAcType: AirConditionerTypeOption | undefined;
   onOpenNewAcTypeForm: () => void;
 
-  // Áreas
+  // Áreas (del cliente, para selector jerárquico)
   areas: AreaSimple[];
   selectedAreaId: number | "" | null;
   selectedSubAreaId: number | "" | null;
@@ -95,7 +100,10 @@ interface CreateEquipmentModalProps {
   onOrderSelectionChange: (orderId: number, isSelected: boolean) => void;
 
   // Acciones
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (
+    e: React.FormEvent<HTMLFormElement>,
+    mainPhoto?: File | null,
+  ) => void | Promise<void>;
   onClose: () => void;
 
   // Nueva prop: función para cargar órdenes
@@ -136,41 +144,40 @@ export default function CreateEquipmentModal({
   onClose,
   onLoadOrders,
 }: CreateEquipmentModalProps) {
-  // 🔧 REFs para tracking de parámetros previos
+  // 🔧 REFs para tracking de parámetros previos (órdenes)
   const previousCategoryRef = useRef<string>("");
   const previousClientRef = useRef<number | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 🔧 EFECTO MEJORADO PARA CARGAR ÓRDENES CON DEBOUNCING
+  // --- FOTO PRINCIPAL (una sola) usando AddPhotoModal ---
+  const [showAddPhotoModal, setShowAddPhotoModal] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoLoading] = useState(false); // solo para UI de la modal
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // 🔧 EFECTO PARA CARGAR ÓRDENES CON DEBOUNCING
   useEffect(() => {
-    // Limpiar timer anterior
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Solo cargar si el modal está abierto y tenemos los datos necesarios
     if (isOpen && client && createForm.category) {
       const hasSameParams =
         previousCategoryRef.current === createForm.category &&
         previousClientRef.current === client.idCliente;
 
-      // Evitar llamada si ya tenemos los datos para esta combinación
       if (!hasSameParams) {
-        // Usar debouncing para evitar múltiples llamadas rápidas
         debounceTimerRef.current = setTimeout(() => {
           onLoadOrders(client.idCliente, createForm.category);
-
-          // Actualizar refs con los parámetros actuales
           previousCategoryRef.current = createForm.category;
           previousClientRef.current = client.idCliente;
-        }, 500); // 500ms de debounce
-      } else {
+        }, 500);
       }
     } else if (isOpen && createForm.category && !client) {
       console.warn("[Modal] No hay cliente definido para cargar órdenes");
     }
 
-    // Cleanup del timer al desmontar o cuando cambien las dependencias
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -179,20 +186,17 @@ export default function CreateEquipmentModal({
     };
   }, [isOpen, createForm.category, client, onLoadOrders]);
 
-  // Función para recargar órdenes manualmente
+  // Recarga manual de órdenes
   const handleManualReloadOrders = useCallback(() => {
     if (client && createForm.category) {
-      // Resetear refs para forzar recarga
       previousCategoryRef.current = "";
       previousClientRef.current = null;
 
-      // Limpiar timer si existe
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = null;
       }
 
-      // Cargar inmediatamente
       onLoadOrders(client.idCliente, createForm.category);
     }
   }, [client, createForm.category, onLoadOrders]);
@@ -210,13 +214,11 @@ export default function CreateEquipmentModal({
 
   const canHaveMultipleComponents = allowsMultipleComponents();
 
-  // Determinar si se pueden agregar más componentes
   const canAddMoreEvaporators =
     canHaveMultipleComponents || evaporators.length === 0;
   const canAddMoreCondensers =
     canHaveMultipleComponents || condensers.length === 0;
 
-  // Determinar si se pueden eliminar componentes (solo si hay más de 1)
   const canRemoveEvaporator =
     canHaveMultipleComponents && evaporators.length > 1;
   const canRemoveCondenser = canHaveMultipleComponents && condensers.length > 1;
@@ -234,8 +236,48 @@ export default function CreateEquipmentModal({
     }
   };
 
-  // Determinar si es aire acondicionado
   const isAirConditioner = createForm.category === "Aires Acondicionados";
+
+  // --- Handlers para la modal de foto (una sola foto) ---
+
+  const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files && e.target.files[0];
+
+    if (file) {
+      // Solo nos quedamos con el primer archivo
+      setPhotoFiles([file]);
+      setPhotoError(null);
+
+      // Generar preview para mostrar en el modal de creación
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPhotoFiles([]);
+      setPhotoPreview(null);
+    }
+  };
+
+  const handleClearMainPhoto = () => {
+    setPhotoFiles([]);
+    setPhotoError(null);
+    setPhotoPreview(null);
+  };
+
+  const handleConfirmMainPhoto = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (photoFiles.length === 0) {
+      setPhotoError("Debes seleccionar una imagen.");
+      return;
+    }
+    setShowAddPhotoModal(false);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    onSubmit(e, photoFiles[0] || null);
+  };
 
   return (
     <div className={styles.modal}>
@@ -254,7 +296,7 @@ export default function CreateEquipmentModal({
 
         {error && <div className={detailStyles.error}>{error}</div>}
 
-        <form onSubmit={onSubmit}>
+        <form onSubmit={handleFormSubmit}>
           {/* Categoría */}
           <div className={styles.formRow}>
             <label>Categoría del equipo *</label>
@@ -262,7 +304,6 @@ export default function CreateEquipmentModal({
               name="category"
               value={createForm.category}
               onChange={(e) => {
-                // Resetear refs cuando cambia la categoría
                 previousCategoryRef.current = "";
                 onCreateFormChange(e);
               }}
@@ -354,7 +395,51 @@ export default function CreateEquipmentModal({
             </select>
           </div>
 
-          {/* ASOCIAR A ÓRDENES EXISTENTES (MÚLTIPLE SELECCIÓN) */}
+          {/* FOTO PRINCIPAL CON MODAL (UNA SOLA) */}
+          {/* FOTO PRINCIPAL CON MODAL (UNA SOLA) */}
+          <div className={styles.formRow}>
+            <label>Foto principal del equipo (opcional)</label>
+            <div className={styles.photoMainRow}>
+              <button
+                type="button"
+                className={styles.addButton}
+                onClick={() => setShowAddPhotoModal(true)}
+                disabled={loading}
+              >
+                {photoFiles.length > 0 ? "Cambiar foto" : "+ Añadir foto"}
+              </button>
+              {photoFiles.length > 0 && (
+                <>
+                  <span className={styles.helperText}>1 foto seleccionada</span>
+                  <button
+                    type="button"
+                    className={styles.clearButton}
+                    onClick={handleClearMainPhoto}
+                    disabled={loading}
+                    title="Quitar foto seleccionada"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
+            </div>
+            {photoError && (
+              <small className={styles.helperText}>{photoError}</small>
+            )}
+
+            {/* Preview de la foto seleccionada */}
+            {photoPreview && (
+              <div className={styles.photoPreviewContainer}>
+                <img
+                  src={photoPreview}
+                  alt="Foto principal seleccionada"
+                  className={styles.photoPreviewImage}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* ASOCIAR A ÓRDENES EXISTENTES */}
           {createForm.category && client && (
             <div className={styles.formRow}>
               <div className={styles.ordersHeader}>
@@ -495,7 +580,6 @@ export default function CreateEquipmentModal({
             </div>
           )}
 
-          {/* Mostrar mensaje cuando no hay cliente definido */}
           {!client && createForm.category && (
             <div className={styles.warningInfo}>
               <small>
@@ -505,7 +589,7 @@ export default function CreateEquipmentModal({
             </div>
           )}
 
-          {/* Ubicación jerárquica */}
+          {/* Selector jerárquico + gestión de áreas integrada */}
           <HierarchicalAreaSelector
             areas={areas}
             selectedAreaId={selectedAreaId}
@@ -513,6 +597,7 @@ export default function CreateEquipmentModal({
             disabled={loading}
             onAreaChange={onAreaChange}
             onSubAreaChange={onSubAreaChange}
+            clientId={client?.idCliente ?? null}
           />
 
           {/* Fecha de instalación */}
@@ -637,33 +722,10 @@ export default function CreateEquipmentModal({
             </div>
           )}
 
-          {/* PLAN DE MANTENIMIENTO (opcional) */}
+          {/* PLAN DE MANTENIMIENTO */}
           <div className={styles.planSection}>
             <h4>Plan de Mantenimiento (Opcional)</h4>
 
-            <div className={styles.formRow}>
-              <label>Días</label>
-              <input
-                type="number"
-                name="diaDelMes"
-                min={1}
-                max={31}
-                value={
-                  planMantenimiento.diaDelMes !== null &&
-                  planMantenimiento.diaDelMes !== undefined
-                    ? planMantenimiento.diaDelMes
-                    : ""
-                }
-                onChange={onPlanMantenimientoChange}
-                disabled={loading}
-                placeholder="1-31"
-              />
-              {/* <small className={styles.helperText}>
-                Introduce el día del mes en el que se programa el mantenimiento.
-              </small> */}
-            </div>
-
-            {/* Unidad de frecuencia */}
             <div className={styles.formRow}>
               <label>Unidad de Frecuencia</label>
               <select
@@ -682,7 +744,32 @@ export default function CreateEquipmentModal({
               </small>
             </div>
 
-            {/* Fecha programada inicial */}
+            <div className={styles.formRow}>
+              <label>
+                Cada{" "}
+                {planMantenimiento.unidadFrecuencia === "DIA"
+                  ? "cuantos Días"
+                  : planMantenimiento.unidadFrecuencia === "SEMANA"
+                    ? "cuantas Semanas"
+                    : "cuantos Meses"}
+              </label>
+              <input
+                type="number"
+                name="diaDelMes"
+                min={1}
+                max={31}
+                value={
+                  planMantenimiento.diaDelMes !== null &&
+                  planMantenimiento.diaDelMes !== undefined
+                    ? planMantenimiento.diaDelMes
+                    : ""
+                }
+                onChange={onPlanMantenimientoChange}
+                disabled={loading}
+                placeholder="1-31"
+              />
+            </div>
+
             <div className={styles.formRow}>
               <label>Fecha Programada</label>
               <input
@@ -691,13 +778,13 @@ export default function CreateEquipmentModal({
                 value={planMantenimiento.fechaProgramada || ""}
                 onChange={onPlanMantenimientoChange}
                 disabled={loading}
+                min={new Date().toISOString().split("T")[0]}
               />
               <small className={styles.helperText}>
                 Fecha de la próxima intervención programada.
               </small>
             </div>
 
-            {/* Notas */}
             <div className={styles.formRow}>
               <label>Notas del Plan</label>
               <textarea
@@ -711,7 +798,7 @@ export default function CreateEquipmentModal({
             </div>
           </div>
 
-          {/* Botones de acción */}
+          {/* Botones */}
           <div className={styles.formActions}>
             <button
               type="button"
@@ -738,6 +825,20 @@ export default function CreateEquipmentModal({
           </div>
         </form>
       </div>
+
+      {/* MODAL DE FOTO PRINCIPAL (UNA SOLA) */}
+      {showAddPhotoModal && (
+        <AddPhotoModal
+          photoFiles={photoFiles}
+          photoLoading={photoLoading}
+          photoError={photoError}
+          onFileSelection={handleFileSelection}
+          onSubmit={handleConfirmMainPhoto}
+          onClose={() => setShowAddPhotoModal(false)}
+          multiple={false}
+          title="Seleccionar foto principal"
+        />
+      )}
     </div>
   );
 }
