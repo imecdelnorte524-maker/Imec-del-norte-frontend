@@ -267,10 +267,7 @@ export const prepareEquipmentForBackend = (
       // Solo enviamos diaDelMes si la unidad es MES
       let diaDelMesNumber: number | null = null;
 
-      if (
-        unidadFrecuencia === "MES" &&
-        diaDelMes !== null
-      ) {
+      if (unidadFrecuencia === "MES" && diaDelMes !== null) {
         const n = Number(diaDelMes as any);
         diaDelMesNumber = Number.isNaN(n) ? null : n;
       }
@@ -459,4 +456,29 @@ export const removeOrderFromEquipmentRequest = async (
   orderId: number,
 ): Promise<void> => {
   await api.delete(`/equipment/${equipmentId}/work-orders/${orderId}`);
+};
+
+export const exportMaintenancePlanExcelRequest = async (
+  clientId: number,
+  year?: number,
+): Promise<void> => {
+  const targetYear = year ?? new Date().getFullYear();
+
+  const response = await api.get("/equipment/maintenance-plan/export", {
+    params: { clientId, year: targetYear },
+    responseType: "blob",
+  });
+
+  const blob = new Blob([response.data], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `plan_mantenimiento_cliente_${clientId}_${targetYear}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };

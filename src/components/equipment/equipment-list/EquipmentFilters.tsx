@@ -69,7 +69,7 @@ export default function EquipmentFilters({
         <label>Búsqueda</label>
         <input
           type="text"
-          placeholder="Buscar por nombre o código de equipo..."
+          placeholder="Buscar por código Tipo de aire, Área o Subárea..."
           value={search}
           onChange={onSearchChange}
           disabled={loadingEquipment}

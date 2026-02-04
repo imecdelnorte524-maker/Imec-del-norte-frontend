@@ -1,8 +1,10 @@
 // src/components/equipment/equipment-details/ComponentsEditForms.tsx
-import type { EvaporatorData, CondenserData } from "../../../interfaces/EquipmentInterfaces";
+import type {
+  EvaporatorData,
+  CondenserData,
+} from "../../../interfaces/EquipmentInterfaces";
 import styles from "../../../styles/components/equipment/equipment-details/ComponentsEditForms.module.css";
 
-// Importar directamente desde el mismo directorio
 import EvaporatorEditForm from "./forms/EvaporatorEditForm";
 import CondenserEditForm from "./forms/CondenserEditForm";
 
@@ -14,7 +16,7 @@ interface ComponentsEditFormsProps {
   onCondensersChange: (condensers: CondenserData[]) => void;
   canAddMoreEvaporators?: boolean;
   canAddMoreCondensers?: boolean;
-  canHaveMultipleComponents?: boolean;
+  canHaveMultipleComponents?: boolean; // sigue existiendo por si lo usas para los botones "Agregar"
 }
 
 export default function ComponentsEditForms({
@@ -25,57 +27,46 @@ export default function ComponentsEditForms({
   onCondensersChange,
   canAddMoreEvaporators = true,
   canAddMoreCondensers = true,
-  canHaveMultipleComponents = false,
+  // canHaveMultipleComponents = false,
 }: ComponentsEditFormsProps) {
-  // Manejar cambios en evaporadores
-  const handleEvaporatorChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  // ───────────────────────────────────────────────────────────────
+  // EVAPORADORES
+  // ───────────────────────────────────────────────────────────────
+
+  const handleEvaporatorChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const updated = [...evaporators];
     updated[index] = { ...updated[index], [e.target.name]: e.target.value };
     onEvaporatorsChange(updated);
   };
 
-  // Manejar cambios en condensadoras
-  const handleCondenserChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-    const updated = [...condensers];
-    updated[index] = { ...updated[index], [e.target.name]: e.target.value };
-    onCondensersChange(updated);
-  };
-
-  // Agregar nuevo evaporador
   const handleAddEvaporator = () => {
     onEvaporatorsChange([...evaporators, {}]);
   };
 
-  // Agregar nueva condensadora
-  const handleAddCondenser = () => {
-    onCondensersChange([...condensers, {}]);
-  };
-
-  // Eliminar evaporador
   const handleRemoveEvaporator = (index: number) => {
     const updated = evaporators.filter((_, i) => i !== index);
     onEvaporatorsChange(updated);
   };
 
-  // Eliminar condensadora
-  const handleRemoveCondenser = (index: number) => {
-    const updated = condensers.filter((_, i) => i !== index);
-    onCondensersChange(updated);
-  };
-
-  // Manejar cambios en motores de evaporador
-  const handleEvaporatorMotorChange = (evaporatorIndex: number, motorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  // Motores de evaporador
+  const handleEvaporatorMotorChange = (
+    evaporatorIndex: number,
+    motorIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const updated = [...evaporators];
     if (updated[evaporatorIndex].motors) {
       updated[evaporatorIndex].motors![motorIndex] = {
         ...updated[evaporatorIndex].motors![motorIndex],
-        [e.target.name]: e.target.value
+        [e.target.name]: e.target.value,
       };
       onEvaporatorsChange(updated);
     }
   };
 
-  // Agregar motor a evaporador
   const handleAddMotorToEvaporator = (evaporatorIndex: number) => {
     const updated = [...evaporators];
     if (!updated[evaporatorIndex].motors) {
@@ -85,29 +76,57 @@ export default function ComponentsEditForms({
     onEvaporatorsChange(updated);
   };
 
-  // Eliminar motor de evaporador
-  const handleRemoveMotorFromEvaporator = (evaporatorIndex: number, motorIndex: number) => {
+  const handleRemoveMotorFromEvaporator = (
+    evaporatorIndex: number,
+    motorIndex: number,
+  ) => {
     const updated = [...evaporators];
     if (updated[evaporatorIndex].motors) {
-      updated[evaporatorIndex].motors = 
-        updated[evaporatorIndex].motors!.filter((_, i) => i !== motorIndex);
+      updated[evaporatorIndex].motors = updated[
+        evaporatorIndex
+      ].motors!.filter((_, i) => i !== motorIndex);
       onEvaporatorsChange(updated);
     }
   };
 
-  // Manejar cambios en motores de condensadora
-  const handleCondenserMotorChange = (condenserIndex: number, motorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  // ───────────────────────────────────────────────────────────────
+  // CONDENSADORAS
+  // ───────────────────────────────────────────────────────────────
+
+  const handleCondenserChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const updated = [...condensers];
+    updated[index] = { ...updated[index], [e.target.name]: e.target.value };
+    onCondensersChange(updated);
+  };
+
+  const handleAddCondenser = () => {
+    onCondensersChange([...condensers, {}]);
+  };
+
+  const handleRemoveCondenser = (index: number) => {
+    const updated = condensers.filter((_, i) => i !== index);
+    onCondensersChange(updated);
+  };
+
+  // Motores de condensadora
+  const handleCondenserMotorChange = (
+    condenserIndex: number,
+    motorIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const updated = [...condensers];
     if (updated[condenserIndex].motors) {
       updated[condenserIndex].motors![motorIndex] = {
         ...updated[condenserIndex].motors![motorIndex],
-        [e.target.name]: e.target.value
+        [e.target.name]: e.target.value,
       };
       onCondensersChange(updated);
     }
   };
 
-  // Agregar motor a condensadora
   const handleAddMotorToCondenser = (condenserIndex: number) => {
     const updated = [...condensers];
     if (!updated[condenserIndex].motors) {
@@ -117,29 +136,35 @@ export default function ComponentsEditForms({
     onCondensersChange(updated);
   };
 
-  // Eliminar motor de condensadora
-  const handleRemoveMotorFromCondenser = (condenserIndex: number, motorIndex: number) => {
+  const handleRemoveMotorFromCondenser = (
+    condenserIndex: number,
+    motorIndex: number,
+  ) => {
     const updated = [...condensers];
     if (updated[condenserIndex].motors) {
-      updated[condenserIndex].motors = 
-        updated[condenserIndex].motors!.filter((_, i) => i !== motorIndex);
+      updated[condenserIndex].motors = updated[
+        condenserIndex
+      ].motors!.filter((_, i) => i !== motorIndex);
       onCondensersChange(updated);
     }
   };
 
-  // Manejar cambios en compresores de condensadora
-  const handleCondenserCompressorChange = (condenserIndex: number, compressorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  // Compresores de condensadora
+  const handleCondenserCompressorChange = (
+    condenserIndex: number,
+    compressorIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const updated = [...condensers];
     if (updated[condenserIndex].compressors) {
       updated[condenserIndex].compressors![compressorIndex] = {
         ...updated[condenserIndex].compressors![compressorIndex],
-        [e.target.name]: e.target.value
+        [e.target.name]: e.target.value,
       };
       onCondensersChange(updated);
     }
   };
 
-  // Agregar compresor a condensadora
   const handleAddCompressorToCondenser = (condenserIndex: number) => {
     const updated = [...condensers];
     if (!updated[condenserIndex].compressors) {
@@ -149,12 +174,15 @@ export default function ComponentsEditForms({
     onCondensersChange(updated);
   };
 
-  // Eliminar compresor de condensadora
-  const handleRemoveCompressorFromCondenser = (condenserIndex: number, compressorIndex: number) => {
+  const handleRemoveCompressorFromCondenser = (
+    condenserIndex: number,
+    compressorIndex: number,
+  ) => {
     const updated = [...condensers];
     if (updated[condenserIndex].compressors) {
-      updated[condenserIndex].compressors = 
-        updated[condenserIndex].compressors!.filter((_, i) => i !== compressorIndex);
+      updated[condenserIndex].compressors = updated[
+        condenserIndex
+      ].compressors!.filter((_, i) => i !== compressorIndex);
       onCondensersChange(updated);
     }
   };
@@ -178,6 +206,7 @@ export default function ComponentsEditForms({
             </button>
           )}
         </div>
+
         {evaporators.length === 0 ? (
           <div className={styles.emptyComponent}>
             <p>No hay evaporadores registrados.</p>
@@ -190,11 +219,12 @@ export default function ComponentsEditForms({
                 index={index}
                 saving={saving}
                 onChange={handleEvaporatorChange}
-                onRemove={canHaveMultipleComponents && evaporators.length > 1 
-                  ? () => handleRemoveEvaporator(index) 
-                  : undefined}
-                onAddMotorToEvaporator={() => handleAddMotorToEvaporator(index)}
+                // 🔹 AHORA SIEMPRE PERMITIMOS ELIMINAR
+                onRemove={() => handleRemoveEvaporator(index)}
                 onMotorChange={handleEvaporatorMotorChange}
+                onAddMotorToEvaporator={() =>
+                  handleAddMotorToEvaporator(index)
+                }
                 onRemoveMotor={handleRemoveMotorFromEvaporator}
               />
             </div>
@@ -217,6 +247,7 @@ export default function ComponentsEditForms({
             </button>
           )}
         </div>
+
         {condensers.length === 0 ? (
           <div className={styles.emptyComponent}>
             <p>No hay condensadoras registradas.</p>
@@ -229,13 +260,16 @@ export default function ComponentsEditForms({
                 index={index}
                 saving={saving}
                 onChange={handleCondenserChange}
-                onRemove={canHaveMultipleComponents && condensers.length > 1 
-                  ? () => handleRemoveCondenser(index) 
-                  : undefined}
-                onAddMotorToCondenser={() => handleAddMotorToCondenser(index)}
-                onAddCompressorToCondenser={() => handleAddCompressorToCondenser(index)}
+                // 🔹 AHORA SIEMPRE PERMITIMOS ELIMINAR
+                onRemove={() => handleRemoveCondenser(index)}
                 onMotorChange={handleCondenserMotorChange}
                 onCompressorChange={handleCondenserCompressorChange}
+                onAddMotorToCondenser={() =>
+                  handleAddMotorToCondenser(index)
+                }
+                onAddCompressorToCondenser={() =>
+                  handleAddCompressorToCondenser(index)
+                }
                 onRemoveMotor={handleRemoveMotorFromCondenser}
                 onRemoveCompressor={handleRemoveCompressorFromCondenser}
               />

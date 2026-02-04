@@ -1,7 +1,10 @@
+import type React from "react";
 import type {
   Equipment,
   EvaporatorData,
   CondenserData,
+  AirConditionerTypeOption,
+  PlanMantenimientoData,
 } from "../../../interfaces/EquipmentInterfaces";
 import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
 import HierarchicalAreaSelectorDetail from "./HierarchicalAreaSelectorDetail";
@@ -14,6 +17,7 @@ interface EquipmentEditFormProps {
     code?: string | null;
     installationDate: string;
     notes: string;
+    status?: string;
   };
   evaporators: EvaporatorData[];
   condensers: CondenserData[];
@@ -22,6 +26,13 @@ interface EquipmentEditFormProps {
   areas: AreaSimple[];
   selectedAreaId: number | null;
   selectedSubAreaId: number | null;
+
+  // Tipos de aire
+  airConditionerTypes: AirConditionerTypeOption[];
+  selectedAcTypeId: number | null;
+
+  // Plan de mantenimiento
+  planMantenimiento: PlanMantenimientoData | null;
 
   // Estado
   saving: boolean;
@@ -34,6 +45,13 @@ interface EquipmentEditFormProps {
   ) => void;
   onAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onAcTypeChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onOpenNewAcTypeForm: () => void;
+  onPlanMantenimientoChange: (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => void;
   onEvaporatorsChange: (evaporators: EvaporatorData[]) => void;
   onCondensersChange: (condensers: CondenserData[]) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -48,17 +66,47 @@ export default function EquipmentEditForm({
   areas,
   selectedAreaId,
   selectedSubAreaId,
+  airConditionerTypes,
+  selectedAcTypeId,
+  planMantenimiento,
   saving,
   loadingLocations,
   locationsError,
   onEditChange,
   onAreaChange,
   onSubAreaChange,
+  onAcTypeChange,
+  onOpenNewAcTypeForm,
+  onPlanMantenimientoChange,
   onEvaporatorsChange,
   onCondensersChange,
   onSubmit,
   onCancel,
 }: EquipmentEditFormProps) {
+  // Valores normalizados del plan
+  const unidadFrecuencia = planMantenimiento?.unidadFrecuencia || "";
+  const diaDelMesValue =
+    planMantenimiento?.diaDelMes != null
+      ? String(planMantenimiento.diaDelMes)
+      : "";
+  const programmingDateValue = planMantenimiento?.fechaProgramada
+    ? planMantenimiento.fechaProgramada.split("T")[0]
+    : "";
+  const notasPlan = planMantenimiento?.notas || "";
+
+  const isAirConditioner = equipment.category === "Aires Acondicionados";
+
+  // Manejar selección de tipo de aire (incluye opción "crear nuevo tipo")
+  const handleAcTypeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === "__create_new__") {
+      // Abrir modal para crear nuevo tipo y no cambiar el valor actual
+      onOpenNewAcTypeForm();
+      return;
+    }
+    onAcTypeChange(e);
+  };
+
   return (
     <div className={styles.section}>
       <h3>Información General</h3>
@@ -77,6 +125,33 @@ export default function EquipmentEditForm({
             {equipment.code ? "Se generará automáticamente" : ""}
           </span>
         </div>
+
+        {/* Selector de Tipo de Aire Acondicionado */}
+        {isAirConditioner && (
+          <div className={styles.formRow}>
+            <label>Tipo de Aire Acondicionado</label>
+            <select
+              name="airConditionerTypeId"
+              value={selectedAcTypeId || ""}
+              onChange={handleAcTypeSelect}
+              disabled={saving || airConditionerTypes.length === 0}
+            >
+              <option value="">Sin tipo</option>
+              {airConditionerTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+              <option value="__create_new__">+ Crear nuevo tipo...</option>
+            </select>
+            {airConditionerTypes.length === 0 && (
+              <span className={styles.helperText}>
+                No hay tipos registrados. Crea uno nuevo con la opción
+                &quot;Crear nuevo tipo...&quot;.
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Selector jerárquico Área/Subárea */}
         <HierarchicalAreaSelectorDetail
@@ -113,7 +188,7 @@ export default function EquipmentEditForm({
         </div>
 
         {/* Sección de Componentes en Edición */}
-        {equipment.category === "Aires Acondicionados" && (
+        {isAirConditioner && (
           <ComponentsEditForms
             saving={saving}
             evaporators={evaporators}
@@ -122,6 +197,76 @@ export default function EquipmentEditForm({
             onCondensersChange={onCondensersChange}
           />
         )}
+        
+        {/* PLAN DE MANTENIMIENTO */}
+        <div className={styles.planSection}>
+          <h4>Plan de Mantenimiento (Opcional)</h4>
+
+          <div className={styles.formRow}>
+            <label>Unidad de Frecuencia</label>
+            <select
+              name="unidadFrecuencia"
+              value={unidadFrecuencia}
+              onChange={onPlanMantenimientoChange}
+              disabled={saving}
+            >
+              <option value="">Sin plan</option>
+              <option value="DIA">Día</option>
+              <option value="SEMANA">Semana</option>
+              <option value="MES">Mes</option>
+            </select>
+            <span className={styles.helperText}>
+              Unidad básica de repetición del mantenimiento.
+            </span>
+          </div>
+
+          <div className={styles.formRow}>
+            <label>
+              Cada{" "}
+              {unidadFrecuencia === "DIA"
+                ? "cuántos Días"
+                : unidadFrecuencia === "SEMANA"
+                  ? "cuántas Semanas"
+                  : "cuántos Meses"}
+            </label>
+            <input
+              type="number"
+              name="diaDelMes"
+              min={1}
+              max={31}
+              value={diaDelMesValue}
+              onChange={onPlanMantenimientoChange}
+              disabled={saving}
+              placeholder="1-31"
+            />
+          </div>
+
+          <div className={styles.formRow}>
+            <label>Fecha Programada</label>
+            <input
+              type="date"
+              name="fechaProgramada"
+              value={programmingDateValue}
+              onChange={onPlanMantenimientoChange}
+              disabled={saving}
+            />
+            <span className={styles.helperText}>
+              Fecha de la próxima intervención programada.
+            </span>
+          </div>
+
+          <div className={styles.formRow}>
+            <label>Razón del Cambio de Plan de Mantenimiento</label>
+            <textarea
+              name="notas"
+              value={notasPlan}
+              onChange={onPlanMantenimientoChange}
+              rows={2}
+              disabled={saving}
+              placeholder="Notas sobre el cambio de plan de mantenimiento..."
+            />
+          </div>
+        </div>
 
         <div className={styles.formActions}>
           <button
