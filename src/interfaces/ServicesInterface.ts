@@ -59,12 +59,14 @@ export interface MetricsResponse {
   no_facturadas: number;
   ingresos_totales: number;
   completadas_este_mes: number;
+  pausados: number;
   status_counts: {
     solicitada_sin_asignar: number;
     solicitada_asignada: number;
     en_proceso: number;
     completado: number;
     cancelado: number;
+    pausado: number;
   };
   technicians: {
     tecnico_id: number;

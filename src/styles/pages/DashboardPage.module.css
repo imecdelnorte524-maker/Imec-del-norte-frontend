@@ -470,6 +470,10 @@
   background: #f97373; /* rojo */
 }
 
+.barPaused {
+  background: #06d99d; /* verde agua */
+}
+
 /* Lista de técnicos */
 .techList {
   display: flex;

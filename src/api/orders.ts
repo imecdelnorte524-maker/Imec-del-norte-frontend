@@ -1,3 +1,4 @@
+// src/api/orders.ts
 import api from "./axios";
 import type {
   Order,
@@ -7,21 +8,41 @@ import type {
   SupplyDetail,
   ToolDetail,
   AssociatedEquipment,
+  TechnicianAssignment,
+  UserInfo,
+  PauseInfo,
+  TimerInfo,
 } from "../interfaces/OrderInterfaces";
 
 // Helpers de mapeo de estados backend ↔ frontend
-const mapStatusFromApi = (apiEstado: string): Order["estado"] => {
+const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
+  if (!apiEstado) return "Pendiente";
+
   switch (apiEstado) {
+    // Estados que vienen de /work-orders (enum textual)
     case "Solicitada sin asignar":
       return "Pendiente";
     case "Solicitada asignada":
       return "Asignada";
     case "En proceso":
       return "En Proceso";
+    case "En pausa":
+      return "Pausada"; // 👈 lo mostramos como "Pausada" en la UI
     case "Finalizada":
       return "Completado";
     case "Cancelada":
       return "Cancelada";
+
+    // Estados ya "bonitos" (p.e. desde /dashboard/orders)
+    case "Pendiente":
+    case "Asignada":
+    case "En Proceso":
+    case "Pausada":
+    case "Completado":
+    case "Cancelada":
+    case "Rechazada":
+      return apiEstado as Order["estado"];
+
     default:
       return "Pendiente";
   }
@@ -35,6 +56,8 @@ const mapStatusToApi = (uiEstado: Order["estado"]): string => {
       return "Solicitada asignada";
     case "En Proceso":
       return "En proceso";
+    case "Pausada":
+      return "En pausa";
     case "Completado":
       return "Finalizada";
     case "Cancelada":
@@ -45,19 +68,66 @@ const mapStatusToApi = (uiEstado: Order["estado"]): string => {
   }
 };
 
-const mapBillingFromApi = (apiEstado: string | undefined): BillingEstado => {
+const mapBillingFromApi = (
+  apiEstado: string | null | undefined,
+): BillingEstado => {
+  if (apiEstado === "Por facturar") return "Por facturar";
   if (apiEstado === "Facturado") return "Facturado";
-  return "No facturado";
+  if (apiEstado === "Garantía") return "Garantía";
+  if (apiEstado === "Sin facturar") return "Sin facturar";
+  return "";
 };
+
+const mapBillingToApi = (uiEstado: BillingEstado): string => {
+  return uiEstado === "Facturado"
+    ? "Facturado"
+    : uiEstado === "Por facturar"
+      ? "Por facturar"
+      : uiEstado === "Garantía"
+        ? "Garantía"
+        : uiEstado === "Sin facturar"
+          ? "Sin facturar"
+          : "";
+};
+
+const mapUserInfo = (apiUser: any): UserInfo => ({
+  usuario_id: apiUser.usuarioId || apiUser.usuario_id,
+  nombre: apiUser.nombre || "",
+  apellido: apiUser.apellido || null,
+  email: apiUser.email || "",
+  telefono: apiUser.telefono || null,
+  cedula: apiUser.cedula,
+});
 
 const mapAssociatedEquipment = (equipment: any): AssociatedEquipment => ({
   equipmentId: equipment.equipmentId,
   code: equipment.code,
   category: equipment.category,
   description: equipment.description,
+  status: equipment.status,
 });
 
-const mapApiOrderToOrder = (apiOrder: any): Order => {
+const mapTechnicianAssignment = (apiTech: any): TechnicianAssignment => ({
+  id: apiTech.id,
+  tecnicoId: apiTech.tecnicoId,
+  isLeader: apiTech.isLeader || false,
+  technician: mapUserInfo(apiTech.technician || {}),
+});
+
+// Hacemos export para poder reutilizarlo desde api/dashboard.ts si se quiere
+export const mapApiOrderToOrder = (apiOrder: any): Order => {
+  // Técnicos (array)
+  const technicians: TechnicianAssignment[] = Array.isArray(
+    apiOrder.technicians,
+  )
+    ? apiOrder.technicians.map(mapTechnicianAssignment)
+    : [];
+
+  // Compatibilidad: usar el primer técnico como "principal"
+  const primerTecnico = technicians[0];
+  const tecnicoId = primerTecnico?.tecnicoId || null;
+  const tecnico = primerTecnico?.technician || null;
+
   const equipos: AssociatedEquipment[] = Array.isArray(apiOrder.equipos)
     ? apiOrder.equipos.map(mapAssociatedEquipment)
     : [];
@@ -67,7 +137,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
         detalleInsumoId: d.detalleInsumoId,
         cantidadUsada: Number(d.cantidadUsada ?? 0),
         costoUnitarioAlMomento: Number(d.costoUnitarioAlMomento ?? 0),
-        nombreInsumo: d.nombreInsumo ?? "",
+        nombreInsumo: d.nombreInsumo ?? d.supply?.nombre ?? "",
       }))
     : [];
 
@@ -75,127 +145,188 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     ? apiOrder.toolDetails.map((d: any) => ({
         detalleHerramientaId: d.detalleHerramientaId,
         tiempoUso: d.tiempoUso ?? "",
-        nombreHerramienta: d.nombreHerramienta ?? "",
-        marca: d.marca ?? "",
+        nombreHerramienta: d.nombreHerramienta ?? d.tool?.nombre ?? "",
+        marca: d.marca ?? d.tool?.marca ?? "",
       }))
     : [];
 
-  return {
-    orden_id: apiOrder.ordenId,
-    servicio_id: apiOrder.service?.servicioId ?? 0,
-    cliente_id: apiOrder.cliente?.usuarioId ?? 0,
-    tecnico_id: apiOrder.tecnico?.usuarioId ?? null,
-    fecha_solicitud: apiOrder.fechaSolicitud,
-    fecha_inicio: apiOrder.fechaInicio ?? null,
-    fecha_finalizacion: apiOrder.fechaFinalizacion ?? null,
-    estado: mapStatusFromApi(apiOrder.estado),
-    comentarios: apiOrder.comentarios ?? null,
+  const timers =
+    apiOrder.timers?.map((timer: any) => ({
+      timerId: timer.timerId,
+      startTime: timer.startTime,
+      endTime: timer.endTime,
+      totalSeconds: timer.totalSeconds,
+    })) || [];
 
-    tipo_servicio: apiOrder.tipoServicio ?? null,
+  const pauses =
+    apiOrder.pauses?.map((pause: any) => ({
+      pauseId: pause.pauseId,
+      startTime: pause.startTime,
+      endTime: pause.endTime,
+      observacion: pause.observacion,
+      user: mapUserInfo(pause.user),
+    })) || [];
+
+  return {
+    orden_id: apiOrder.ordenId || apiOrder.orden_id,
+    servicio_id: apiOrder.servicioId || apiOrder.service?.servicioId || 0,
+    cliente_id:
+      apiOrder.clienteId ||
+      apiOrder.cliente?.usuarioId ||
+      apiOrder.cliente?.usuario_id ||
+      0,
+    cliente_empresa_id:
+      apiOrder.clienteEmpresaId ||
+      apiOrder.clienteEmpresa?.idCliente ||
+      apiOrder.cliente_empresa?.id_cliente ||
+      null,
+    fecha_solicitud: apiOrder.fechaSolicitud || apiOrder.fecha_solicitud,
+    fecha_inicio: apiOrder.fechaInicio || apiOrder.fecha_inicio || null,
+    fecha_finalizacion:
+      apiOrder.fechaFinalizacion || apiOrder.fecha_finalizacion || null,
+    estado: mapStatusFromApi(apiOrder.estado),
+    comentarios: apiOrder.comentarios || null,
+    tipo_servicio: apiOrder.tipoServicio || apiOrder.tipo_servicio || null,
     maintenance_type: apiOrder.maintenanceType
       ? {
           id: apiOrder.maintenanceType.id,
           nombre: apiOrder.maintenanceType.nombre,
         }
       : null,
-
-    estado_facturacion: mapBillingFromApi(apiOrder.estadoFacturacion),
-    factura_pdf_url: apiOrder.facturaPdfUrl ?? null,
+    estado_facturacion: mapBillingFromApi(
+      apiOrder.estadoFacturacion ?? apiOrder.estado_facturacion,
+    ),
+    factura_pdf_url: apiOrder.facturaPdfUrl || apiOrder.factura_pdf_url || null,
+    isEmergency: apiOrder.isEmergency || false,
+    plan_mantenimiento_id:
+      apiOrder.planMantenimientoId || apiOrder.plan_mantenimiento_id || null,
 
     servicio: {
-      servicio_id: apiOrder.service?.servicioId ?? 0,
-      nombre_servicio: apiOrder.service?.nombreServicio ?? "",
-      descripcion: apiOrder.service?.descripcion ?? null,
-      duracion_estimada: apiOrder.service?.duracionEstimada ?? null,
-      categoria_servicio: apiOrder.service?.categoriaServicio ?? null,
-      tipo_trabajo: apiOrder.service?.tipoTrabajo ?? null,
-      tipo_mantenimiento: apiOrder.service?.tipoMantenimiento ?? null,
+      servicio_id:
+        apiOrder.service?.servicioId || apiOrder.servicio?.servicio_id || 0,
+      nombre_servicio:
+        apiOrder.service?.nombreServicio ||
+        apiOrder.servicio?.nombre_servicio ||
+        "",
+      descripcion:
+        apiOrder.service?.descripcion || apiOrder.servicio?.descripcion || null,
+      duracion_estimada:
+        apiOrder.service?.duracionEstimada ||
+        apiOrder.servicio?.duracion_estimada ||
+        null,
+      categoria_servicio:
+        apiOrder.service?.categoriaServicio ||
+        apiOrder.servicio?.categoria_servicio ||
+        null,
+      tipo_trabajo:
+        apiOrder.service?.tipoTrabajo ||
+        apiOrder.servicio?.tipo_trabajo ||
+        null,
+      tipo_mantenimiento:
+        apiOrder.service?.tipoMantenimiento ||
+        apiOrder.servicio?.tipo_mantenimiento ||
+        null,
     },
 
-    cliente: {
-      usuario_id: apiOrder.cliente?.usuarioId ?? 0,
-      nombre: apiOrder.cliente?.nombre ?? "",
-      apellido: apiOrder.cliente?.apellido ?? null,
-      email: apiOrder.cliente?.email ?? "",
-      telefono: apiOrder.cliente?.telefono ?? null,
-    },
-
-    tecnico: apiOrder.tecnico
-      ? {
-          usuario_id: apiOrder.tecnico.usuarioId,
-          nombre: apiOrder.tecnico.nombre,
-          apellido: apiOrder.tecnico.apellido ?? null,
-          email: apiOrder.tecnico.email,
-        }
-      : null,
+    cliente: apiOrder.cliente ? mapUserInfo(apiOrder.cliente) : undefined,
 
     cliente_empresa: apiOrder.clienteEmpresa
       ? {
-          id_cliente: apiOrder.clienteEmpresa.idCliente,
-          nombre: apiOrder.clienteEmpresa.nombre,
-          nit: apiOrder.clienteEmpresa.nit,
-          email: apiOrder.clienteEmpresa.email,
-          telefono: apiOrder.clienteEmpresa.telefono,
-          localizacion: apiOrder.clienteEmpresa.localizacion,
-          direccion: apiOrder.clienteEmpresa.direccion ?? null,
-          contacto: apiOrder.clienteEmpresa.contacto ?? null,
-          id_usuario_contacto: apiOrder.clienteEmpresa.idUsuarioContacto ?? null,
+          id_cliente:
+            apiOrder.clienteEmpresa.idCliente ||
+            apiOrder.cliente_empresa?.id_cliente,
+          nombre:
+            apiOrder.clienteEmpresa.nombre ||
+            apiOrder.cliente_empresa?.nombre ||
+            "",
+          nit:
+            apiOrder.clienteEmpresa.nit || apiOrder.cliente_empresa?.nit || "",
+          email:
+            apiOrder.clienteEmpresa.email ||
+            apiOrder.cliente_empresa?.email ||
+            "",
+          telefono:
+            apiOrder.clienteEmpresa.telefono ||
+            apiOrder.cliente_empresa?.telefono ||
+            "",
+          localizacion:
+            apiOrder.clienteEmpresa.localizacion ||
+            apiOrder.cliente_empresa?.localizacion ||
+            "",
+          direccion:
+            apiOrder.clienteEmpresa.direccion ||
+            apiOrder.cliente_empresa?.direccion ||
+            null,
+          contacto:
+            apiOrder.clienteEmpresa.contacto ||
+            apiOrder.cliente_empresa?.contacto ||
+            null,
+          id_usuario_contacto:
+            apiOrder.clienteEmpresa.idUsuarioContacto ||
+            apiOrder.cliente_empresa?.id_usuario_contacto ||
+            null,
         }
       : null,
 
-    equipos: equipos,
+    technicians,
+    tecnico_id: tecnicoId,
+    tecnico,
 
+    equipos,
     supplyDetails,
     toolDetails,
+    timers,
+    pauses,
 
-    costo_total_insumos: apiOrder.costoTotalInsumos ?? 0,
-    costo_total_estimado: apiOrder.costoTotalEstimado ?? 0,
+    costo_total_insumos:
+      apiOrder.costo_total_insumos || apiOrder.costoTotalInsumos || 0,
+    tiempo_total: apiOrder.tiempoTotal || apiOrder.tiempo_total || 0,
   };
 };
 
-// 🔧 NUEVO: Obtener órdenes por cliente empresa y categoría (endpoint optimizado)
+// 🔧 Obtener órdenes por cliente empresa y categoría
 export const getOrdersByClientAndCategoryRequest = async (
   clienteEmpresaId: number,
   category: string,
 ): Promise<Order[]> => {
   try {
-    
-    // Usar el nuevo endpoint optimizado del backend
     const response = await api.get(
-      `/work-orders/client/${clienteEmpresaId}/category/${encodeURIComponent(category)}`
+      `/work-orders/client/${clienteEmpresaId}/category/${encodeURIComponent(
+        category,
+      )}`,
     );
-    
+
     const data = response.data?.data || [];
-    
     const orders = data.map(mapApiOrderToOrder);
 
-    // Filtro adicional de seguridad (el backend ya filtra, pero por si acaso)
+    // Filtro adicional de seguridad
     const filteredOrders = orders.filter((order: Order) => {
       const isActiveStatus =
-        order.estado === 'Pendiente' || 
-        order.estado === 'Asignada' || 
-        order.estado === 'En Proceso';
-      
-      const isSameClient = order.cliente_empresa?.id_cliente === clienteEmpresaId;
-      const isSameCategory = order.servicio.categoria_servicio?.toLowerCase() === category.toLowerCase();
-      
+        order.estado === "Pendiente" ||
+        order.estado === "Asignada" ||
+        order.estado === "En Proceso";
+
+      const isSameClient =
+        order.cliente_empresa?.id_cliente === clienteEmpresaId;
+      const isSameCategory =
+        order.servicio.categoria_servicio?.toLowerCase() ===
+        category.toLowerCase();
+
       return isActiveStatus && isSameClient && isSameCategory;
     });
 
     return filteredOrders;
   } catch (error: any) {
-    console.error('[API] Error fetching orders by client and category:', error);
-    
-    // Si el nuevo endpoint no existe (404), usar método de respaldo
+    console.error("[API] Error fetching orders by client and category:", error);
+
     if (error.response?.status === 404) {
       return getOrdersByClientAndCategoryFallback(clienteEmpresaId, category);
     }
-    
-    // Si es error de permisos (403), retornar array vacío
+
     if (error.response?.status === 403) {
       return [];
     }
-    
+
     throw error;
   }
 };
@@ -206,24 +337,27 @@ const getOrdersByClientAndCategoryFallback = async (
   category: string,
 ): Promise<Order[]> => {
   try {
-    const response = await api.get('/work-orders');
+    const response = await api.get("/work-orders");
     const data = response.data?.data || [];
     const orders = data.map(mapApiOrderToOrder);
 
     const filteredOrders = orders.filter((order: Order) => {
-      const isSameClient = order.cliente_empresa?.id_cliente === clienteEmpresaId;
-      const isSameCategory = order.servicio.categoria_servicio?.toLowerCase() === category.toLowerCase();
-      const isActiveStatus = 
-        order.estado === 'Pendiente' || 
-        order.estado === 'Asignada' || 
-        order.estado === 'En Proceso';
+      const isSameClient =
+        order.cliente_empresa?.id_cliente === clienteEmpresaId;
+      const isSameCategory =
+        order.servicio.categoria_servicio?.toLowerCase() ===
+        category.toLowerCase();
+      const isActiveStatus =
+        order.estado === "Pendiente" ||
+        order.estado === "Asignada" ||
+        order.estado === "En Proceso";
 
       return isSameClient && isSameCategory && isActiveStatus;
     });
 
     return filteredOrders;
   } catch (error: any) {
-    console.error('[API] Error en método de respaldo:', error);
+    console.error("[API] Error en método de respaldo:", error);
     throw error;
   }
 };
@@ -243,12 +377,11 @@ export const addEquipmentToOrderRequest = async (
   equipmentId: number,
   description?: string,
 ): Promise<any> => {
-  
   const response = await api.post(
     `/work-orders/${ordenId}/equipment/${equipmentId}`,
     { description },
   );
-  
+
   return response.data;
 };
 
@@ -260,23 +393,49 @@ export const removeEquipmentFromOrderRequest = async (
   await api.delete(`/work-orders/${ordenId}/equipment/${equipmentId}`);
 };
 
-// 🟢 MÉTODOS EXISTENTES (sin cambios)
+// 🟢 Obtener todas las órdenes desde /work-orders (sin paginación real en backend)
 export const getAllOrdersRequest = async (filters?: {
   status?: string;
   startDate?: string;
   endDate?: string;
-}): Promise<Order[]> => {
+  search?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  services: Order[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}> => {
   const params = new URLSearchParams();
+  // Estos filtros hoy no los usa el backend en /work-orders,
+  // pero los dejamos por si luego agregas soporte.
   if (filters?.status) params.append("estado", filters.status);
-  if (filters?.startDate) params.append("fecha-inicio", filters.startDate);
-  if (filters?.endDate) params.append("fecha-fin", filters.endDate);
+  if (filters?.startDate) params.append("startDate", filters.startDate);
+  if (filters?.endDate) params.append("endDate", filters.endDate);
+  if (filters?.search) params.append("search", filters.search);
+  if (filters?.page) params.append("page", filters.page.toString());
+  if (filters?.limit) params.append("limit", filters.limit.toString());
 
   const url = `/work-orders${params.toString() ? `?${params.toString()}` : ""}`;
   const response = await api.get(url);
-  const data = response.data?.data || [];
-  return data.map(mapApiOrderToOrder);
+
+  const list = response.data?.data || [];
+  const mappedServices = Array.isArray(list)
+    ? list.map(mapApiOrderToOrder)
+    : [];
+
+  return {
+    services: mappedServices,
+    total: mappedServices.length,
+    page: 1,
+    limit: mappedServices.length,
+    totalPages: 1,
+  };
 };
 
+// 🔧 Mis órdenes (técnico/cliente) → usan /work-orders, el backend filtra según rol
 export const getMyAssignedOrdersRequest = async (): Promise<Order[]> => {
   const response = await api.get("/work-orders");
   const data = response.data?.data || [];
@@ -299,14 +458,21 @@ export const createOrderRequest = async (
 ): Promise<Order> => {
   const payload: any = {
     servicioId: orderData.servicio_id,
-    clienteEmpresaId: orderData.cliente_empresa_id,
   };
 
+  if (orderData.cliente_empresa_id)
+    payload.clienteEmpresaId = orderData.cliente_empresa_id;
+  if (orderData.cliente_id) payload.clienteId = orderData.cliente_id;
   if (orderData.comentarios) payload.comentarios = orderData.comentarios;
-  if (orderData.tecnico_id) payload.tecnicoId = orderData.tecnico_id;
+  if (orderData.technicians) payload.technicians = orderData.technicians;
   if (orderData.equipmentIds) payload.equipmentIds = orderData.equipmentIds;
   if (orderData.tipo_servicio) payload.tipoServicio = orderData.tipo_servicio;
-  if (orderData.maintenance_type_id) payload.maintenanceTypeId = orderData.maintenance_type_id;
+  if (orderData.maintenance_type_id)
+    payload.maintenanceTypeId = orderData.maintenance_type_id;
+  if (orderData.isEmergency !== undefined)
+    payload.isEmergency = orderData.isEmergency;
+  if (orderData.plan_mantenimiento_id)
+    payload.planMantenimientoId = orderData.plan_mantenimiento_id;
 
   const response = await api.post("/work-orders", payload);
   const apiOrder = response.data?.data;
@@ -318,25 +484,42 @@ export const updateOrderRequest = async (
   updateData: UpdateOrderData,
 ): Promise<Order> => {
   const payload: any = {};
-  if (updateData.tecnico_id !== undefined) payload.tecnicoId = updateData.tecnico_id;
+
   if (updateData.estado) payload.estado = mapStatusToApi(updateData.estado);
-  if (updateData.comentarios !== undefined) payload.comentarios = updateData.comentarios;
-  if (updateData.fecha_inicio !== undefined) payload.fechaInicio = updateData.fecha_inicio;
-  if (updateData.fecha_finalizacion !== undefined) payload.fechaFinalizacion = updateData.fecha_finalizacion;
-  if (updateData.equipmentIds !== undefined) payload.equipmentIds = updateData.equipmentIds;
+  if (updateData.comentarios !== undefined)
+    payload.comentarios = updateData.comentarios;
+  if (updateData.fecha_inicio !== undefined)
+    payload.fechaInicio = updateData.fecha_inicio;
+  if (updateData.fecha_finalizacion !== undefined)
+    payload.fechaFinalizacion = updateData.fecha_finalizacion;
+  if (updateData.technicians !== undefined)
+    payload.technicians = updateData.technicians;
+  if (updateData.equipmentIds !== undefined)
+    payload.equipmentIds = updateData.equipmentIds;
+  if (updateData.estado_facturacion !== undefined)
+    payload.estadoFacturacion = mapBillingToApi(updateData.estado_facturacion);
+  if (updateData.tipo_servicio !== undefined)
+    payload.tipoServicio = updateData.tipo_servicio;
+  if (updateData.maintenance_type_id !== undefined)
+    payload.maintenanceTypeId = updateData.maintenance_type_id;
+  if (updateData.pause_observation !== undefined)
+    payload.pauseObservation = updateData.pause_observation; // 👈 este nombre coincide con DTO backend
 
   const response = await api.patch(`/work-orders/${orderId}`, payload);
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
 };
 
-export const assignTechnicianRequest = async (
+export const assignTechniciansRequest = async (
   orderId: number,
-  technicianId: number,
+  payload: {
+    technicianIds: number[];
+    leaderTechnicianId?: number;
+  },
 ): Promise<Order> => {
   const response = await api.patch(
-    `/work-orders/${orderId}/assign-technician`,
-    { tecnicoId: technicianId },
+    `/work-orders/${orderId}/assign-technicians`,
+    payload,
   );
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
@@ -345,9 +528,37 @@ export const assignTechnicianRequest = async (
 export const unassignTechnicianRequest = async (
   orderId: number,
 ): Promise<Order> => {
-  const response = await api.delete(`/work-orders/${orderId}/technician`);
+  const url = `/work-orders/${orderId}/technicians`;
+  const response = await api.delete(url);
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
+};
+
+export const removeSpecificTechnicianRequest = async (
+  orderId: number,
+  tecnicoIdToRemove: number,
+): Promise<Order> => {
+  const currentOrder = await getOrderByIdRequest(orderId);
+
+  const remainingTechnicians = currentOrder.technicians.filter(
+    (t) => t.tecnicoId !== tecnicoIdToRemove,
+  );
+
+  if (remainingTechnicians.length === 0) {
+    const response = await api.delete(`/work-orders/${orderId}/technicians`);
+    const apiOrder = response.data?.data;
+    return mapApiOrderToOrder(apiOrder);
+  } else {
+    const technicianIds = remainingTechnicians.map((t) => t.tecnicoId);
+    const leaderTechnicianId =
+      remainingTechnicians.find((t) => t.isLeader)?.tecnicoId ||
+      technicianIds[0];
+
+    return assignTechniciansRequest(orderId, {
+      technicianIds,
+      leaderTechnicianId,
+    });
+  }
 };
 
 export const getOrderByIdRequest = async (orderId: number): Promise<Order> => {
@@ -435,4 +646,49 @@ export const removeSupplyDetailRequest = async (
   detalleInsumoId: number,
 ): Promise<void> => {
   await api.delete(`/work-orders/${orderId}/supplies/${detalleInsumoId}`);
+};
+
+// 🔧 Timers y pausas (adaptado a endpoints reales del backend)
+export const startTimerRequest = async (
+  orderId: number,
+): Promise<TimerInfo> => {
+  const response = await api.post(`/work-orders/${orderId}/start-timer`);
+  return response.data?.data;
+};
+
+export const stopTimerRequest = async (orderId: number): Promise<TimerInfo> => {
+  const response = await api.post(`/work-orders/${orderId}/stop-timer`);
+  return response.data?.data;
+};
+
+export const addPauseRequest = async (
+  orderId: number,
+  payload: { observacion: string; userId?: number },
+): Promise<PauseInfo> => {
+  // El backend obtiene userId del JWT, solo necesita observacion
+  const response = await api.post(`/work-orders/${orderId}/pause`, {
+    observacion: payload.observacion,
+  });
+  return response.data?.data;
+};
+
+// El backend no cierra pausas por pauseId, usa /:id/resume y cierra la última pausa activa
+export const endPauseRequest = async (orderId: number): Promise<TimerInfo> => {
+  const response = await api.post(`/work-orders/${orderId}/resume`);
+  return response.data?.data;
+};
+
+// Crear orden de emergencia desde una orden existente
+export const createEmergencyOrderRequest = async (
+  orderId: number,
+  payload: {
+    technicianIds: number[];
+    leaderTechnicianId?: number;
+    equipmentIds?: number[];
+    comentarios?: string;
+  },
+): Promise<Order> => {
+  const response = await api.post(`/work-orders/${orderId}/emergency`, payload);
+  const apiOrder = response.data?.data;
+  return mapApiOrderToOrder(apiOrder);
 };

@@ -123,6 +123,10 @@ export default function EquipmentListPage() {
     roleName === "Secretaria" ||
     roleName === "Técnico";
   const canCreate = roleName === "Administrador" || roleName === "Técnico";
+  const canExport =
+    roleName === "Administrador" ||
+    roleName === "Cliente" ||
+    roleName === "Secretaria";
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
@@ -814,16 +818,18 @@ export default function EquipmentListPage() {
 
           {selectedClientId && selectedClientId !== 0 && (
             <div className={listStyles.headerActions}>
-              <button
-                type="button"
-                className={listStyles.exportButton}
-                onClick={handleExportMaintenancePlan}
-                disabled={!selectedClientId || exportingPlan}
-              >
-                {exportingPlan
-                  ? "Exportando..."
-                  : "Exportar plan mantenimiento"}
-              </button>
+              {canExport && (
+                <button
+                  type="button"
+                  className={listStyles.exportButton}
+                  onClick={handleExportMaintenancePlan}
+                  disabled={!selectedClientId || exportingPlan}
+                >
+                  {exportingPlan
+                    ? "Exportando..."
+                    : "Exportar plan mantenimiento"}
+                </button>
+              )}
 
               {canCreate && (
                 <button

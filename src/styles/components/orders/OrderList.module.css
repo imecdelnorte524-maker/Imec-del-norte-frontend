@@ -39,6 +39,7 @@
 .orderCardCompleted { border-left: 4px solid #22c55e; }
 .orderCardCancelled { border-left: 4px solid #f23e3e; }
 .orderCardPendingAssigned { border-left: 4px solid #de16f9; }
+.orderCardPaused { border-left: 4px solid #06d99d; }
 
 .cardHeader {
   display: flex;
@@ -180,6 +181,7 @@
 .statusCompleted { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
 .statusCancelled { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 .statusRejected { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; }
+.statusPaused { background: #d1fae5; color: #047857; border: 1px solid #86efac; }
 
 .billingNotBilled { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
 .billingBilled { background: #ecfccb; color: #3f6212; border: 1px solid #d9f99d; }

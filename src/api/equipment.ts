@@ -267,7 +267,7 @@ export const prepareEquipmentForBackend = (
       // Solo enviamos diaDelMes si la unidad es MES
       let diaDelMesNumber: number | null = null;
 
-      if (unidadFrecuencia === "MES" && diaDelMes !== null) {
+      if (diaDelMes !== null && diaDelMes !== undefined) {
         const n = Number(diaDelMes as any);
         diaDelMesNumber = Number.isNaN(n) ? null : n;
       }

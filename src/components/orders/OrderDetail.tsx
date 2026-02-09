@@ -2,25 +2,29 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  updateOrderRequest,
-  cancelOrderRequest,
   rejectOrderRequest,
-  assignTechnicianRequest,
   uploadInvoiceRequest,
-  unassignTechnicianRequest,
   addSupplyDetailRequest,
   addToolDetailRequest,
   removeToolDetailRequest,
   removeSupplyDetailRequest,
+  createEmergencyOrderRequest,
 } from "../../api/orders";
 import { usersApi } from "../../api/users";
 import { inventory } from "../../api/inventory";
-import { useOrderDetail } from "../../hooks/useOrders";
-import type { Order, UpdateOrderData } from "../../interfaces/OrderInterfaces";
+import { getEquipmentByClientRequest } from "../../api/equipment";
+import { useOrderDetail, useOrderMutations } from "../../hooks/useOrders";
+import type {
+  BillingEstado,
+  Order,
+  UpdateOrderData,
+} from "../../interfaces/OrderInterfaces";
 import type { Usuario } from "../../interfaces/UserInterfaces";
+import type { Equipment } from "../../interfaces/EquipmentInterfaces";
 import styles from "../../styles/components/orders/OrderDetail.module.css";
 import type { Inventory } from "../../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../../utils/sounds";
+import { useAuth } from "../../hooks/useAuth";
 
 interface Props {
   order: Order;
@@ -52,23 +56,24 @@ export default function OrderDetail({
 }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { order } = useOrderDetail(initialOrderData.orden_id, initialOrderData);
   const currentOrder = order || initialOrderData;
+  const { updateOrder, assignTechnician, unassignTechnician, cancelOrder } =
+    useOrderMutations();
 
-  // Normalizar el rol para uso interno
   const normalizedUserRole = normalizeUserRole(userRole);
-
   const isClient = normalizedUserRole === "cliente";
   const isTechnician = normalizedUserRole === "tecnico";
   const isAdminOrSecretaria =
     normalizedUserRole === "admin" || normalizedUserRole === "secretaria";
 
-  // Agregar "Asignada" al validStatuses
   const validStatuses = {
     PENDIENTE: "Pendiente" as const,
     ASIGNADA: "Asignada" as const,
     EN_PROCESO: "En Proceso" as const,
+    PAUSADA: "Pausada" as const,
     COMPLETADO: "Completado" as const,
     CANCELADA: "Cancelada" as const,
     RECHAZADA: "Rechazada" as const,
@@ -79,7 +84,8 @@ export default function OrderDetail({
 
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
-  const [selectedTechnician, setSelectedTechnician] = useState<number | null>(
+  const [selectedTechnicians, setSelectedTechnicians] = useState<number[]>([]);
+  const [leaderTechnicianId, setLeaderTechnicianId] = useState<number | null>(
     null,
   );
   const [rejectReason, setRejectReason] = useState("");
@@ -99,12 +105,31 @@ export default function OrderDetail({
     "",
   );
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const [showBillingModal, setShowBillingModal] = useState(false);
+  const [selectedBillingStatus, setSelectedBillingStatus] =
+    useState<BillingEstado>("");
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
     isOpen: false,
     type: null,
     id: null,
   });
+
+  // --- Modal Emergencia ---
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const [clientEquipments, setClientEquipments] = useState<Equipment[]>([]);
+  const [selectedEmergencyEquipments, setSelectedEmergencyEquipments] =
+    useState<number[]>([]);
+  const [loadingEquipments, setLoadingEquipments] = useState(false);
+  // 🔹 NUEVO: Estado para seleccionar el técnico que se va a la emergencia
+  const [selectedEmergencyTechId, setSelectedEmergencyTechId] = useState<
+    number | null
+  >(null);
+
+  // --- Modal Pausa ---
+  const [showPauseModal, setShowPauseModal] = useState(false);
+  const [pauseObservation, setPauseObservation] = useState("");
 
   const supplyDetails = currentOrder.supplyDetails ?? [];
   const toolDetails = currentOrder.toolDetails ?? [];
@@ -122,25 +147,132 @@ export default function OrderDetail({
     loadTechnicians();
   }, [isAdminOrSecretaria]);
 
+  useEffect(() => {
+    if (
+      selectedTechnicians.length > 0 &&
+      !selectedTechnicians.includes(leaderTechnicianId || 0)
+    ) {
+      setLeaderTechnicianId(selectedTechnicians[0]);
+    } else if (selectedTechnicians.length === 0) {
+      setLeaderTechnicianId(null);
+    }
+  }, [selectedTechnicians, leaderTechnicianId]);
+
   const refreshData = async () => {
     queryClient.invalidateQueries({
       queryKey: ["orderDetail", currentOrder.orden_id],
     });
+    queryClient.invalidateQueries({ queryKey: ["dashboardOrders"] });
     queryClient.invalidateQueries({ queryKey: ["orders"] });
   };
 
-  const handleStatusUpdate = async (newStatus: Order["estado"]) => {
+  // 🔹 Función para abrir modal de emergencia
+  const handleOpenEmergencyModal = async () => {
+    setShowEmergencyModal(true);
+    setLoadingEquipments(true);
+    setSelectedEmergencyEquipments([]);
+
+    // 1. Configurar selección de técnicos
+    const currentTechs = currentOrder.technicians || [];
+    if (currentTechs.length === 1) {
+      // Si solo hay uno, se selecciona automáticamente
+      setSelectedEmergencyTechId(currentTechs[0].tecnicoId);
+    } else {
+      // Si hay varios, resetear para que el usuario elija
+      setSelectedEmergencyTechId(null);
+    }
+
+    // 2. Cargar equipos
+    try {
+      if (currentOrder.cliente_empresa?.id_cliente) {
+        const data = await getEquipmentByClientRequest(
+          currentOrder.cliente_empresa.id_cliente,
+        );
+        setClientEquipments(data);
+      }
+    } catch (err) {
+      console.error("Error cargando equipos", err);
+    } finally {
+      setLoadingEquipments(false);
+    }
+  };
+
+  const toggleEmergencyEquipment = (eqId: number) => {
+    setSelectedEmergencyEquipments((prev) =>
+      prev.includes(eqId) ? prev.filter((id) => id !== eqId) : [...prev, eqId],
+    );
+  };
+
+  // 🔹 Crear orden de emergencia (confirmada)
+  const confirmEmergencyOrder = async () => {
+    // Validaciones
+    if (!selectedEmergencyTechId) {
+      alert("Debe seleccionar un técnico para la emergencia.");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+
+    try {
+      const equipmentIds = selectedEmergencyEquipments;
+
+      const emergencyOrder = await createEmergencyOrderRequest(
+        currentOrder.orden_id,
+        {
+          technicianIds: [selectedEmergencyTechId], // Enviamos el seleccionado
+          leaderTechnicianId: selectedEmergencyTechId,
+          equipmentIds,
+          comentarios: `Emergencia creada desde orden ${currentOrder.orden_id}`,
+        },
+      );
+
+      await refreshData();
+      setShowEmergencyModal(false);
+      navigate(`/orders?ordenId=${emergencyOrder.orden_id}`);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error creando orden de emergencia",
+      );
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Resto de handlers (sin cambios) ...
+  const handleStatusUpdate = async (
+    newStatus: Order["estado"],
+    pauseObs?: string,
+  ) => {
+    setLoading(true);
+    setError(null);
     try {
       const updateData: UpdateOrderData = { estado: newStatus };
+
       if (newStatus === validStatuses.EN_PROCESO)
         updateData.fecha_inicio = new Date().toISOString();
       else if (newStatus === validStatuses.COMPLETADO)
         updateData.fecha_finalizacion = new Date().toISOString();
 
-      await updateOrderRequest(currentOrder.orden_id, updateData);
+      if (pauseObs !== undefined) {
+        (updateData as any).pause_observation = pauseObs;
+      }
+
+      await updateOrder.mutateAsync({
+        orderId: currentOrder.orden_id,
+        data: updateData,
+      });
       await refreshData();
-      onBack();
+
+      if (
+        newStatus === validStatuses.COMPLETADO ||
+        newStatus === validStatuses.CANCELADA
+      ) {
+        onBack();
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al actualizar orden");
       playErrorSound();
@@ -149,25 +281,46 @@ export default function OrderDetail({
     }
   };
 
-  const handleAssignTechnician = async () => {
-    if (!selectedTechnician) return;
+  const handleAssignTechnicians = async () => {
+    if (selectedTechnicians.length === 0) {
+      setError("Debe seleccionar al menos un técnico");
+      return;
+    }
     setLoading(true);
+    setError(null);
     try {
-      await assignTechnicianRequest(currentOrder.orden_id, selectedTechnician);
+      const techniciansData = selectedTechnicians.map((id) => ({
+        tecnicoId: id,
+        isLeader: id === (leaderTechnicianId || selectedTechnicians[0]),
+      }));
+      await assignTechnician.mutateAsync({
+        orderId: currentOrder.orden_id,
+        technicians: techniciansData,
+      });
       await refreshData();
       setShowAssignForm(false);
+      setSelectedTechnicians([]);
+      setLeaderTechnicianId(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Error al asignar técnico");
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error al asignar técnicos",
+      );
       playErrorSound();
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUnassignTechnician = async () => {
+  const handleUnassignTechnician = async (tecnicoId?: number) => {
     setLoading(true);
+    setError(null);
     try {
-      await unassignTechnicianRequest(currentOrder.orden_id);
+      await unassignTechnician.mutateAsync({
+        orderId: currentOrder.orden_id,
+        tecnicoId,
+      });
       await refreshData();
     } catch (err: any) {
       setError(err.response?.data?.message || "Error quitando técnico");
@@ -180,6 +333,7 @@ export default function OrderDetail({
   const handleRejectOrder = async () => {
     if (!rejectReason.trim()) return;
     setLoading(true);
+    setError(null);
     try {
       await rejectOrderRequest(currentOrder.orden_id, rejectReason);
       await refreshData();
@@ -196,8 +350,9 @@ export default function OrderDetail({
   const handleCancelOrder = async () => {
     if (!window.confirm("¿Cancelar orden?")) return;
     setLoading(true);
+    setError(null);
     try {
-      await cancelOrderRequest(currentOrder.orden_id);
+      await cancelOrder.mutateAsync(currentOrder.orden_id);
       await refreshData();
       onBack();
     } catch (err: any) {
@@ -235,9 +390,10 @@ export default function OrderDetail({
     try {
       setInventoryLoading(true);
       const data = await inventory.getAllInventory();
-      // Filtrar solo los ítems con estado "Disponible"
       const availableItems = data.filter((item: Inventory) => {
-        const estadoNormalizado = item.tool?.estado?.toLowerCase().trim() || item.supply?.estado?.toLowerCase().trim();
+        const estadoNormalizado =
+          item.tool?.estado?.toLowerCase().trim() ||
+          item.supply?.estado?.toLowerCase().trim();
         return estadoNormalizado === "disponible";
       });
       setInventoryItems(availableItems);
@@ -246,6 +402,12 @@ export default function OrderDetail({
     } finally {
       setInventoryLoading(false);
     }
+  };
+
+  const handleOpenBillingModal = () => {
+    setSelectedBillingStatus(currentOrder.estado_facturacion);
+    setBillingError(null);
+    setShowBillingModal(true);
   };
 
   const handleAssignInventoryItem = async () => {
@@ -292,6 +454,35 @@ export default function OrderDetail({
     }
   };
 
+  const handleAssignBillingStatus = async () => {
+    if (!selectedBillingStatus) return;
+
+    setLoading(true);
+    setBillingError(null);
+
+    try {
+      // Usar updateOrder del hook useOrderMutations
+      await updateOrder.mutateAsync({
+        orderId: currentOrder.orden_id,
+        data: {
+          estado_facturacion: selectedBillingStatus,
+        },
+      });
+
+      await refreshData();
+      setShowBillingModal(false);
+    } catch (err: any) {
+      setBillingError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error asignando estado de facturación",
+      );
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const requestReturnTool = (id: number) =>
     setConfirmModal({ isOpen: true, type: "tool", id });
   const requestRemoveSupply = (id: number) =>
@@ -318,10 +509,21 @@ export default function OrderDetail({
     }
   };
 
+  const toggleTechnicianSelection = (techId: number) => {
+    setSelectedTechnicians((prev) => {
+      if (prev.includes(techId)) {
+        return prev.filter((id) => id !== techId);
+      } else {
+        return [...prev, techId];
+      }
+    });
+  };
+
   const getStatusColor = (st: string) => {
     if (st === validStatuses.PENDIENTE || st === validStatuses.ASIGNADA)
       return styles.statusPending;
     if (st === validStatuses.EN_PROCESO) return styles.statusInProgress;
+    if (st === validStatuses.PAUSADA) return styles.statusPaused;
     if (st === validStatuses.COMPLETADO) return styles.statusCompleted;
     if (st === validStatuses.CANCELADA) return styles.statusCancelled;
     if (st === validStatuses.RECHAZADA) return styles.statusRejected;
@@ -329,7 +531,11 @@ export default function OrderDetail({
   };
 
   const getBillingColor = (st: string) =>
-    st === "Facturado" ? styles.billingBilled : styles.billingNotBilled;
+    st === "Facturado"
+      ? styles.billingBilled
+      : st === "Garantía"
+        ? styles.billingWarranty
+        : styles.billingNotBilled;
 
   const isEquipmentCategory = [
     "Aires Acondicionados",
@@ -342,6 +548,7 @@ export default function OrderDetail({
   const canUploadInvoice =
     isAdminOrSecretaria &&
     currentOrder.estado === validStatuses.COMPLETADO &&
+    currentOrder.estado_facturacion === "Por facturar" &&
     !isReadOnly;
 
   const canAssignInventory =
@@ -350,20 +557,45 @@ export default function OrderDetail({
     currentOrder.estado !== validStatuses.CANCELADA &&
     currentOrder.estado !== validStatuses.RECHAZADA;
 
+  const canBillingStatus =
+    isAdminOrSecretaria &&
+    !isReadOnly &&
+    currentOrder.estado === validStatuses.COMPLETADO &&
+    currentOrder.estado_facturacion !== "";
+
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  // Verificar si el técnico puede iniciar la orden
+  const isTechnicianAssigned =
+    user &&
+    currentOrder.technicians?.some((tech) => tech.tecnicoId === user.usuarioId);
+
   const canTechnicianStartOrder =
     isTechnician &&
     !isReadOnly &&
-    currentOrder.tecnico &&
-    (currentOrder.estado === validStatuses.PENDIENTE ||
-      currentOrder.estado === validStatuses.ASIGNADA);
+    isTechnicianAssigned &&
+    currentOrder.estado === validStatuses.ASIGNADA;
 
   const canTechnicianCompleteOrder =
     isTechnician &&
     !isReadOnly &&
+    isTechnicianAssigned &&
     currentOrder.estado === validStatuses.EN_PROCESO;
+
+  const canPauseOrder =
+    !isReadOnly &&
+    currentOrder.estado === validStatuses.EN_PROCESO &&
+    ((isTechnician && isTechnicianAssigned) || isAdminOrSecretaria);
+
+  const canResumeOrder =
+    !isReadOnly &&
+    currentOrder.estado === validStatuses.PAUSADA &&
+    ((isTechnician && isTechnicianAssigned) || isAdminOrSecretaria);
+
+  const canCreateEmergency =
+    isAdminOrSecretaria &&
+    !isReadOnly &&
+    (currentOrder.estado === validStatuses.ASIGNADA ||
+      currentOrder.estado === validStatuses.EN_PROCESO);
 
   return (
     <div className={styles.container}>
@@ -374,15 +606,21 @@ export default function OrderDetail({
         <h1>Orden de Servicio #{currentOrder.orden_id}</h1>
         <div className={styles.statusRow}>
           <span
-            className={`${styles.statusBadge} ${getStatusColor(currentOrder.estado)}`}
+            className={`${styles.statusBadge} ${getStatusColor(
+              currentOrder.estado,
+            )}`}
           >
             {currentOrder.estado}
           </span>
-          <span
-            className={`${styles.billingBadge} ${getBillingColor(currentOrder.estado_facturacion)}`}
-          >
-            {currentOrder.estado_facturacion}
-          </span>
+          {currentOrder.estado_facturacion !== "" && (
+            <span
+              className={`${styles.billingBadge} ${getBillingColor(
+                currentOrder.estado_facturacion,
+              )}`}
+            >
+              {currentOrder.estado_facturacion}
+            </span>
+          )}
           {currentOrder.factura_pdf_url && (
             <a
               href={`${apiUrl}${currentOrder.factura_pdf_url}`}
@@ -399,6 +637,7 @@ export default function OrderDetail({
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.detailsGrid}>
+        {/* ... DETALLES (Cliente, Servicio, etc) - Se mantienen igual ... */}
         <div className={styles.section}>
           <h3>Información Cliente</h3>
           {currentOrder.cliente_empresa && (
@@ -410,14 +649,16 @@ export default function OrderDetail({
           <div className={styles.detailItem}>
             <strong>Cliente:</strong>
             <span>
-              {currentOrder.cliente.nombre} {currentOrder.cliente.apellido}
+              {currentOrder.cliente?.nombre || ""}{" "}
+              {currentOrder.cliente?.apellido || ""}
             </span>
           </div>
           <div className={styles.detailItem}>
             <strong>Teléfono:</strong>
             <span>
               {currentOrder.cliente_empresa?.telefono ||
-                currentOrder.cliente.telefono}
+                currentOrder.cliente?.telefono ||
+                "No disponible"}
             </span>
           </div>
         </div>
@@ -432,15 +673,12 @@ export default function OrderDetail({
             <strong>Descripción:</strong>
             <span>{currentOrder.servicio.descripcion || "N/A"}</span>
           </div>
-
           {currentOrder.tipo_servicio && (
             <div className={styles.detailItem}>
               <strong>Tipo:</strong>
               <span>{currentOrder.tipo_servicio}</span>
             </div>
           )}
-
-          {/* NUEVO: Campo Clase de Mantenimiento */}
           {currentOrder.maintenance_type && (
             <div className={styles.detailItem}>
               <strong>Clase:</strong>
@@ -449,7 +687,6 @@ export default function OrderDetail({
               </span>
             </div>
           )}
-
           {currentOrder.servicio.categoria_servicio && (
             <div className={styles.detailItem}>
               <strong>Categoría:</strong>
@@ -459,16 +696,48 @@ export default function OrderDetail({
         </div>
 
         <div className={styles.section}>
-          <h3>Técnico</h3>
-          {currentOrder.tecnico ? (
-            <div className={styles.detailItem}>
-              <strong>Nombre:</strong>
-              <span>
-                {currentOrder.tecnico.nombre} {currentOrder.tecnico.apellido}
-              </span>
+          <h3>Técnicos Asignados</h3>
+          {currentOrder.technicians && currentOrder.technicians.length > 0 ? (
+            <div className={styles.techniciansList}>
+              {currentOrder.technicians.map((tech) => (
+                <div key={tech.id} className={styles.technicianItem}>
+                  <div className={styles.technicianInfo}>
+                    <strong>
+                      {tech.technician.nombre} {tech.technician.apellido}
+                      {tech.isLeader && (
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            padding: "2px 6px",
+                            backgroundColor: "#fef3c7",
+                            color: "#92400e",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                          }}
+                        >
+                          Líder
+                        </span>
+                      )}
+                    </strong>
+                    <span>{tech.technician.email}</span>
+                    <span>📞 {tech.technician.telefono || "N/A"}</span>
+                  </div>
+                  {isAdminOrSecretaria &&
+                    (currentOrder.estado === validStatuses.PENDIENTE ||
+                      currentOrder.estado === validStatuses.ASIGNADA) && (
+                      <button
+                        className={styles.removeTechnicianButton}
+                        onClick={() => handleUnassignTechnician(tech.tecnicoId)}
+                        disabled={loading}
+                      >
+                        Quitar
+                      </button>
+                    )}
+                </div>
+              ))}
             </div>
           ) : (
-            <span className={styles.unassigned}>Sin asignar</span>
+            <span className={styles.unassigned}>Sin técnicos asignados</span>
           )}
         </div>
 
@@ -623,10 +892,14 @@ export default function OrderDetail({
             {currentOrder.servicio.tipo_trabajo === "Instalación"
               ? !currentOrder.equipos || currentOrder.equipos.length === 0
                 ? "Instalación sin hoja de vida asociada."
-                : `Instalación con ${currentOrder.equipos.length} equipo${currentOrder.equipos.length !== 1 ? "s" : ""} asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`
+                : `Instalación con ${currentOrder.equipos.length} equipo${
+                    currentOrder.equipos.length !== 1 ? "s" : ""
+                  } asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`
               : !currentOrder.equipos || currentOrder.equipos.length === 0
                 ? "Mantenimiento sin hoja de vida asociada."
-                : `Mantenimiento con ${currentOrder.equipos.length} equipo${currentOrder.equipos.length !== 1 ? "s" : ""} asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`}
+                : `Mantenimiento con ${currentOrder.equipos.length} equipo${
+                    currentOrder.equipos.length !== 1 ? "s" : ""
+                  } asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`}
           </p>
         </div>
       )}
@@ -638,6 +911,7 @@ export default function OrderDetail({
         </div>
       )}
 
+      {/* ACCIONES */}
       <div className={styles.actions}>
         {currentOrder.cliente_empresa && !isClient && (
           <button
@@ -657,9 +931,30 @@ export default function OrderDetail({
             className={styles.secondaryButton}
             onClick={handleOpenInventoryModal}
           >
-            Asignar H/I
+            Asignar Herramienta/Insumo
           </button>
         )}
+
+        {canBillingStatus && (
+          <button
+            className={styles.secondaryButton}
+            onClick={handleOpenBillingModal}
+          >
+            Asignar Estado de Facturación
+          </button>
+        )}
+
+        {/* Botón de Orden de Emergencia */}
+        {canCreateEmergency && (
+          <button
+            className={styles.invoiceButton}
+            onClick={handleOpenEmergencyModal}
+            disabled={loading}
+          >
+            Crear Orden de Emergencia
+          </button>
+        )}
+
         {canUploadInvoice && (
           <button
             className={styles.invoiceButton}
@@ -671,13 +966,14 @@ export default function OrderDetail({
 
         {isAdminOrSecretaria &&
           !isReadOnly &&
-          currentOrder.estado !== validStatuses.CANCELADA && (
+          currentOrder.estado !== validStatuses.CANCELADA &&
+          currentOrder.estado !== validStatuses.COMPLETADO && (
             <div className={styles.adminActions}>
               <button
                 className={styles.assignButton}
                 onClick={() => setShowAssignForm(true)}
               >
-                Asignar Técnico
+                Asignar Técnico(s)
               </button>
               {normalizedUserRole === "admin" && (
                 <button
@@ -687,16 +983,6 @@ export default function OrderDetail({
                   Rechazar
                 </button>
               )}
-              {currentOrder.tecnico &&
-                (currentOrder.estado === validStatuses.PENDIENTE ||
-                  currentOrder.estado === validStatuses.ASIGNADA) && (
-                  <button
-                    className={styles.cancelButton}
-                    onClick={handleUnassignTechnician}
-                  >
-                    Quitar Técnico
-                  </button>
-                )}
             </div>
           )}
 
@@ -707,6 +993,30 @@ export default function OrderDetail({
             disabled={loading}
           >
             Iniciar Orden
+          </button>
+        )}
+
+        {/* NUEVOS: Pausar / Reanudar */}
+        {canPauseOrder && (
+          <button
+            className={styles.startButton}
+            onClick={() => {
+              setPauseObservation("");
+              setShowPauseModal(true);
+            }}
+            disabled={loading}
+          >
+            Pausar Orden
+          </button>
+        )}
+
+        {canResumeOrder && (
+          <button
+            className={styles.startButton}
+            onClick={() => handleStatusUpdate(validStatuses.EN_PROCESO)}
+            disabled={loading}
+          >
+            Reanudar Orden
           </button>
         )}
 
@@ -772,15 +1082,14 @@ export default function OrderDetail({
                 ×
               </button>
             </div>
-            
             {inventoryLoading && (
-              <div className={styles.loading}>Cargando inventario disponible...</div>
+              <div className={styles.loading}>
+                Cargando inventario disponible...
+              </div>
             )}
-            
             {inventoryError && (
               <div className={styles.error}>{inventoryError}</div>
             )}
-            
             {!inventoryLoading && (
               <>
                 {inventoryItems.length === 0 ? (
@@ -796,7 +1105,9 @@ export default function OrderDetail({
                         value={selectedInventoryId}
                         onChange={(e) => {
                           setSelectedInventoryId(
-                            Number(e.target.value) ? Number(e.target.value) : ""
+                            Number(e.target.value)
+                              ? Number(e.target.value)
+                              : "",
                           );
                           setSelectedQuantity(1);
                         }}
@@ -804,16 +1115,16 @@ export default function OrderDetail({
                         <option value="">Seleccionar ítem disponible...</option>
                         {inventoryItems.map((i: Inventory) => (
                           <option key={i.inventarioId} value={i.inventarioId}>
-                            {i.nombreItem} ({i.tipo}) - Stock: {
-                              i.tipo === "insumo" ? i.cantidadActual : "Disponible"
-                            }
+                            {i.nombreItem} ({i.tipo}) - Stock:{" "}
+                            {i.tipo === "insumo"
+                              ? i.cantidadActual
+                              : "Disponible"}
                           </option>
                         ))}
                       </select>
                     </div>
-                    
                     {inventoryItems.find(
-                      (i: Inventory) => i.inventarioId === selectedInventoryId
+                      (i: Inventory) => i.inventarioId === selectedInventoryId,
                     )?.tipo === "insumo" && (
                       <div className={styles.formRow}>
                         <label>Cantidad a usar</label>
@@ -826,13 +1137,14 @@ export default function OrderDetail({
                           }
                         />
                         <small className={styles.helperText}>
-                          Máximo disponible: {
-                            inventoryItems.find((i: Inventory) => i.inventarioId === selectedInventoryId)?.cantidadActual || 0
-                          }
+                          Máximo disponible:{" "}
+                          {inventoryItems.find(
+                            (i: Inventory) =>
+                              i.inventarioId === selectedInventoryId,
+                          )?.cantidadActual || 0}
                         </small>
                       </div>
                     )}
-                    
                     <div className={styles.formActions}>
                       <button onClick={() => setShowInventoryModal(false)}>
                         Cancelar
@@ -855,21 +1167,108 @@ export default function OrderDetail({
       {showAssignForm && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Asignar Técnico</h3>
-            <select
-              className={styles.technicianSelect}
-              onChange={(e) => setSelectedTechnician(Number(e.target.value))}
-            >
-              <option value="">Seleccionar...</option>
-              {technicians.map((t: Usuario) => (
-                <option key={t.usuarioId} value={t.usuarioId}>
-                  {t.nombre} {t.apellido}
-                </option>
-              ))}
-            </select>
-            <div className={styles.modalActions}>
-              <button onClick={() => setShowAssignForm(false)}>Cancelar</button>
-              <button onClick={handleAssignTechnician}>Guardar</button>
+            <div className={styles.modalHeaderRow}>
+              <h3>Asignar Técnico(s)</h3>
+              <button
+                onClick={() => {
+                  setShowAssignForm(false);
+                  setSelectedTechnicians([]);
+                  setLeaderTechnicianId(null);
+                }}
+                className={styles.modalCloseButton}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.formRow}>
+              <label>Seleccionar Técnicos</label>
+              <div
+                style={{
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "8px",
+                }}
+              >
+                {technicians.map((t: Usuario) => (
+                  <div
+                    key={t.usuarioId}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "8px",
+                      borderBottom: "1px solid #f3f4f6",
+                      cursor: "pointer",
+                      backgroundColor: selectedTechnicians.includes(t.usuarioId)
+                        ? "#eff6ff"
+                        : "transparent",
+                    }}
+                    onClick={() => toggleTechnicianSelection(t.usuarioId)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTechnicians.includes(t.usuarioId)}
+                      onChange={() => toggleTechnicianSelection(t.usuarioId)}
+                      style={{ marginRight: "12px" }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <strong>
+                        {t.nombre} {t.apellido}
+                      </strong>
+                      <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+                        {t.email}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <small className={styles.helperText}>
+                Seleccione uno o más técnicos para asignar a esta orden.
+              </small>
+            </div>
+            {selectedTechnicians.length > 1 && (
+              <div className={styles.formRow}>
+                <label>Técnico Líder</label>
+                <select
+                  className={styles.technicianSelect}
+                  value={leaderTechnicianId || ""}
+                  onChange={(e) =>
+                    setLeaderTechnicianId(Number(e.target.value))
+                  }
+                >
+                  {selectedTechnicians.map((techId) => {
+                    const tech = technicians.find(
+                      (t) => t.usuarioId === techId,
+                    );
+                    return (
+                      <option key={techId} value={techId}>
+                        {tech?.nombre} {tech?.apellido}
+                      </option>
+                    );
+                  })}
+                </select>
+                <small className={styles.helperText}>
+                  El líder será el responsable principal de la orden.
+                </small>
+              </div>
+            )}
+            <div className={styles.formActions}>
+              <button
+                onClick={() => {
+                  setShowAssignForm(false);
+                  setSelectedTechnicians([]);
+                  setLeaderTechnicianId(null);
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAssignTechnicians}
+                disabled={selectedTechnicians.length === 0 || loading}
+              >
+                {loading ? "Asignando..." : "Asignar"}
+              </button>
             </div>
           </div>
         </div>
@@ -878,33 +1277,35 @@ export default function OrderDetail({
       {showRejectForm && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Rechazar</h3>
+            <h3>Rechazar Orden</h3>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className={styles.rejectTextarea}
-              placeholder="Motivo..."
+              placeholder="Ingrese el motivo del rechazo..."
             />
             <div className={styles.modalActions}>
               <button onClick={() => setShowRejectForm(false)}>Cancelar</button>
               <button
                 onClick={handleRejectOrder}
                 className={styles.rejectButton}
+                disabled={!rejectReason.trim() || loading}
               >
-                Rechazar
+                {loading ? "Rechazando..." : "Rechazar"}
               </button>
             </div>
           </div>
         </div>
       )}
+
       {showInvoiceModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Factura</h3>
+            <h3>Subir Factura</h3>
             {invoiceError && <div className={styles.error}>{invoiceError}</div>}
             <form onSubmit={handleUploadInvoice}>
               <div className={styles.formRow}>
-                <label>PDF</label>
+                <label>Archivo PDF</label>
                 <input
                   type="file"
                   accept="application/pdf"
@@ -918,11 +1319,243 @@ export default function OrderDetail({
                 >
                   Cancelar
                 </button>
-                <button type="submit" disabled={invoiceLoading}>
+                <button type="submit" disabled={invoiceLoading || !invoiceFile}>
                   Subir
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EMERGENCIA CON SELECCIÓN DE EQUIPOS Y TÉCNICO */}
+      {showEmergencyModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <h3>Crear Orden de Emergencia</h3>
+            <p style={{ marginBottom: "12px", fontSize: "0.9rem" }}>
+              Esta acción creará una nueva orden de emergencia.
+            </p>
+
+            {/* SELECCIÓN DE TÉCNICO (Solo si hay más de uno) */}
+            {currentOrder.technicians && currentOrder.technicians.length > 1 ? (
+              <div className={styles.formRow}>
+                <label style={{ fontWeight: 600 }}>
+                  Seleccione el técnico para la emergencia:
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    maxHeight: "150px",
+                    overflowY: "auto",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    padding: "8px",
+                    marginBottom: "12px",
+                  }}
+                >
+                  {currentOrder.technicians.map((tech) => (
+                    <label
+                      key={tech.tecnicoId}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="emergencyTech"
+                        value={tech.tecnicoId}
+                        checked={selectedEmergencyTechId === tech.tecnicoId}
+                        onChange={() =>
+                          setSelectedEmergencyTechId(tech.tecnicoId)
+                        }
+                      />
+                      {tech.technician.nombre} {tech.technician.apellido}
+                      {tech.isLeader && (
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            backgroundColor: "#fef3c7",
+                            padding: "2px 4px",
+                            borderRadius: "4px",
+                          }}
+                        >
+                          {" "}
+                          (Líder)
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className={styles.warning}>
+                <p>
+                  El técnico actual{" "}
+                  <strong>
+                    {currentOrder.technicians?.[0]?.technician.nombre}
+                  </strong>{" "}
+                  será asignado a la emergencia.
+                </p>
+              </div>
+            )}
+
+            <p
+              style={{
+                marginBottom: "8px",
+                fontWeight: 600,
+                marginTop: "12px",
+              }}
+            >
+              Seleccione los equipos que atenderá en esta emergencia:
+            </p>
+
+            {loadingEquipments ? (
+              <div className={styles.loading}>Cargando equipos...</div>
+            ) : clientEquipments.length === 0 ? (
+              <div className={styles.warning}>
+                El cliente no tiene equipos registrados.
+              </div>
+            ) : (
+              <div
+                style={{
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "8px",
+                  marginBottom: "16px",
+                }}
+              >
+                {clientEquipments.map((eq) => (
+                  <div
+                    key={eq.equipmentId}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: "8px",
+                      borderBottom: "1px solid #f3f4f6",
+                      cursor: "pointer",
+                      backgroundColor: selectedEmergencyEquipments.includes(
+                        eq.equipmentId,
+                      )
+                        ? "#eff6ff"
+                        : "transparent",
+                    }}
+                    onClick={() => toggleEmergencyEquipment(eq.equipmentId)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmergencyEquipments.includes(
+                        eq.equipmentId,
+                      )}
+                      onChange={() => toggleEmergencyEquipment(eq.equipmentId)}
+                      style={{ marginRight: "12px" }}
+                    />
+                    <div>
+                      <strong>
+                        {eq.code || `#${eq.equipmentId}`} - {eq.category}
+                      </strong>
+                      <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                        {eq.subArea?.nombreSubArea ||
+                          eq.area?.nombreArea ||
+                          "Sin ubicación"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowEmergencyModal(false)}>
+                Cancelar
+              </button>
+              <button onClick={confirmEmergencyOrder} disabled={loading}>
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PAUSA */}
+      {showPauseModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <h3>Pausar Orden</h3>
+            <p style={{ marginBottom: "8px" }}>
+              Ingrese el motivo de la pausa (quedará registrado en el
+              historial).
+            </p>
+            <textarea
+              className={styles.rejectTextarea}
+              value={pauseObservation}
+              onChange={(e) => setPauseObservation(e.target.value)}
+              placeholder="Ej: Esperando repuestos, cliente no disponible, etc."
+            />
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowPauseModal(false)}>Cancelar</button>
+              <button
+                onClick={() => {
+                  handleStatusUpdate(validStatuses.PAUSADA, pauseObservation);
+                  setShowPauseModal(false);
+                }}
+                disabled={loading}
+              >
+                Confirmar Pausa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showBillingModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeaderRow}>
+              <h3>Asignar Estado de Facturación</h3>
+              <button
+                onClick={() => setShowBillingModal(false)}
+                className={styles.modalCloseButton}
+              >
+                ×
+              </button>
+            </div>
+
+            {billingError && <div className={styles.error}>{billingError}</div>}
+
+            <div className={styles.formRow}>
+              <label>Estado de Facturación</label>
+              <select
+                className={styles.technicianSelect}
+                value={selectedBillingStatus}
+                onChange={(e) =>
+                  setSelectedBillingStatus(e.target.value as BillingEstado)
+                }
+              >
+                <option value="">Seleccionar estado...</option>
+                <option value="Sin facturar">Sin factura</option>
+                <option value="Por facturar">Por facturar</option>
+                <option value="Garantía">Garantía</option>
+              </select>
+            </div>
+
+            <div className={styles.formActions}>
+              <button onClick={() => setShowBillingModal(false)}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleAssignBillingStatus}
+                disabled={!selectedBillingStatus || loading}
+              >
+                Guardar
+              </button>
+            </div>
           </div>
         </div>
       )}

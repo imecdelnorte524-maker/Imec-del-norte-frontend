@@ -27,7 +27,29 @@ export default function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
 
-  // Filtrar usuarios según estado y búsqueda
+  // Función segura para obtener el nombre del rol
+  const getSafeRoleName = (usuario: Usuario): string => {
+    if (!usuario.role) {
+      return "Sin rol";
+    }
+    return usuario.role.nombreRol || usuario.role.nombreRol || "Sin nombre";
+  };
+
+  // Función segura para obtener la clase CSS del rol
+  const getSafeRoleClass = (usuario: Usuario): string => {
+    const roleName = getSafeRoleName(usuario).toLowerCase();
+    // Validar que la clase CSS exista
+    const validRoles = [
+      "admin",
+      "técnico",
+      "cliente",
+      "secretaria",
+      "supervisor",
+    ];
+    return validRoles.includes(roleName) ? roleName : "default";
+  };
+
+  // Filtrar usuarios según estado y búsqueda (con manejo seguro)
   const usuariosFiltrados = usuarios.filter((usuario) => {
     const coincideEstado =
       filtroEstado === "todos" ||
@@ -36,11 +58,16 @@ export default function Users() {
 
     const coincideBusqueda =
       busqueda === "" ||
-      usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.email.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.username.toLowerCase().includes(busqueda.toLowerCase()) ||
-      usuario.cedula.toLowerCase().includes(busqueda.toLowerCase());
+      (usuario.nombre &&
+        usuario.nombre.toLowerCase().includes(busqueda.toLowerCase())) ||
+      (usuario.apellido &&
+        usuario.apellido.toLowerCase().includes(busqueda.toLowerCase())) ||
+      (usuario.email &&
+        usuario.email.toLowerCase().includes(busqueda.toLowerCase())) ||
+      (usuario.username &&
+        usuario.username.toLowerCase().includes(busqueda.toLowerCase())) ||
+      (usuario.cedula &&
+        usuario.cedula.toLowerCase().includes(busqueda.toLowerCase()));
 
     return coincideEstado && coincideBusqueda;
   });
@@ -49,7 +76,7 @@ export default function Users() {
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
 
-  // Obtener usuarios para la página actual
+  // Obtener usuarios para la página actual (con verificación)
   const currentUsers = usuariosFiltrados.slice(
     indexOfFirstUser,
     indexOfLastUser,
@@ -88,7 +115,7 @@ export default function Users() {
 
   const handleToggleStatus = async (usuario: Usuario) => {
     const confirmacion = window.confirm(
-      `¿Estás seguro de que quieres ${usuario.activo ? "desactivar" : "activar"} a ${usuario.nombre} ${usuario.apellido}?`,
+      `¿Estás seguro de que quieres ${usuario.activo ? "desactivar" : "activar"} a ${usuario.nombre || "este usuario"}?`,
     );
 
     if (confirmacion) {
@@ -182,69 +209,79 @@ export default function Users() {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentUsers.map((usuario) => (
-                      <tr key={usuario.usuarioId}>
-                        <td>
-                          <div className={styles.userInfo}>
-                            <strong
-                              className={styles.userNameDesktop}
-                              data-fullname={`${usuario.nombre} ${usuario.apellido}`}
-                              title={`${usuario.nombre} ${usuario.apellido}`}
-                            >
-                              {usuario.nombre} {usuario.apellido}
-                            </strong>
-                          </div>
-                        </td>
-                        <td
-                          className={styles.emailCell}
-                          data-fulltext={usuario.email}
-                          title={usuario.email}
-                        >
-                          {usuario.email}
-                        </td>
-                        <td>
-                          <span
-                            className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}
-                            data-fullrole={usuario.role.nombreRol}
-                            title={usuario.role.nombreRol}
+                    {currentUsers.map((usuario) => {
+                      const roleName = getSafeRoleName(usuario);
+                      const roleClass = getSafeRoleClass(usuario);
+
+                      return (
+                        <tr key={usuario.usuarioId}>
+                          <td>
+                            <div className={styles.userInfo}>
+                              <strong
+                                className={styles.userNameDesktop}
+                                data-fullname={`${usuario.nombre || ""} ${usuario.apellido || ""}`}
+                                title={`${usuario.nombre || ""} ${usuario.apellido || ""}`}
+                              >
+                                {usuario.nombre || "Sin nombre"}{" "}
+                                {usuario.apellido || ""}
+                              </strong>
+                            </div>
+                          </td>
+                          <td
+                            className={styles.emailCell}
+                            data-fulltext={usuario.email || "Sin email"}
+                            title={usuario.email || "Sin email"}
                           >
-                            {usuario.role.nombreRol}
-                          </span>
-                        </td>
-                        <td
-                          className={styles.phoneCell}
-                          data-fulltext={usuario.telefono || "No especificado"}
-                          title={usuario.telefono || "No especificado"}
-                        >
-                          {usuario.telefono || "No especificado"}
-                        </td>
-                        <td>
-                          <span
-                            className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}
+                            {usuario.email || "Sin email"}
+                          </td>
+                          <td>
+                            <span
+                              className={`${styles.role} ${styles[roleClass]}`}
+                              data-fullrole={roleName}
+                              title={roleName}
+                            >
+                              {roleName}
+                            </span>
+                          </td>
+                          <td
+                            className={styles.phoneCell}
+                            data-fulltext={
+                              usuario.telefono || "No especificado"
+                            }
+                            title={usuario.telefono || "No especificado"}
                           >
-                            {usuario.activo ? "Activo" : "Inactivo"}
-                          </span>
-                        </td>
-                        <td>
-                          <div className={styles.actions}>
-                            <button
-                              className={styles.btnAction}
-                              onClick={() => handleEdit(usuario)}
-                              title="Editar"
+                            {usuario.telefono || "No especificado"}
+                          </td>
+                          <td>
+                            <span
+                              className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}
                             >
-                              ✏️
-                            </button>
-                            <button
-                              className={`${styles.btnAction} ${usuario.activo ? styles.deactivate : styles.activate}`}
-                              onClick={() => handleToggleStatus(usuario)}
-                              title={usuario.activo ? "Desactivar" : "Activar"}
-                            >
-                              {usuario.activo ? "⏸️" : "▶️"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {usuario.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </td>
+                          <td>
+                            <div className={styles.actions}>
+                              <button
+                                className={styles.btnAction}
+                                onClick={() => handleEdit(usuario)}
+                                title="Editar"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className={`${styles.btnAction} ${usuario.activo ? styles.deactivate : styles.activate}`}
+                                onClick={() => handleToggleStatus(usuario)}
+                                title={
+                                  usuario.activo ? "Desactivar" : "Activar"
+                                }
+                              >
+                                {usuario.activo ? "⏸️" : "▶️"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -252,116 +289,127 @@ export default function Users() {
 
             {/* Vista de tarjetas para móvil */}
             <div className={styles.mobileView}>
-              {currentUsers.map((usuario) => (
-                <div key={usuario.usuarioId} className={styles.mobileCard}>
-                  <div className={styles.cardHeader}>
-                    <div className={styles.userMainInfo}>
-                      <h3
-                        className={styles.userNameMobile}
-                        data-fullname={`${usuario.nombre} ${usuario.apellido}`}
-                        tabIndex={0}
-                      >
-                        {usuario.nombre} {usuario.apellido}
-                      </h3>
-                      <p
-                        className={styles.userEmail}
-                        data-fulltext={usuario.email}
-                        tabIndex={0}
-                      >
-                        {usuario.email}
-                      </p>
-                    </div>
-                    <div className={styles.cardActions}>
-                      <button
-                        className={styles.btnAction}
-                        onClick={() => handleEdit(usuario)}
-                        title="Editar"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        className={`${styles.btnAction} ${usuario.activo ? styles.deactivate : styles.activate}`}
-                        onClick={() => handleToggleStatus(usuario)}
-                        title={usuario.activo ? "Desactivar" : "Activar"}
-                      >
-                        {usuario.activo ? "⏸️" : "▶️"}
-                      </button>
-                    </div>
-                  </div>
+              {currentUsers.map((usuario) => {
+                const roleName = getSafeRoleName(usuario);
+                const roleClass = getSafeRoleClass(usuario);
 
-                  <div className={styles.cardContent}>
-                    <div className={styles.cardDetails}>
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Usuario:</span>
-                        <span className={styles.detailValue}>
-                          <span
-                            className={styles.truncatedText}
-                            data-fulltext={usuario.username}
-                            tabIndex={0}
-                          >
-                            {usuario.username}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Cédula:</span>
-                        <span className={styles.detailValue}>
-                          <span
-                            className={styles.truncatedText}
-                            data-fulltext={`${usuario.tipoCedula} ${usuario.cedula}`}
-                            tabIndex={0}
-                          >
-                            {usuario.tipoCedula} {usuario.cedula}
-                          </span>
-                        </span>
-                      </div>
-
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Rol:</span>
-                        <span
-                          className={`${styles.role} ${styles[usuario.role.nombreRol.toLowerCase()]}`}
-                          data-fullrole={usuario.role.nombreRol}
+                return (
+                  <div key={usuario.usuarioId} className={styles.mobileCard}>
+                    <div className={styles.cardHeader}>
+                      <div className={styles.userMainInfo}>
+                        <h3
+                          className={styles.userNameMobile}
+                          data-fullname={`${usuario.nombre || ""} ${usuario.apellido || ""}`}
                           tabIndex={0}
                         >
-                          {usuario.role.nombreRol}
-                        </span>
+                          {usuario.nombre || "Sin nombre"}{" "}
+                          {usuario.apellido || ""}
+                        </h3>
+                        <p
+                          className={styles.userEmail}
+                          data-fulltext={usuario.email || "Sin email"}
+                          tabIndex={0}
+                        >
+                          {usuario.email || "Sin email"}
+                        </p>
                       </div>
+                      <div className={styles.cardActions}>
+                        <button
+                          className={styles.btnAction}
+                          onClick={() => handleEdit(usuario)}
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className={`${styles.btnAction} ${usuario.activo ? styles.deactivate : styles.activate}`}
+                          onClick={() => handleToggleStatus(usuario)}
+                          title={usuario.activo ? "Desactivar" : "Activar"}
+                        >
+                          {usuario.activo ? "⏸️" : "▶️"}
+                        </button>
+                      </div>
+                    </div>
 
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Teléfono:</span>
-                        <span className={styles.detailValue}>
+                    <div className={styles.cardContent}>
+                      <div className={styles.cardDetails}>
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Usuario:</span>
+                          <span className={styles.detailValue}>
+                            <span
+                              className={styles.truncatedText}
+                              data-fulltext={usuario.username || "Sin usuario"}
+                              tabIndex={0}
+                            >
+                              {usuario.username || "Sin usuario"}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Cédula:</span>
+                          <span className={styles.detailValue}>
+                            <span
+                              className={styles.truncatedText}
+                              data-fulltext={`${usuario.tipoCedula || ""} ${usuario.cedula || ""}`}
+                              tabIndex={0}
+                            >
+                              {usuario.tipoCedula || ""}{" "}
+                              {usuario.cedula || "Sin cédula"}
+                            </span>
+                          </span>
+                        </div>
+
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Rol:</span>
                           <span
-                            className={styles.truncatedText}
-                            data-fulltext={
-                              usuario.telefono || "No especificado"
-                            }
+                            className={`${styles.role} ${styles[roleClass]}`}
+                            data-fullrole={roleName}
                             tabIndex={0}
                           >
-                            {usuario.telefono || "No especificado"}
+                            {roleName}
                           </span>
-                        </span>
-                      </div>
+                        </div>
 
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Estado:</span>
-                        <span
-                          className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}
-                        >
-                          {usuario.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Teléfono:</span>
+                          <span className={styles.detailValue}>
+                            <span
+                              className={styles.truncatedText}
+                              data-fulltext={
+                                usuario.telefono || "No especificado"
+                              }
+                              tabIndex={0}
+                            >
+                              {usuario.telefono || "No especificado"}
+                            </span>
+                          </span>
+                        </div>
 
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Registro:</span>
-                        <span className={styles.detailValue}>
-                          {new Date(usuario.fechaCreacion).toLocaleDateString()}
-                        </span>
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Estado:</span>
+                          <span
+                            className={`${styles.status} ${usuario.activo ? styles.activo : styles.inactivo}`}
+                          >
+                            {usuario.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
+
+                        <div className={styles.detailRow}>
+                          <span className={styles.detailLabel}>Registro:</span>
+                          <span className={styles.detailValue}>
+                            {usuario.fechaCreacion
+                              ? new Date(
+                                  usuario.fechaCreacion,
+                                ).toLocaleDateString()
+                              : "No disponible"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {usuariosFiltrados.length === 0 && (
