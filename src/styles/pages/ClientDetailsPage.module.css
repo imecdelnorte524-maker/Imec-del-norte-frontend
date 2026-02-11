@@ -1331,3 +1331,7 @@
     height: 250px;
   }
 }
+
+.equipmentLink{
+  text-decoration: none;
+}
