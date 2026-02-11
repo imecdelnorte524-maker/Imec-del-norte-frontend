@@ -771,6 +771,7 @@ export default function OrderDetail({
                   <thead>
                     <tr>
                       <th>Código</th>
+                      <th>Ubicación</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -778,6 +779,20 @@ export default function OrderDetail({
                     {currentOrder.equipos.map((equipo) => (
                       <tr key={equipo.equipmentId}>
                         <td>{equipo.code || `#${equipo.equipmentId}`}</td>
+                        <td>
+                          {equipo.subArea?.nombre ? (
+                            <span>
+                              {equipo.area?.nombre &&
+                                `${equipo.area.nombre} - ${equipo.subArea.nombre}`}
+                            </span>
+                          ) : equipo.area?.nombre ? (
+                            <span>{equipo.area.nombre}</span>
+                          ) : (
+                            <span className={styles.unassigned}>
+                              Sin ubicación
+                            </span>
+                          )}
+                        </td>
                         <td>
                           {!isClient && (
                             <Link
