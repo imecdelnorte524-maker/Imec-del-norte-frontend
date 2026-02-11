@@ -1,0 +1,317 @@
+.section {
+  background: var(--surface);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  flex-wrap: wrap;
+}
+
+.backButton {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  min-height: 44px; /* Tamaño mínimo táctil */
+}
+
+.backButton:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-default);
+}
+
+.sectionTitle {
+  font-size: clamp(1.5rem, 4vw, 2rem); /* Tamaño de fuente responsive */
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  min-width: 0; /* Para prevenir overflow */
+  word-wrap: break-word;
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.primaryButton {
+  background: #10B981;
+  color: var(--text-inverse);
+  border: none;
+  padding: clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem);
+  border-radius: var(--border-radius);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  min-height: 44px; /* Tamaño mínimo táctil */
+  white-space: nowrap;
+}
+
+.primaryButton:hover {
+  background: #059669;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--spacing-sm);
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 2px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: clamp(0.5rem, 2vw, 0.75rem) clamp(1rem, 3vw, 1.5rem);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  min-height: 44px; /* Tamaño mínimo táctil */
+  flex-shrink: 0;
+}
+
+.tab:hover {
+  background: var(--surface-muted);
+  color: var(--text-primary);
+}
+
+.activeTab {
+  background: var(--primary-50);
+  color: var(--primary-600);
+  border-bottom: 2px solid var(--primary-500);
+}
+
+/* Contenido */
+.content {
+  background: var(--surface);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  overflow: hidden; /* Previene problemas de overflow */
+}
+
+.contentSection h2 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  word-wrap: break-word;
+}
+
+.contentSection p {
+  color: var(--text-secondary);
+  margin: 0 0 var(--spacing-md) 0;
+  line-height: 1.6;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+}
+
+/* Responsive - Mobile First Approach */
+@media (max-width: 1024px) {
+  .section {
+    padding: var(--spacing-lg);
+  }
+  
+  .sectionHeader {
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .headerActions {
+    gap: var(--spacing-sm);
+  }
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+  }
+  
+  .sectionHeader {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .backButton {
+    order: 1;
+    flex-shrink: 0;
+  }
+  
+  .sectionTitle {
+    order: 3;
+    flex: 1 0 100%;
+    margin-top: var(--spacing-sm);
+    text-align: left;
+  }
+  
+  .headerActions {
+    order: 2;
+    flex: 1;
+    justify-content: flex-end;
+    gap: var(--spacing-xs);
+  }
+  
+  .primaryButton {
+    padding: 0.5rem 1rem;
+  }
+  
+  .tabs {
+    gap: var(--spacing-xs);
+    padding-bottom: var(--spacing-xs);
+    margin-bottom: var(--spacing-lg);
+  }
+  
+  .tab {
+    padding: 0.5rem 1rem;
+    min-width: max-content;
+  }
+  
+  .content {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
+  }
+  
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
+  }
+  
+  .backButton {
+    align-self: flex-start;
+    width: auto;
+  }
+  
+  .sectionTitle {
+    order: 2;
+    margin-top: 0;
+    text-align: center;
+  }
+  
+  .headerActions {
+    order: 3;
+    justify-content: stretch;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+  }
+  
+  .primaryButton {
+    flex: 1;
+    text-align: center;
+    padding: 0.75rem;
+  }
+  
+  .tabs {
+    flex-direction: column;
+    gap: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  
+  .tab {
+    border-bottom: 1px solid var(--border-subtle);
+    border-radius: 0;
+    text-align: left;
+    padding: 1rem;
+    min-height: auto;
+  }
+  
+  .tab:first-child {
+    border-top: 1px solid var(--border-subtle);
+  }
+  
+  .activeTab {
+    border-bottom: 2px solid var(--primary-500);
+    background: var(--primary-50);
+  }
+  
+  .content {
+    padding: var(--spacing-sm);
+  }
+  
+  .contentSection h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+/* Para pantallas muy pequeñas (móviles antiguos) */
+@media (max-width: 320px) {
+  .section {
+    padding: var(--spacing-xs);
+  }
+  
+  .headerActions {
+    flex-direction: column;
+  }
+  
+  .primaryButton {
+    width: 100%;
+  }
+}
+
+/* Soporte para modo oscuro automático */
+@media (prefers-color-scheme: dark) {
+  .primaryButton {
+    background: #059669;
+  }
+  
+  .primaryButton:hover {
+    background: #047857;
+  }
+  
+  .activeTab {
+    background: var(--primary-900);
+    color: var(--primary-200);
+  }
+}
+
+/* Mejoras para tablets en orientación horizontal */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .sectionHeader {
+    flex-wrap: nowrap;
+  }
+  
+  .tabs {
+    overflow-x: hidden;
+  }
+}

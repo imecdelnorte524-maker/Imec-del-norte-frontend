@@ -124,24 +124,28 @@
   white-space: nowrap;
 }
 
-/* --- GRID DE INFORMACIÓN --- */
+/* --- GRID / LAYOUT DE INFORMACIÓN --- */
+/* Ahora es una sola columna hacia abajo, ya no un grid de tarjetas */
 .detailsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
   box-sizing: border-box;
 }
 
+/* Las secciones ya no son "tarjetas": sin fondo blanco ni borde envolvente,
+   solo se separan con un borde inferior para que parezca una página continua */
 .section,
 .problemSection,
 .commentsSection {
-  background: var(--white);
-  padding: var(--spacing-lg);
-  border-radius: var(--border-radius-lg);
-  border: 1px solid var(--gray-200);
+  background: transparent;
+  padding: 0 0 var(--spacing-lg) 0;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--gray-200);
   box-sizing: border-box;
-  height: fit-content;
+  height: auto;
   overflow-wrap: break-word;
   min-width: 0;
 }
@@ -633,8 +637,9 @@ select {
     justify-content: center;
   }
 
+  /* Ya no usamos grid, solo ajustamos el gap si queremos más compacto en mobile */
   .detailsGrid {
-    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
 
   .detailItem {

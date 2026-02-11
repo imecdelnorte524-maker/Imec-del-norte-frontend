@@ -32,14 +32,10 @@ const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
       return "Completado";
     case "Cancelada":
       return "Cancelada";
-
-    // Estados ya "bonitos" (p.e. desde /dashboard/orders)
+  
     case "Pendiente":
     case "Asignada":
     case "En Proceso":
-    case "Pausada":
-    case "Completado":
-    case "Cancelada":
     case "Rechazada":
       return apiEstado as Order["estado"];
 

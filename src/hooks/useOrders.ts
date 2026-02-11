@@ -1,3 +1,4 @@
+// src/hooks/useOrders.ts
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import {
@@ -26,9 +27,49 @@ import type {
   CreateOrderData,
   UpdateOrderData,
 } from "../interfaces/OrderInterfaces";
+import { useSocket } from "../context/SocketContext"; // <-- NUEVO
+import { useSocketEvent } from "./useSocketEvent"; // <-- NUEVO
 
 // ---------------------------------------------------------------------------
-// Hook para la LISTA de órdenes del dashboard (admin/secretaria) - /dashboard/orders
+// Helper global de tiempo real para órdenes
+// ---------------------------------------------------------------------------
+function useWorkOrdersRealtime() {
+  const socket = useSocket();
+  const queryClient = useQueryClient();
+
+  const invalidateLists = () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+  };
+
+  const invalidateMetrics = () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardMetrics] });
+  };
+
+  const invalidateDetails = () => {
+    // Invalida todos los detalles: ["orderDetail", id]
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orderDetail] });
+  };
+
+  const onChange = () => {
+    invalidateLists();
+    invalidateMetrics();
+    invalidateDetails();
+  };
+
+  // No dependemos del payload, sólo invalidamos cache
+  useSocketEvent(socket, "workOrders.created", onChange);
+  useSocketEvent(socket, "workOrders.updated", onChange);
+  useSocketEvent(socket, "workOrders.deleted", onChange);
+  useSocketEvent(socket, "workOrders.statusUpdated", onChange);
+  useSocketEvent(socket, "workOrders.invoiceUpdated", onChange);
+  useSocketEvent(socket, "workOrders.assigned", onChange);
+  useSocketEvent(socket, "workOrders.emergencyCreated", onChange);
+}
+
+// ---------------------------------------------------------------------------
+// LISTA de órdenes del dashboard (/dashboard/orders)
 // ---------------------------------------------------------------------------
 export const useDashboardOrders = (filters?: {
   estado?: string;
@@ -41,6 +82,7 @@ export const useDashboardOrders = (filters?: {
   clienteId?: number;
 }) => {
   const queryClient = useQueryClient();
+  useWorkOrdersRealtime(); // activar WS
 
   const { data, isLoading, error } = useQuery({
     queryKey: [QUERY_KEYS.dashboardOrders, filters],
@@ -56,25 +98,23 @@ export const useDashboardOrders = (filters?: {
     loading: isLoading,
     error: error ? (error as Error).message : null,
     refreshOrders: () =>
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.dashboardOrders],
-      }),
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] }),
   };
 };
 
 // ---------------------------------------------------------------------------
-// Hook para mis órdenes (técnico/cliente) usando /work-orders
-// (lo puedes usar si quieres una vista “mis órdenes” aparte)
+// MIS ÓRDENES (técnico/cliente) usando /work-orders
 // ---------------------------------------------------------------------------
 export const useMyOrders = (filters?: {
   estado?: string; // "Pendiente", "Asignada", "En Proceso", ...
 }) => {
   const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
 
   const { data, isLoading, error } = useQuery({
     queryKey: [QUERY_KEYS.orders, "my", filters],
     queryFn: async () => {
-      const response = await getAllOrdersRequest(); // GET /work-orders
+      const response = await getAllOrdersRequest();
       let list: Order[] = response.services || [];
 
       if (filters?.estado) {
@@ -95,7 +135,7 @@ export const useMyOrders = (filters?: {
     orders: data?.services || [],
     total: data?.total || 0,
     page: data?.page || 1,
-    limit: data?.limit || (data?.services?.length || 0),
+    limit: data?.limit || data?.services?.length || 0,
     totalPages: data?.totalPages || 1,
     loading: isLoading,
     error: error ? (error as Error).message : null,
@@ -105,7 +145,7 @@ export const useMyOrders = (filters?: {
 };
 
 // ---------------------------------------------------------------------------
-// Hook para MIS SERVICIOS según rol (Técnico/Cliente) - /dashboard/mis-servicios
+// MIS SERVICIOS (/dashboard/mis-servicios)
 // ---------------------------------------------------------------------------
 export const useMyServices = (filters: {
   userRole: string;
@@ -118,6 +158,7 @@ export const useMyServices = (filters: {
   limit?: number;
 }) => {
   const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
 
   const { data, isLoading, error } = useQuery({
     queryKey: [QUERY_KEYS.myServices, filters],
@@ -138,13 +179,16 @@ export const useMyServices = (filters: {
 };
 
 // ---------------------------------------------------------------------------
-// Hook para MÉTRICAS del dashboard - /dashboard/metricas
+// MÉTRICAS dashboard (/dashboard/metricas)
 // ---------------------------------------------------------------------------
 export const useDashboardMetrics = () => {
+  useWorkOrdersRealtime();
+
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [QUERY_KEYS.dashboardMetrics],
     queryFn: getDashboardMetricsRequest,
-    refetchInterval: 30000,
+    // Si confías sólo en WS, puedes quitar el polling:
+    // refetchInterval: 30000,
   });
 
   return {
@@ -156,18 +200,19 @@ export const useDashboardMetrics = () => {
 };
 
 // ---------------------------------------------------------------------------
-// Hook para la LISTA de órdenes en OrdersPage (usa /work-orders para TODOS los roles)
+// LISTA de órdenes en OrdersPage (/work-orders)
 // ---------------------------------------------------------------------------
 export const useOrders = (
   userRole: "cliente" | "tecnico" | "admin" | "secretaria",
   filter: "all" | "pending" | "assigned" | "completed" | "cancelled" = "all",
 ) => {
   const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
 
   const { data, isLoading, error } = useQuery({
     queryKey: [QUERY_KEYS.orders, userRole, filter],
     queryFn: async () => {
-      const response = await getAllOrdersRequest(); // GET /work-orders
+      const response = await getAllOrdersRequest();
       let list: Order[] = response.services || [];
 
       const filterMap: Record<
@@ -184,22 +229,14 @@ export const useOrders = (
         const targetEstado = filterMap[filter];
 
         if (targetEstado) {
-          // Primero filtramos por estado
           list = list.filter((o) => o.estado === targetEstado);
 
-          // Para admin/secretaria, separamos “Pendiente sin técnico” vs “Asignada”
           if (userRole === "admin" || userRole === "secretaria") {
             if (filter === "pending") {
-              // Pendiente sin técnicos
-              list = list.filter(
-                (o) => (o.technicians?.length || 0) === 0,
-              );
+              list = list.filter((o) => (o.technicians?.length || 0) === 0);
             }
             if (filter === "assigned") {
-              // Asignada con al menos 1 técnico
-              list = list.filter(
-                (o) => (o.technicians?.length || 0) > 0,
-              );
+              list = list.filter((o) => (o.technicians?.length || 0) > 0);
             }
           }
         }
@@ -231,17 +268,24 @@ export const useOrders = (
 };
 
 // ---------------------------------------------------------------------------
-// Hook para DETALLE de orden - GET /work-orders/:id
+// DETALLE de orden
 // ---------------------------------------------------------------------------
 export const useOrderDetail = (orderId: number, initialData?: Order) => {
   const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
 
-  const { data: order, isLoading, error, refetch } = useQuery({
+  const {
+    data: order,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: [QUERY_KEYS.orderDetail, orderId],
     queryFn: () => getOrderByIdRequest(orderId),
     initialData,
-    refetchInterval: 4000,
-    refetchIntervalInBackground: true,
+    // Puedes quitar el polling si ya tienes WS:
+    // refetchInterval: 4000,
+    // refetchIntervalInBackground: true,
   });
 
   return {
@@ -265,13 +309,8 @@ export const useOrderMutations = () => {
     mutationFn: (orderData: CreateOrderData) => createOrderRequest(orderData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.dashboardOrders],
-      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
-    },
-    onError: (error: any) => {
-      console.error("Error creando orden:", error);
     },
   });
 
@@ -285,16 +324,11 @@ export const useOrderMutations = () => {
     }) => updateOrderRequest(orderId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.dashboardOrders],
-      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
       });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
-    },
-    onError: (error: any) => {
-      console.error("Error actualizando orden:", error);
     },
   });
 
@@ -318,16 +352,11 @@ export const useOrderMutations = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.dashboardOrders],
-      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
       });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
-    },
-    onError: (error: any) => {
-      console.error("Error asignando técnicos:", error);
     },
   });
 
@@ -341,22 +370,16 @@ export const useOrderMutations = () => {
     }) => {
       if (tecnicoId) {
         return removeSpecificTechnicianRequest(orderId, tecnicoId);
-      } else {
-        return unassignTechnicianRequest(orderId);
       }
+      return unassignTechnicianRequest(orderId);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.dashboardOrders],
-      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
       });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
-    },
-    onError: (error: any) => {
-      console.error("Error desasignando técnico:", error);
     },
   });
 
@@ -364,16 +387,11 @@ export const useOrderMutations = () => {
     mutationFn: (orderId: number) => cancelOrderRequest(orderId),
     onSuccess: (_, orderId) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
-      queryClient.invalidateQueries({
-        queryKey: [QUERY_KEYS.dashboardOrders],
-      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.orderDetail, orderId],
       });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
-    },
-    onError: (error: any) => {
-      console.error("Error cancelando orden:", error);
     },
   });
 
@@ -402,9 +420,6 @@ export const useOrderTimerMutations = (orderId: number) => {
         queryKey: [QUERY_KEYS.dashboardOrders],
       });
     },
-    onError: (error: any) => {
-      console.error("Error iniciando timer:", error);
-    },
   });
 
   const stopTimerMutation = useMutation({
@@ -416,9 +431,6 @@ export const useOrderTimerMutations = (orderId: number) => {
       queryClient.invalidateQueries({
         queryKey: [QUERY_KEYS.dashboardOrders],
       });
-    },
-    onError: (error: any) => {
-      console.error("Error deteniendo timer:", error);
     },
   });
 
@@ -433,9 +445,6 @@ export const useOrderTimerMutations = (orderId: number) => {
         queryKey: [QUERY_KEYS.dashboardOrders],
       });
     },
-    onError: (error: any) => {
-      console.error("Error agregando pausa:", error);
-    },
   });
 
   const endPauseMutation = useMutation({
@@ -448,9 +457,6 @@ export const useOrderTimerMutations = (orderId: number) => {
         queryKey: [QUERY_KEYS.dashboardOrders],
       });
     },
-    onError: (error: any) => {
-      console.error("Error finalizando pausa:", error);
-    },
   });
 
   return {
@@ -462,7 +468,7 @@ export const useOrderTimerMutations = (orderId: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// Hook para cargar órdenes por cliente/categoría (usado en otras vistas)
+// Órdenes por cliente/categoría (con cache local)
 // ---------------------------------------------------------------------------
 interface OrdersCache {
   [key: string]: {

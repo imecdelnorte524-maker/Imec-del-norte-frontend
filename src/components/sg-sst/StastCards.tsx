@@ -24,6 +24,12 @@ export default function StatsCards({ stats }: StatsCardsProps) {
       value: stats.completed,
       color: '#10B981',
       icon: '✅'
+    },
+    {
+      title: 'Rechazados',
+      value: stats.rejected,
+      color: '#EF4444',
+      icon: '❌'
     }
   ];
 

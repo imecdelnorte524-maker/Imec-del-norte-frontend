@@ -13,6 +13,8 @@ import type {
   UnitMeasure,
 } from "../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../utils/sounds";
+import { useSocketEvent } from "./useSocketEvent";
+import { useSocket } from "../context/SocketContext";
 
 // Hook para obtener todo el inventario
 export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
@@ -20,6 +22,7 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
   const [filteredInventory, setFilteredInventory] = useState<Inventory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const socket = useSocket();
 
   const loadInventory = async () => {
     try {
@@ -38,6 +41,31 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
   useEffect(() => {
     loadInventory();
   }, []);
+
+  const reloadOnChange = () => {
+    loadInventory();
+  };
+
+  useSocketEvent(socket, "inventory.created", reloadOnChange);
+  useSocketEvent(socket, "inventory.updated", reloadOnChange);
+  useSocketEvent(socket, "inventory.deleted", reloadOnChange);
+  useSocketEvent(socket, "inventory.deletedPermanent", reloadOnChange);
+  useSocketEvent(socket, "inventory.stockUpdated", reloadOnChange);
+  useSocketEvent(socket, "inventory.restored", reloadOnChange);
+
+  // También nos interesan cambios directos de insumos/herramientas
+  useSocketEvent(socket, "supplies.created", reloadOnChange);
+  useSocketEvent(socket, "supplies.updated", reloadOnChange);
+  useSocketEvent(socket, "supplies.deleted", reloadOnChange);
+  useSocketEvent(socket, "supplies.stockUpdated", reloadOnChange);
+  useSocketEvent(socket, "supplies.restored", reloadOnChange);
+
+  useSocketEvent(socket, "tools.created", reloadOnChange);
+  useSocketEvent(socket, "tools.updated", reloadOnChange);
+  useSocketEvent(socket, "tools.deleted", reloadOnChange);
+  useSocketEvent(socket, "tools.softDeleted", reloadOnChange);
+  useSocketEvent(socket, "tools.restored", reloadOnChange);
+  useSocketEvent(socket, "tools.statusUpdated", reloadOnChange);
 
   useEffect(() => {
     if (!inventory.length) {
@@ -207,6 +235,7 @@ export const useCatalogActions = () => {
 export const useWarehouses = (includeInactive = false) => {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
+  const socket = useSocket();
 
   const loadWarehouses = async () => {
     try {
@@ -224,6 +253,11 @@ export const useWarehouses = (includeInactive = false) => {
     loadWarehouses();
   }, []);
 
+  // 🔴 Tiempo real
+  useSocketEvent(socket, "warehouses.created", loadWarehouses);
+  useSocketEvent(socket, "warehouses.updated", loadWarehouses);
+  useSocketEvent(socket, "warehouses.deleted", loadWarehouses);
+
   return { warehouses, loading, refetch: loadWarehouses };
 };
 
@@ -231,14 +265,24 @@ export const useWarehouses = (includeInactive = false) => {
 export const useUnitMeasures = () => {
   const [units, setUnits] = useState<UnitMeasure[]>([]);
   const [loading, setLoading] = useState(true);
+  const socket = useSocket(); // <-- NUEVO
 
-  useEffect(() => {
+  const loadUnits = () => {
     unitMeasureApi
       .getAll()
       .then(setUnits)
       .catch(() => playErrorSound())
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadUnits();
   }, []);
+
+  // 🔴 Tiempo real
+  useSocketEvent(socket, "unitMeasures.created", loadUnits);
+  useSocketEvent(socket, "unitMeasures.updated", loadUnits);
+  useSocketEvent(socket, "unitMeasures.deleted", loadUnits);
 
   return { units, loading };
 };

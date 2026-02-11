@@ -637,7 +637,6 @@ export default function OrderDetail({
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.detailsGrid}>
-        {/* ... DETALLES (Cliente, Servicio, etc) - Se mantienen igual ... */}
         <div className={styles.section}>
           <h3>Información Cliente</h3>
           {currentOrder.cliente_empresa && (
@@ -654,12 +653,8 @@ export default function OrderDetail({
             </span>
           </div>
           <div className={styles.detailItem}>
-            <strong>Teléfono:</strong>
-            <span>
-              {currentOrder.cliente_empresa?.telefono ||
-                currentOrder.cliente?.telefono ||
-                "No disponible"}
-            </span>
+            <strong>Teléfono del Contacto:</strong>
+            <span>{currentOrder.cliente?.telefono || "No disponible"}</span>
           </div>
         </div>
 
@@ -723,8 +718,8 @@ export default function OrderDetail({
                     <span>📞 {tech.technician.telefono || "N/A"}</span>
                   </div>
                   {isAdminOrSecretaria &&
-                    (currentOrder.estado === validStatuses.PENDIENTE ||
-                      currentOrder.estado === validStatuses.ASIGNADA) && (
+                    currentOrder.estado !== validStatuses.CANCELADA &&
+                    currentOrder.estado !== validStatuses.COMPLETADO && (
                       <button
                         className={styles.removeTechnicianButton}
                         onClick={() => handleUnassignTechnician(tech.tecnicoId)}
@@ -913,19 +908,6 @@ export default function OrderDetail({
 
       {/* ACCIONES */}
       <div className={styles.actions}>
-        {currentOrder.cliente_empresa && !isClient && (
-          <button
-            className={styles.secondaryButton}
-            onClick={() =>
-              navigate("/equipment", {
-                state: { clientId: currentOrder.cliente_empresa?.id_cliente },
-              })
-            }
-          >
-            Ver equipos
-          </button>
-        )}
-
         {canAssignInventory && (
           <button
             className={styles.secondaryButton}

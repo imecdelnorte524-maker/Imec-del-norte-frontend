@@ -1,26 +1,7 @@
-/* Variables para mantener consistencia */
-:root {
-  --primary-color: #3b82f6;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --danger-color: #ef4444;
-  --text-dark: #1f2937;
-  --text-medium: #374151;
-  --text-light: #6b7280;
-  --border-color: #e5e7eb;
-  --background-light: #f9fafb;
-  --border-radius: 8px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 20px;
-  --spacing-2xl: 24px;
-}
 
 /* Overlay - Responsive base */
 .overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -43,7 +24,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
@@ -334,6 +316,11 @@
   color: #065f46;
 }
 
+.checkValue.regular {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .checkValue.bad {
   background: #fee2e2;
   color: #991b1b;
@@ -603,7 +590,7 @@
   background: #f0fdf4;
 }
 
-.verificationCheckbox input[type='checkbox'] {
+.verificationCheckbox input[type="checkbox"] {
   width: 20px;
   height: 20px;
   border: 2px solid #d1d5db;
@@ -890,6 +877,11 @@
 .goodStat {
   border-color: var(--success-color);
   background: #f0fdf4;
+}
+
+.regularStat {
+  border-color: var(--warning-color);
+  background: #fef3c7;
 }
 
 .badStat {
@@ -1403,4 +1395,66 @@
   .risksContainer {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.rejectSection {
+  margin-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.rejectToggleButton {
+  border: none;
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.rejectBox {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+}
+
+.rejectTextarea {
+  width: 100%;
+  min-height: 80px;
+  border-radius: 0.5rem;
+  border: 1px solid #fca5a5;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.rejectActions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.cancelRejectButton {
+  border: none;
+  background: #e5e7eb;
+  color: #4b5563;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.rejectButton {
+  border: none;
+  background: #dc2626;
+  color: #ffffff;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
 }

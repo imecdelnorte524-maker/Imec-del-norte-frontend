@@ -22,6 +22,11 @@
   --gray-700: #334155;
   --gray-800: #1e293b;
   --gray-900: #0f172a;
+
+  --error-50: #fef2f2;
+  --error-100: #fee2e2;
+  --error-200: #fecaca;
+  --error-600: #dc2626;
   
   --white: #ffffff;
   --black: #000000;
