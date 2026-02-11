@@ -11,6 +11,7 @@ interface CondenserEditFormProps {
   onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
   onAddMotor?: () => void;
   onAddCompressor?: () => void;
+  canRemove?: boolean;
   onRemove?: () => void;
   onMotorChange?: (condenserIndex: number, motorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => void;
   onCompressorChange?: (condenserIndex: number, compressorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -27,6 +28,7 @@ export default function CondenserEditForm({
   onChange,
   onAddMotor,
   onAddCompressor,
+  canRemove,
   onRemove,
   onMotorChange,
   onCompressorChange,
@@ -42,14 +44,14 @@ export default function CondenserEditForm({
     <div className={styles.componentSection}>
       <div className={styles.componentHeader}>
         <h5>Condensadora {index + 1}</h5>
-        {onRemove && (
+        {canRemove && (
           <button 
             type="button" 
             className={styles.removeButton}
             onClick={onRemove}
             disabled={saving}
           >
-            ✕ Eliminar
+            ✕ Eliminar condensadora
           </button>
         )}
       </div>

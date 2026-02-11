@@ -9,8 +9,13 @@ interface EvaporatorEditFormProps {
   saving: boolean;
   onChange: (index: number, e: React.ChangeEvent<HTMLInputElement>) => void;
   onAddMotor?: () => void;
+  canRemove?: boolean;
   onRemove?: () => void;
-  onMotorChange?: (evaporatorIndex: number, motorIndex: number, e: React.ChangeEvent<HTMLInputElement>) => void;
+  onMotorChange?: (
+    evaporatorIndex: number,
+    motorIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => void;
   onAddMotorToEvaporator?: (evaporatorIndex: number) => void;
   onRemoveMotor?: (evaporatorIndex: number, motorIndex: number) => void;
 }
@@ -21,6 +26,7 @@ export default function EvaporatorEditForm({
   saving,
   onChange,
   onAddMotor,
+  canRemove,
   onRemove,
   onMotorChange,
   onAddMotorToEvaporator,
@@ -32,18 +38,18 @@ export default function EvaporatorEditForm({
     <div className={styles.componentSection}>
       <div className={styles.componentHeader}>
         <h5>Evaporador {index + 1}</h5>
-        {onRemove && (
-          <button 
-            type="button" 
+        {canRemove && (
+          <button
+            type="button"
             className={styles.removeButton}
             onClick={onRemove}
             disabled={saving}
           >
-            ✕ Eliminar
+            ✕ Eliminar evaporador
           </button>
         )}
       </div>
-      
+
       <div className={styles.formGrid}>
         <div className={styles.formField}>
           <label>Marca</label>
@@ -108,9 +114,11 @@ export default function EvaporatorEditForm({
                 index={motorIndex}
                 saving={saving}
                 onChange={(e) => onMotorChange?.(index, motorIndex, e)}
-                onRemove={onRemoveMotor 
-                  ? () => onRemoveMotor(index, motorIndex) 
-                  : undefined}
+                onRemove={
+                  onRemoveMotor
+                    ? () => onRemoveMotor(index, motorIndex)
+                    : undefined
+                }
               />
             </div>
           ))}
@@ -120,12 +128,14 @@ export default function EvaporatorEditForm({
       {/* Botón para agregar motor */}
       {(onAddMotor || onAddMotorToEvaporator) && (
         <div className={styles.componentActions}>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className={styles.addButton}
-            onClick={onAddMotorToEvaporator 
-              ? () => onAddMotorToEvaporator(index) 
-              : onAddMotor}
+            onClick={
+              onAddMotorToEvaporator
+                ? () => onAddMotorToEvaporator(index)
+                : onAddMotor
+            }
             disabled={saving}
           >
             + Agregar Motor
