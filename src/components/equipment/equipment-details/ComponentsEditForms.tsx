@@ -8,6 +8,16 @@ import styles from "../../../styles/components/equipment/equipment-details/Compo
 import EvaporatorEditForm from "./forms/EvaporatorEditForm";
 import CondenserEditForm from "./forms/CondenserEditForm";
 
+// Tipos de aire acondicionado que permiten múltiples componentes
+const MULTIPLE_COMPONENT_TYPES = [
+  "MultiSplit",
+  "Refrigerante Variable",
+  "VRF",
+  "VRV",
+  "Variable Refrigerant Flow",
+  "Sistema Multi Split",
+];
+
 interface ComponentsEditFormsProps {
   saving: boolean;
   evaporators: EvaporatorData[];
@@ -16,7 +26,8 @@ interface ComponentsEditFormsProps {
   onCondensersChange: (condensers: CondenserData[]) => void;
   canAddMoreEvaporators?: boolean;
   canAddMoreCondensers?: boolean;
-  canHaveMultipleComponents?: boolean; // sigue existiendo por si lo usas para los botones "Agregar"
+  airConditionerTypeName?: string;
+  canHaveMultipleComponents?: boolean;
 }
 
 export default function ComponentsEditForms({
@@ -25,10 +36,21 @@ export default function ComponentsEditForms({
   condensers = [],
   onEvaporatorsChange,
   onCondensersChange,
-  canAddMoreEvaporators = true,
-  canAddMoreCondensers = true,
-  // canHaveMultipleComponents = false,
+  airConditionerTypeName = "",
+  canHaveMultipleComponents = false,
 }: ComponentsEditFormsProps) {
+  // 🔥 FUNCIÓN PARA VERIFICAR SI EL TIPO PERMITE MÚLTIPLES COMPONENTES
+  const allowsMultipleComponents = (): boolean => {
+    if (!airConditionerTypeName) return false;
+    const typeName = airConditionerTypeName.toLowerCase();
+    return MULTIPLE_COMPONENT_TYPES.some((multiType) =>
+      typeName.includes(multiType.toLowerCase()),
+    );
+  };
+
+  const canHaveMultiple =
+    allowsMultipleComponents() || canHaveMultipleComponents;
+
   // ───────────────────────────────────────────────────────────────
   // EVAPORADORES
   // ───────────────────────────────────────────────────────────────
@@ -82,9 +104,9 @@ export default function ComponentsEditForms({
   ) => {
     const updated = [...evaporators];
     if (updated[evaporatorIndex].motors) {
-      updated[evaporatorIndex].motors = updated[
-        evaporatorIndex
-      ].motors!.filter((_, i) => i !== motorIndex);
+      updated[evaporatorIndex].motors = updated[evaporatorIndex].motors!.filter(
+        (_, i) => i !== motorIndex,
+      );
       onEvaporatorsChange(updated);
     }
   };
@@ -142,9 +164,9 @@ export default function ComponentsEditForms({
   ) => {
     const updated = [...condensers];
     if (updated[condenserIndex].motors) {
-      updated[condenserIndex].motors = updated[
-        condenserIndex
-      ].motors!.filter((_, i) => i !== motorIndex);
+      updated[condenserIndex].motors = updated[condenserIndex].motors!.filter(
+        (_, i) => i !== motorIndex,
+      );
       onCondensersChange(updated);
     }
   };
@@ -187,6 +209,26 @@ export default function ComponentsEditForms({
     }
   };
 
+  // 🔥 REGLAS DE VISIBILIDAD DE BOTONES
+  const evapCount = evaporators.length;
+  const condCount = condensers.length;
+
+  // Solo mostrar botón "Agregar Evaporador" si:
+  // - Puede tener múltiples componentes O (no tiene ninguno)
+  const canShowAddEvaporator = canHaveMultiple || evapCount === 0;
+
+  // Solo mostrar botón "Agregar Condensadora" si:
+  // - Puede tener múltiples componentes O (no tiene ninguna)
+  const canShowAddCondenser = canHaveMultiple || condCount === 0;
+
+  // Solo mostrar botón "Eliminar" en evaporadores si:
+  // - Puede tener múltiples componentes Y (tiene más de 1)
+  const canShowRemoveEvaporator = canHaveMultiple && evapCount > 1;
+
+  // Solo mostrar botón "Eliminar" en condensadoras si:
+  // - Puede tener múltiples componentes Y (tiene más de 1)
+  const canShowRemoveCondenser = canHaveMultiple && condCount > 1;
+
   return (
     <div className={styles.componentsSection}>
       <h4>Componentes del Equipo</h4>
@@ -194,8 +236,10 @@ export default function ComponentsEditForms({
       {/* EVAPORADORES */}
       <div className={styles.componentGroup}>
         <div className={styles.groupHeader}>
-          <h5>Evaporadores</h5>
-          {canAddMoreEvaporators && (
+          <h5>
+            Evaporadores {!canHaveMultiple && evapCount > 0 && "(Máximo 1)"}
+          </h5>
+          {canShowAddEvaporator && (
             <button
               type="button"
               className={styles.addButton}
@@ -219,24 +263,32 @@ export default function ComponentsEditForms({
                 index={index}
                 saving={saving}
                 onChange={handleEvaporatorChange}
-                // 🔹 AHORA SIEMPRE PERMITIMOS ELIMINAR
+                // 👇 PASAMOS LA REGLA DE VISIBILIDAD
+                canRemove={canShowRemoveEvaporator}
                 onRemove={() => handleRemoveEvaporator(index)}
                 onMotorChange={handleEvaporatorMotorChange}
-                onAddMotorToEvaporator={() =>
-                  handleAddMotorToEvaporator(index)
-                }
+                onAddMotorToEvaporator={() => handleAddMotorToEvaporator(index)}
                 onRemoveMotor={handleRemoveMotorFromEvaporator}
               />
             </div>
           ))
+        )}
+
+        {/* Mensaje informativo para tipos que solo permiten 1 evaporador */}
+        {!canHaveMultiple && evaporators.length === 1 && (
+          <div className={styles.infoMessage}>
+            <small>✓ Este tipo de aire solo permite un evaporador</small>
+          </div>
         )}
       </div>
 
       {/* CONDENSADORAS */}
       <div className={styles.componentGroup}>
         <div className={styles.groupHeader}>
-          <h5>Condensadoras</h5>
-          {canAddMoreCondensers && (
+          <h5>
+            Condensadoras {!canHaveMultiple && condCount > 0 && "(Máximo 1)"}
+          </h5>
+          {canShowAddCondenser && (
             <button
               type="button"
               className={styles.addButton}
@@ -260,13 +312,12 @@ export default function ComponentsEditForms({
                 index={index}
                 saving={saving}
                 onChange={handleCondenserChange}
-                // 🔹 AHORA SIEMPRE PERMITIMOS ELIMINAR
+                // 👇 PASAMOS LA REGLA DE VISIBILIDAD
+                canRemove={canShowRemoveCondenser}
                 onRemove={() => handleRemoveCondenser(index)}
                 onMotorChange={handleCondenserMotorChange}
                 onCompressorChange={handleCondenserCompressorChange}
-                onAddMotorToCondenser={() =>
-                  handleAddMotorToCondenser(index)
-                }
+                onAddMotorToCondenser={() => handleAddMotorToCondenser(index)}
                 onAddCompressorToCondenser={() =>
                   handleAddCompressorToCondenser(index)
                 }
@@ -275,6 +326,13 @@ export default function ComponentsEditForms({
               />
             </div>
           ))
+        )}
+
+        {/* Mensaje informativo para tipos que solo permiten 1 condensadora */}
+        {!canHaveMultiple && condensers.length === 1 && (
+          <div className={styles.infoMessage}>
+            <small>✓ Este tipo de aire solo permite una condensadora</small>
+          </div>
         )}
       </div>
     </div>
