@@ -13,11 +13,11 @@ import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
 // Tipos de aire acondicionado que permiten múltiples componentes
 const MULTIPLE_COMPONENT_TYPES = [
   "MultiSplit",
-  "Refrigerante Variable", 
+  "Refrigerante Variable",
   "VRF",
   "VRV",
   "Variable Refrigerant Flow",
-  "Sistema Multi Split"
+  "Sistema Multi Split",
 ];
 
 interface EquipmentInfoEditFormProps {
@@ -37,14 +37,16 @@ interface EquipmentInfoEditFormProps {
   airConditionerTypes: AirConditionerTypeOption[];
   selectedAcTypeId: number | null;
   selectedAcType: AirConditionerTypeOption | undefined;
-  
+
   // Arrays de componentes (nueva estructura)
   evaporators: EvaporatorData[];
   condensers: CondenserData[];
 
   // Handlers
   onEditChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => void;
   onAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -81,16 +83,18 @@ export default function EquipmentInfoEditForm({
     const typeToCheck = selectedAcType || equipment.airConditionerType;
     if (!typeToCheck || !typeToCheck.name) return false;
     const typeName = typeToCheck.name.toLowerCase();
-    return MULTIPLE_COMPONENT_TYPES.some(multiType => 
-      typeName.includes(multiType.toLowerCase())
+    return MULTIPLE_COMPONENT_TYPES.some((multiType) =>
+      typeName.includes(multiType.toLowerCase()),
     );
   };
 
   const canHaveMultipleComponents = allowsMultipleComponents();
-  
+
   // Determinar si se pueden agregar más componentes
-  const canAddMoreEvaporators = canHaveMultipleComponents || evaporators.length === 0;
-  const canAddMoreCondensers = canHaveMultipleComponents || condensers.length === 0;
+  const canAddMoreEvaporators =
+    canHaveMultipleComponents || evaporators.length === 0;
+  const canAddMoreCondensers =
+    canHaveMultipleComponents || condensers.length === 0;
 
   // Si el equipo es de aires acondicionados, mostrar componentes
   const isAirConditioner = equipment.category === "Aires Acondicionados";
@@ -147,8 +151,8 @@ export default function EquipmentInfoEditForm({
           {(selectedAcType || equipment.airConditionerType) && (
             <div className={styles.typeInfo}>
               <small>
-                {canHaveMultipleComponents 
-                  ? "✓ Este tipo permite múltiples evaporadoras y condensadoras" 
+                {canHaveMultipleComponents
+                  ? "✓ Este tipo permite múltiples evaporadoras y condensadoras"
                   : "✓ Este tipo permite una sola evaporadora y una sola condensadora"}
               </small>
             </div>
@@ -203,6 +207,9 @@ export default function EquipmentInfoEditForm({
           canAddMoreEvaporators={canAddMoreEvaporators}
           canAddMoreCondensers={canAddMoreCondensers}
           canHaveMultipleComponents={canHaveMultipleComponents}
+          airConditionerTypeName={
+            selectedAcType?.name || equipment.airConditionerType?.name || ""
+          }
         />
       )}
 

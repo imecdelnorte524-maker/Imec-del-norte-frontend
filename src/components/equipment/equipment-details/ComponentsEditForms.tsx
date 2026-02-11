@@ -24,7 +24,8 @@ interface ComponentsEditFormsProps {
   condensers: CondenserData[];
   onEvaporatorsChange: (evaporators: EvaporatorData[]) => void;
   onCondensersChange: (condensers: CondenserData[]) => void;
-  // 👇 NUEVAS PROPS PARA CONTROLAR LOS TIPOS
+  canAddMoreEvaporators?: boolean;
+  canAddMoreCondensers?: boolean;
   airConditionerTypeName?: string;
   canHaveMultipleComponents?: boolean;
 }
