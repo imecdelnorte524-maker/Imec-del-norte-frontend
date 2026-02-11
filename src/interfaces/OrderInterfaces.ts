@@ -1,13 +1,18 @@
 export type OrderEstado =
-  | 'Pendiente'
-  | 'Asignada'
-  | 'En Proceso'
-  | 'Pausada'
-  | 'Completado'
-  | 'Cancelada'
-  | 'Rechazada';
+  | "Pendiente"
+  | "Asignada"
+  | "En Proceso"
+  | "Pausada"
+  | "Completado"
+  | "Cancelada"
+  | "Rechazada";
 
-export type BillingEstado = "" | "Sin facturar" | 'Por facturar' | 'Facturado' | 'Garantía';
+export type BillingEstado =
+  | ""
+  | "Sin facturar"
+  | "Por facturar"
+  | "Facturado"
+  | "Garantía";
 
 export interface SupplyDetail {
   detalleInsumoId: number;
@@ -35,6 +40,8 @@ export interface AssociatedEquipment {
   category: string;
   description?: string;
   status?: string;
+  area?: { areaId: number; nombre: string } | null;
+  subArea?: { subAreaId: number; nombre: string } | null;
 }
 
 export interface UserInfo {
@@ -45,7 +52,6 @@ export interface UserInfo {
   telefono: string | null;
   cedula?: string;
 }
-
 export interface TechnicianAssignment {
   id: number;
   tecnicoId: number;
@@ -96,7 +102,7 @@ export interface Order {
   };
 
   cliente?: UserInfo;
-  
+
   cliente_empresa?: {
     id_cliente: number;
     nombre: string;
@@ -111,7 +117,7 @@ export interface Order {
 
   // ✅ CAMBIO IMPORTANTE: De tecnico singular a array de technicians
   technicians: TechnicianAssignment[];
-  
+
   // Para compatibilidad con código existente, mantenemos tecnico_id como el primer técnico
   tecnico_id: number | null;
   tecnico?: UserInfo | null;
@@ -119,10 +125,10 @@ export interface Order {
   equipos: AssociatedEquipment[];
   supplyDetails: SupplyDetail[];
   toolDetails: ToolDetail[];
-  
+
   timers?: TimerInfo[];
   pauses?: PauseInfo[];
-  
+
   costo_total_insumos: number;
   tiempo_total?: number;
 }
@@ -145,7 +151,7 @@ export interface CreateOrderData {
 }
 
 export interface UpdateOrderData {
-  estado?: Order['estado'];
+  estado?: Order["estado"];
   comentarios?: string;
   fecha_inicio?: string | null;
   fecha_finalizacion?: string | null;

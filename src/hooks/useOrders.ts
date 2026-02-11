@@ -281,11 +281,9 @@ export const useOrderDetail = (orderId: number, initialData?: Order) => {
     refetch,
   } = useQuery({
     queryKey: [QUERY_KEYS.orderDetail, orderId],
-    queryFn: () => getOrderByIdRequest(orderId),
+    queryFn: () => getOrderByIdRequest(orderId), // 👈 ESTO DEBE LLAMAR A /work-orders/{id}
     initialData,
-    // Puedes quitar el polling si ya tienes WS:
-    // refetchInterval: 4000,
-    // refetchIntervalInBackground: true,
+    enabled: !!orderId, // 👈 IMPORTANTE: No ejecutar si no hay ID
   });
 
   return {

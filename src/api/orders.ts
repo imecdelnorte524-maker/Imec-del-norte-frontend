@@ -32,7 +32,7 @@ const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
       return "Completado";
     case "Cancelada":
       return "Cancelada";
-  
+
     case "Pendiente":
     case "Asignada":
     case "En Proceso":
@@ -101,6 +101,18 @@ const mapAssociatedEquipment = (equipment: any): AssociatedEquipment => ({
   category: equipment.category,
   description: equipment.description,
   status: equipment.status,
+  area: equipment.area
+    ? {
+        areaId: equipment.area.areaId,
+        nombre: equipment.area.nombre,
+      }
+    : null,
+  subArea: equipment.subArea
+    ? {
+        subAreaId: equipment.subArea.subAreaId,
+        nombre: equipment.subArea.nombre,
+      }
+    : null,
 });
 
 const mapTechnicianAssignment = (apiTech: any): TechnicianAssignment => ({
@@ -295,20 +307,28 @@ export const getOrdersByClientAndCategoryRequest = async (
     const data = response.data?.data || [];
     const orders = data.map(mapApiOrderToOrder);
 
-    // Filtro adicional de seguridad
+    // 🔥 FILTRO CORREGIDO: SOLO órdenes que cumplen TODAS las condiciones
     const filteredOrders = orders.filter((order: Order) => {
-      const isActiveStatus =
-        order.estado === "Pendiente" ||
-        order.estado === "Asignada" ||
-        order.estado === "En Proceso";
-
-      const isSameClient =
-        order.cliente_empresa?.id_cliente === clienteEmpresaId;
-      const isSameCategory =
-        order.servicio.categoria_servicio?.toLowerCase() ===
+      // 1. Estado válido: Pendiente o Asignada
+      const isValidStatus = 
+        order.estado === "Pendiente" || 
+        order.estado === "Asignada";
+      
+      // 2. Sin equipos asociados
+      const hasNoEquipment = !order.equipos || order.equipos.length === 0;
+      
+      // 3. NO es orden automática de plan de mantenimiento
+      const isNotAutomatic = order.plan_mantenimiento_id === null;
+      
+      // 4. Mismo cliente
+      const isSameClient = order.cliente_empresa?.id_cliente === clienteEmpresaId;
+      
+      // 5. Misma categoría
+      const isSameCategory = 
+        order.servicio.categoria_servicio?.toLowerCase() === 
         category.toLowerCase();
 
-      return isActiveStatus && isSameClient && isSameCategory;
+      return isValidStatus && hasNoEquipment && isNotAutomatic && isSameClient && isSameCategory;
     });
 
     return filteredOrders;
@@ -327,7 +347,7 @@ export const getOrdersByClientAndCategoryRequest = async (
   }
 };
 
-// 🔧 MÉTODO DE RESPALDO (para compatibilidad con backend antiguo)
+// 🔧 MÉTODO DE RESPALDO - TAMBIÉN CORREGIDO
 const getOrdersByClientAndCategoryFallback = async (
   clienteEmpresaId: number,
   category: string,
@@ -338,17 +358,19 @@ const getOrdersByClientAndCategoryFallback = async (
     const orders = data.map(mapApiOrderToOrder);
 
     const filteredOrders = orders.filter((order: Order) => {
-      const isSameClient =
-        order.cliente_empresa?.id_cliente === clienteEmpresaId;
-      const isSameCategory =
-        order.servicio.categoria_servicio?.toLowerCase() ===
+      // MISMOS FILTROS QUE ARRIBA
+      const isValidStatus = 
+        order.estado === "Pendiente" || 
+        order.estado === "Asignada";
+      
+      const hasNoEquipment = !order.equipos || order.equipos.length === 0;
+      const isNotAutomatic = order.plan_mantenimiento_id === null;
+      const isSameClient = order.cliente_empresa?.id_cliente === clienteEmpresaId;
+      const isSameCategory = 
+        order.servicio.categoria_servicio?.toLowerCase() === 
         category.toLowerCase();
-      const isActiveStatus =
-        order.estado === "Pendiente" ||
-        order.estado === "Asignada" ||
-        order.estado === "En Proceso";
 
-      return isSameClient && isSameCategory && isActiveStatus;
+      return isValidStatus && hasNoEquipment && isNotAutomatic && isSameClient && isSameCategory;
     });
 
     return filteredOrders;
