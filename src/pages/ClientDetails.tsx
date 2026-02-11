@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import type { JSX } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { clients as clientsAPI } from "../api/clients";
 import { imagesApi } from "../api/images";
@@ -393,12 +393,20 @@ export default function ClientDetailsPage() {
     return (
       <div className={styles.subareaEquipmentList}>
         {subareaEquipments.map((eq) => (
-          <div key={eq.equipmentId} className={styles.equipmentItem}>
-            <span className={styles.equipmentName}>
-              {eq.code || `Equipo ${eq.equipmentId}`}
-            </span>
-            {eq.code && <span className={styles.equipmentCode}>{eq.code}</span>}
-          </div>
+          <Link
+            key={eq.equipmentId}
+            to={`/equipment/${eq.equipmentId}`}
+            className={styles.equipmentLink}
+          >
+            <div className={styles.equipmentItem}>
+              <span className={styles.equipmentName}>
+                {eq.code || `Equipo ${eq.equipmentId}`}
+              </span>
+              {eq.code && (
+                <span className={styles.equipmentCode}>{eq.code}</span>
+              )}
+            </div>
+          </Link>
         ))}
       </div>
     );
@@ -418,14 +426,20 @@ export default function ClientDetailsPage() {
         </div>
         <div className={styles.equipmentGrid}>
           {areaEquipments.map((eq) => (
-            <div key={eq.equipmentId} className={styles.equipmentItem}>
-              <span className={styles.equipmentName}>
-                {eq.code || `Equipo ${eq.equipmentId}`}
-              </span>
-              {eq.code && (
-                <span className={styles.equipmentCode}>{eq.code}</span>
-              )}
-            </div>
+            <Link
+              key={eq.equipmentId}
+              to={`/equipment/${eq.equipmentId}`}
+              className={`${styles.viewEquipmentButton} ${styles.equipmentLink}`}
+            >
+              <div className={styles.equipmentItem}>
+                <span className={styles.equipmentName}>
+                  {eq.code || `Equipo ${eq.equipmentId}`}
+                </span>
+                {eq.code && (
+                  <span className={styles.equipmentCode}>{eq.code}</span>
+                )}
+              </div>
+            </Link>
           ))}
         </div>
       </div>
