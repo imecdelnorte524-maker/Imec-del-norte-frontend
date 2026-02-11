@@ -1,13 +1,21 @@
 export const QUERY_KEYS = {
-  users: "users",
+  orders: "orders",
+  orderDetail: "orderDetail",
+  dashboardOrders: "dashboardOrders",
+  myServices: "myServices",
+  dashboardMetrics: "dashboardMetrics",
+  technicians: "technicians",
   clients: "clients",
   modules: "modules",
   roles: "roles",
-  orders: "orders",
+  users: "users",
   inventory: "inventory",
   equipment: "equipment",
   services: "services",
+  supplies: "supplies",
+  tools: "tools",
+  maintenanceTypes: "maintenanceTypes",
+  clientCompanies: "clientCompanies",
   profile: "profile",
   metrics: "metrics",
-  myServices: "myServices"
-} as const;
+};

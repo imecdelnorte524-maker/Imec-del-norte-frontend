@@ -2,18 +2,18 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import type { HeightWorkFormData } from "../../interfaces/SgSstInterface";
-import type { Usuario } from "../../interfaces/UserInterfaces";
-import type { Rol } from "../../interfaces/RolesInterfaces";
-import type { Client } from "../../interfaces/ClientInterfaces";
-import type { Order } from "../../interfaces/OrderInterfaces";
-import { usersApi } from "../../api/users";
-import { sgSstService } from "../../api/sg-sst";
-import { getMyAssignedOrdersRequest } from "../../api/orders";
-import SignaturePad from "./SignaturePad";
-import styles from "../../styles/components/sg-sst/HeightWorkForm.module.css";
-import { useAuth } from "../../hooks/useAuth";
-import { rolesApi } from "../../api/roles";
+import type { HeightWorkFormData } from "../../../interfaces/SgSstInterface";
+import type { Usuario } from "../../../interfaces/UserInterfaces";
+import type { Rol } from "../../../interfaces/RolesInterfaces";
+import type { Client } from "../../../interfaces/ClientInterfaces";
+import type { Order } from "../../../interfaces/OrderInterfaces";
+import { usersApi } from "../../../api/users";
+import { sgSstService } from "../../../api/sg-sst";
+import { getMyAssignedOrdersRequest } from "../../../api/orders";
+import SignaturePad from "../SignaturePad";
+import styles from "../../../styles/components/sg-sst/forms/HeightWorkForm.module.css";
+import { useAuth } from "../../../hooks/useAuth";
+import { rolesApi } from "../../../api/roles";
 
 interface HeightWorkFormProps {
   onSubmit: (data: HeightWorkFormData) => void;
@@ -41,6 +41,12 @@ export default function HeightWorkForm({
     location: "",
     estimatedTime: "",
     protectionElements: {},
+
+    // 🔹 Verificaciones de seguridad (las llenará el técnico)
+    physicalCondition: false,
+    instructionsReceived: false,
+    fitForHeightWork: false,
+
     userId,
     createdBy,
     workOrderId: 0,
@@ -123,7 +129,7 @@ export default function HeightWorkForm({
       console.error("Error cargando órdenes del técnico:", error);
       setOrdersError(
         error.response?.data?.message ||
-          "Error al cargar las órdenes del técnico"
+          "Error al cargar las órdenes del técnico",
       );
     } finally {
       setOrdersLoading(false);
@@ -146,18 +152,26 @@ export default function HeightWorkForm({
     ];
 
     const allRequiredFieldsFilled = requiredFields.every(
-      (field) => field !== undefined && field !== null && field !== ""
+      (field) => field !== undefined && field !== null && field !== "",
     );
 
     const hasSelectedProtection = Object.values(
-      formData.protectionElements || {}
+      formData.protectionElements || {},
     ).some((value) => value === true);
+
+    // 🔹 Las tres verificaciones deben estar marcadas en true
+    const safetyChecksOk =
+      formData.physicalCondition &&
+      formData.instructionsReceived &&
+      formData.fitForHeightWork;
+
     const hasSignature = !!signatureData;
     const hasAcceptedTerms = privacyAccepted;
 
     return (
       allRequiredFieldsFilled &&
       hasSelectedProtection &&
+      safetyChecksOk &&
       hasSignature &&
       hasAcceptedTerms
     );
@@ -175,11 +189,18 @@ export default function HeightWorkForm({
 
     if (
       !Object.values(formData.protectionElements || {}).some(
-        (value) => value === true
+        (value) => value === true,
       )
     ) {
       errors.push("Al menos un elemento de protección seleccionado");
     }
+
+    if (!formData.physicalCondition)
+      errors.push("Confirmar condiciones físicas para trabajo en alturas");
+    if (!formData.instructionsReceived)
+      errors.push("Confirmar que recibió instrucciones para trabajo en alturas");
+    if (!formData.fitForHeightWork)
+      errors.push("Confirmar que está apto para trabajo en alturas");
 
     if (!signatureData) errors.push("Firma del trabajador");
     if (!privacyAccepted) errors.push("Aceptación de términos de seguridad");
@@ -195,10 +216,16 @@ export default function HeightWorkForm({
         return !!selectedOrder;
       case 3:
         return formData.workDescription?.trim() && formData.location?.trim();
-      case 4:
-        return Object.values(formData.protectionElements || {}).some(
-          (value) => value === true
-        );
+      case 4: {
+        const hasProtection = Object.values(
+          formData.protectionElements || {},
+        ).some((value) => value === true);
+        const safetyChecksOk =
+          formData.physicalCondition &&
+          formData.instructionsReceived &&
+          formData.fitForHeightWork;
+        return hasProtection && safetyChecksOk;
+      }
       case 5:
         return !!signatureData;
       case 6:
@@ -220,7 +247,7 @@ export default function HeightWorkForm({
       const filtered = usuarios.filter((usuario) =>
         `${usuario.nombre} ${usuario.apellido}`
           .toLowerCase()
-          .includes(value.toLowerCase())
+          .includes(value.toLowerCase()),
       );
       setSuggestions(filtered.slice(0, 5));
       setShowSuggestions(true);
@@ -255,7 +282,7 @@ export default function HeightWorkForm({
       HeightWorkFormData,
       "signatureData" | "signerType" | "userName"
     >,
-    value: string
+    value: any, // 🔹 puede ser string o boolean
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -317,8 +344,8 @@ export default function HeightWorkForm({
       const errors = getValidationErrors();
       alert(
         `Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join(
-          "\n• "
-        )}`
+          "\n• ",
+        )}`,
       );
       return;
     }
@@ -335,6 +362,12 @@ export default function HeightWorkForm({
         location: formData.location || "",
         estimatedTime: formData.estimatedTime || "",
         protectionElements: formData.protectionElements || {},
+
+        // 🔹 Enviamos las verificaciones al backend
+        physicalCondition: formData.physicalCondition,
+        instructionsReceived: formData.instructionsReceived,
+        fitForHeightWork: formData.fitForHeightWork,
+
         userId: formData.userId,
         createdBy: formData.createdBy,
         workOrderId: formData.workOrderId,
@@ -346,7 +379,7 @@ export default function HeightWorkForm({
       await sgSstService.createHeightWorkWithSignature(submitData as any);
 
       setSuccessMessage(
-        "¡Trabajo en Alturas guardado exitosamente! Redirigiendo al listado..."
+        "¡Trabajo en Alturas guardado exitosamente! Redirigiendo al listado...",
       );
 
       if (onSubmit) {
@@ -374,9 +407,9 @@ export default function HeightWorkForm({
       return empresaContact;
     }
 
-    if (selectedOrder) {
-      const { cliente } = selectedOrder;
-      return `${cliente.nombre} ${cliente.apellido || ""}`.trim();
+    const personaClient = selectedOrder?.cliente;
+    if (personaClient) {
+      return `${personaClient.nombre} ${personaClient.apellido ?? ""}`.trim();
     }
 
     return "N/D";
@@ -384,7 +417,7 @@ export default function HeightWorkForm({
 
   const getClientPhoneDisplay = () => {
     if (selectedClient?.telefono) return selectedClient.telefono;
-    if (selectedOrder?.cliente.telefono) return selectedOrder.cliente.telefono;
+    if (selectedOrder?.cliente?.telefono) return selectedOrder.cliente.telefono;
     return "N/D";
   };
 
@@ -572,16 +605,23 @@ export default function HeightWorkForm({
                   required
                 >
                   <option value="">Seleccione una orden...</option>
-                  {orders.map((o) => (
-                    <option key={o.orden_id} value={o.orden_id}>
-                      #{o.orden_id} -{" "}
-                      {o.cliente_empresa?.nombre ||
-                        `${o.cliente.nombre} ${
-                          o.cliente.apellido || ""
-                        }`.trim()}{" "}
-                      - {o.servicio.nombre_servicio}
-                    </option>
-                  ))}
+                  {orders.map((o) => {
+                    const personaClient = o.cliente;
+                    const clientName =
+                      o.cliente_empresa?.nombre ||
+                      (personaClient
+                        ? `${personaClient.nombre} ${
+                            personaClient.apellido ?? ""
+                          }`.trim()
+                        : "N/D");
+
+                    return (
+                      <option key={o.orden_id} value={o.orden_id}>
+                        #{o.orden_id} - {clientName} -{" "}
+                        {o.servicio.nombre_servicio}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
             </div>
@@ -701,7 +741,7 @@ export default function HeightWorkForm({
           </div>
         </div>
 
-        {/* SECCIÓN 4: ELEMENTOS DE PROTECCIÓN */}
+        {/* SECCIÓN 4: ELEMENTOS DE PROTECCIÓN + VERIFICACIONES */}
         <div
           className={`${styles.section} ${
             !getSectionStatus(4) ? styles.sectionIncomplete : ""
@@ -709,7 +749,7 @@ export default function HeightWorkForm({
         >
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
-              4. Elementos de Protección Personal y Sistemas
+              4. Elementos de Protección Personal y Verificaciones
             </h2>
             {getSectionStatus(4) && (
               <span className={styles.sectionStatus}>✓</span>
@@ -717,7 +757,7 @@ export default function HeightWorkForm({
             {!getSectionStatus(4) && (
               <span className={styles.requiredIndicator}>
                 {" "}
-                (Seleccione al menos uno)
+                (Seleccione al menos un EPP y complete las verificaciones)
               </span>
             )}
           </div>
@@ -736,6 +776,58 @@ export default function HeightWorkForm({
                 <span className={styles.protectionLabel}>{element}</span>
               </label>
             ))}
+          </div>
+
+          {/* 🔹 Verificaciones que antes estaban en el modal SST */}
+          <div className={styles.verificationsSection}>
+            <h3 className={styles.subsectionTitle}>Verificaciones previas</h3>
+            <p className={styles.sectionSubtitle}>
+              Confirme las siguientes condiciones antes de iniciar el trabajo:
+            </p>
+
+            <div className={styles.verificationsList}>
+              <label className={styles.verificationCheckbox}>
+                <input
+                  type="checkbox"
+                  checked={formData.physicalCondition || false}
+                  onChange={(e) =>
+                    handleInputChange("physicalCondition", e.target.checked)
+                  }
+                  required
+                />
+                <span className={styles.verificationLabel}>
+                  Poseo condiciones físicas adecuadas para trabajar en alturas
+                </span>
+              </label>
+
+              <label className={styles.verificationCheckbox}>
+                <input
+                  type="checkbox"
+                  checked={formData.instructionsReceived || false}
+                  onChange={(e) =>
+                    handleInputChange("instructionsReceived", e.target.checked)
+                  }
+                  required
+                />
+                <span className={styles.verificationLabel}>
+                  He recibido instrucciones completas para trabajo en alturas
+                </span>
+              </label>
+
+              <label className={styles.verificationCheckbox}>
+                <input
+                  type="checkbox"
+                  checked={formData.fitForHeightWork || false}
+                  onChange={(e) =>
+                    handleInputChange("fitForHeightWork", e.target.checked)
+                  }
+                  required
+                />
+                <span className={styles.verificationLabel}>
+                  Me declaro apto para realizar este trabajo en alturas
+                </span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -823,16 +915,6 @@ export default function HeightWorkForm({
           </label>
         </div>
 
-        {/* Advertencia */}
-        <div className={styles.warning}>
-          <strong>ADVERTENCIA:</strong> El incumplimiento de las medidas
-          preventivas propuestas en este formato podrá originar la suspensión de
-          los trabajos.
-          <br />
-          <strong>NOTA:</strong> Este permiso requerirá autorización del
-          personal SST.
-        </div>
-
         {/* Botones de acción */}
         <div className={styles.formActions}>
           <button
@@ -852,10 +934,10 @@ export default function HeightWorkForm({
             {isSubmitting
               ? "Guardando..."
               : successMessage
-              ? "✅ Guardado"
-              : isFormValid
-              ? "✅ Guardar Trabajo en Alturas"
-              : "Completar formulario primero"}
+                ? "✅ Guardado"
+                : isFormValid
+                  ? "✅ Guardar Trabajo en Alturas"
+                  : "Completar formulario primero"}
           </button>
         </div>
 

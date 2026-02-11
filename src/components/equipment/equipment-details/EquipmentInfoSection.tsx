@@ -52,19 +52,6 @@ export default function EquipmentInfoSection({
         <span>{equipment.status}</span>
       </div>
 
-      {equipment.area && (
-        <div className={styles.detailItem}>
-          <strong>Área:</strong>
-          <span>{equipment.area.nombreArea}</span>
-        </div>
-      )}
-
-      {equipment.subArea && (
-        <div className={styles.detailItem}>
-          <strong>Subárea:</strong>
-          <span>{equipment.subArea.nombreSubArea}</span>
-        </div>
-      )}
       <div className={styles.detailItem}>
         <strong>Creado por:</strong>
         <span>{equipment.createdBy}</span>

@@ -1,21 +1,20 @@
-// src/components/sg-sst/AtsForm.tsx
 import { useState, useEffect, useMemo } from "react";
-import type { AtsFormData } from "../../interfaces/SgSstInterface";
-import type { Usuario } from "../../interfaces/UserInterfaces";
-import type { Rol } from "../../interfaces/RolesInterfaces";
-import type { Client } from "../../interfaces/ClientInterfaces";
-import type { Order } from "../../interfaces/OrderInterfaces";
-import type { Area } from "../../interfaces/AreaInterfaces";
-import type { SubArea } from "../../interfaces/SubAreaInterfaces";
-import { usersApi } from "../../api/users";
-import { sgSstService } from "../../api/sg-sst";
-import { areas as areasAPI } from "../../api/areas";
-import { subAreas as subAreasAPI } from "../../api/subAreas";
-import SignaturePad from "./SignaturePad";
-import styles from "../../styles/components/sg-sst/AtsForm.module.css";
-import { useAuth } from "../../hooks/useAuth";
-import { rolesApi } from "../../api/roles";
-import { getMyAssignedOrdersRequest } from "../../api/orders";
+import type { AtsFormData } from "../../../interfaces/SgSstInterface";
+import type { Usuario } from "../../../interfaces/UserInterfaces";
+import type { Rol } from "../../../interfaces/RolesInterfaces";
+import type { Client } from "../../../interfaces/ClientInterfaces";
+import type { Order } from "../../../interfaces/OrderInterfaces";
+import type { Area } from "../../../interfaces/AreaInterfaces";
+import type { SubArea } from "../../../interfaces/SubAreaInterfaces";
+import { usersApi } from "../../../api/users";
+import { sgSstService } from "../../../api/sg-sst";
+import { areas as areasAPI } from "../../../api/areas";
+import { subAreas as subAreasAPI } from "../../../api/subAreas";
+import SignaturePad from "../SignaturePad";
+import styles from "../../../styles/components/sg-sst/forms/AtsForm.module.css";
+import { useAuth } from "../../../hooks/useAuth";
+import { rolesApi } from "../../../api/roles";
+import { getMyAssignedOrdersRequest } from "../../../api/orders";
 
 interface AtsFormProps {
   onSubmit: (data: AtsFormData) => void;
@@ -37,7 +36,7 @@ export default function AtsForm({
     user?.role?.nombreRol?.toLowerCase() === "tecnico";
 
   const [dateString, setDateString] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
 
   const [formData, setFormData] = useState<
@@ -136,24 +135,6 @@ export default function AtsForm({
     "MASCARILLA",
   ];
 
-  const toolOptions = [
-    "MARTILLO",
-    "DESTORNILLADOR",
-    "LLAVE INGLESA",
-    "ALICATES",
-    "SIERRA",
-    "TALADRO",
-    "LLAVE DE TUBO",
-    "CINTA MÉTRICA",
-    "NIVEL",
-    "ESCALERA",
-    "ANDAMIO",
-    "EQUIPO DE SOLDADURA",
-    "COMPRESOR",
-    "MÁQUINA DE CORTE",
-    "EQUIPO DE ELEVACIÓN",
-  ];
-
   useEffect(() => {
     if (!user) return;
 
@@ -182,17 +163,17 @@ export default function AtsForm({
     ];
 
     const allRequiredFieldsFilled = requiredFields.every(
-      (field) => field !== undefined && field !== null && field !== ""
+      (field) => field !== undefined && field !== null && field !== "",
     );
 
     const hasSelectedRisks =
       Object.keys(formData.selectedRisks || {}).length > 0 &&
       Object.values(formData.selectedRisks).some(
-        (risks) => Array.isArray(risks) && risks.length > 0
+        (risks) => Array.isArray(risks) && risks.length > 0,
       );
 
     const hasSelectedPPE = Object.values(formData.requiredPpe || {}).some(
-      (value) => value === true
+      (value) => value === true,
     );
 
     const hasSignature = !!signatureData;
@@ -232,7 +213,7 @@ export default function AtsForm({
     if (
       Object.keys(formData.selectedRisks || {}).length === 0 ||
       !Object.values(formData.selectedRisks).some(
-        (risks) => Array.isArray(risks) && risks.length > 0
+        (risks) => Array.isArray(risks) && risks.length > 0,
       )
     ) {
       errors.push("Al menos un riesgo seleccionado");
@@ -258,7 +239,7 @@ export default function AtsForm({
   useEffect(() => {
     if (selectedClient) {
       loadAreasByClient(
-        (selectedClient as any).id_cliente || selectedClient.idCliente
+        (selectedClient as any).id_cliente || selectedClient.idCliente,
       );
     } else {
       setAvailableAreas([]);
@@ -294,7 +275,7 @@ export default function AtsForm({
       console.error("Error cargando órdenes del técnico:", error);
       setOrdersError(
         error.response?.data?.message ||
-          "Error al cargar las órdenes del técnico"
+          "Error al cargar las órdenes del técnico",
       );
     } finally {
       setOrdersLoading(false);
@@ -403,7 +384,7 @@ export default function AtsForm({
       const filtered = usuarios.filter((usuario) =>
         `${usuario.nombre} ${usuario.apellido}`
           .toLowerCase()
-          .includes(value.toLowerCase())
+          .includes(value.toLowerCase()),
       );
       setSuggestions(filtered.slice(0, 5));
       setShowSuggestions(true);
@@ -453,7 +434,7 @@ export default function AtsForm({
 
   const handleSubAreaChange = (subAreaId: string) => {
     const subArea = availableSubAreas.find(
-      (sa) => sa.idSubArea.toString() === subAreaId
+      (sa) => sa.idSubArea.toString() === subAreaId,
     );
     setFormData((prev) => ({
       ...prev,
@@ -488,7 +469,7 @@ export default function AtsForm({
       AtsFormData,
       "date" | "signatureData" | "signerType" | "userName"
     >,
-    value: string
+    value: string,
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -517,8 +498,8 @@ export default function AtsForm({
       const errors = getValidationErrors();
       alert(
         `Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join(
-          "\n• "
-        )}`
+          "\n• ",
+        )}`,
       );
       return;
     }
@@ -534,7 +515,9 @@ export default function AtsForm({
       const clientId = clientEmpresa?.id_cliente;
       const clientName =
         clientEmpresa?.nombre ||
-        `${clientPersona.nombre} ${clientPersona.apellido || ""}`.trim();
+        (clientPersona
+          ? `${clientPersona.nombre} ${clientPersona.apellido ?? ""}`.trim()
+          : "N/D");
       const clientNit = clientEmpresa?.nit;
 
       const atsData: AtsFormData = {
@@ -605,11 +588,11 @@ export default function AtsForm({
         );
       case 4:
         return Object.values(formData.selectedRisks || {}).some(
-          (risks) => Array.isArray(risks) && risks.length > 0
+          (risks) => Array.isArray(risks) && risks.length > 0,
         );
       case 5:
         return Object.values(formData.requiredPpe || {}).some(
-          (value) => value === true
+          (value) => value === true,
         );
       case 6:
         return !!signatureData;
@@ -629,9 +612,9 @@ export default function AtsForm({
       return empresaContact;
     }
 
-    if (selectedOrder) {
-      const { cliente } = selectedOrder;
-      return `${cliente.nombre} ${cliente.apellido || ""}`.trim();
+    const personaClient = selectedOrder?.cliente;
+    if (personaClient) {
+      return `${personaClient.nombre} ${personaClient.apellido ?? ""}`.trim();
     }
 
     return "N/D";
@@ -639,7 +622,7 @@ export default function AtsForm({
 
   const getClientPhoneDisplay = () => {
     if (selectedClient?.telefono) return selectedClient.telefono;
-    if (selectedOrder?.cliente.telefono) return selectedOrder.cliente.telefono;
+    if (selectedOrder?.cliente?.telefono) return selectedOrder.cliente.telefono;
     return "N/D";
   };
 
@@ -816,16 +799,23 @@ export default function AtsForm({
                   required
                 >
                   <option value="">Seleccione una orden...</option>
-                  {orders.map((o) => (
-                    <option key={o.orden_id} value={o.orden_id}>
-                      #{o.orden_id} -{" "}
-                      {o.cliente_empresa?.nombre ||
-                        `${o.cliente.nombre} ${
-                          o.cliente.apellido || ""
-                        }`.trim()}{" "}
-                      - {o.servicio.nombre_servicio}
-                    </option>
-                  ))}
+                  {orders.map((o) => {
+                    const personaClient = o.cliente;
+                    const clientName =
+                      o.cliente_empresa?.nombre ||
+                      (personaClient
+                        ? `${personaClient.nombre} ${
+                            personaClient.apellido ?? ""
+                          }`.trim()
+                        : "N/D");
+
+                    return (
+                      <option key={o.orden_id} value={o.orden_id}>
+                        #{o.orden_id} - {clientName} -{" "}
+                        {o.servicio.nombre_servicio}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
             </div>
@@ -912,7 +902,7 @@ export default function AtsForm({
                 className={styles.input}
                 value={
                   availableSubAreas.find(
-                    (sa) => sa.nombreSubArea === formData.subArea
+                    (sa) => sa.nombreSubArea === formData.subArea,
                   )?.idSubArea || ""
                 }
                 onChange={(e) => handleSubAreaChange(e.target.value)}
@@ -1132,23 +1122,12 @@ export default function AtsForm({
             </div>
           </div>
 
-          <div className={styles.subsection}>
+          {/* <div className={styles.subsection}>
             <h3 className={styles.subsectionTitle}>Herramientas</h3>
-            <div className={styles.toolsGrid}>
-              {toolOptions.map((tool) => (
-                <label key={tool} className={styles.toolCheckbox}>
-                  <input
-                    type="checkbox"
-                    checked={formData.requiredPpe?.[tool] || false}
-                    onChange={() => handlePpeToolToggle(tool)}
-                  />
-                  <span className={styles.toolLabel}>{tool}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+            
+          </div> */}
 
-          <div className={styles.formGroup}>
+          {/* <div className={styles.formGroup}>
             <label className={styles.label}>
               Otras herramientas o equipos (opcional)
             </label>
@@ -1163,7 +1142,7 @@ export default function AtsForm({
                   .filter((t) => t);
                 const newTools = tools.reduce(
                   (acc, tool) => ({ ...acc, [tool]: true }),
-                  {}
+                  {},
                 );
                 setFormData((prev) => ({
                   ...prev,
@@ -1171,7 +1150,7 @@ export default function AtsForm({
                 }));
               }}
             />
-          </div>
+          </div> */}
         </div>
 
         {/* SECCIÓN 6: OBSERVACIONES */}
@@ -1291,8 +1270,8 @@ export default function AtsForm({
             {isSubmitting
               ? "Guardando..."
               : isFormValid
-              ? "✅ Guardar ATS"
-              : "Completar formulario primero"}
+                ? "✅ Guardar ATS"
+                : "Completar formulario primero"}
           </button>
         </div>
 

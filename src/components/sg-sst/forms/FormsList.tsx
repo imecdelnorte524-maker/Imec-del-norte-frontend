@@ -1,6 +1,6 @@
 // src/components/sg-sst/FormsList.tsx
-import type { SgSstForm, FormType, FormStatus } from '../../interfaces/SgSstInterface';
-import styles from '../../styles/components/sg-sst/FormsList.module.css';
+import type { SgSstForm, FormType, FormStatus } from '../../../interfaces/SgSstInterface';
+import styles from '../../../styles/components/sg-sst/forms/FormsList.module.css';
 
 interface FormsListProps {
   forms: SgSstForm[];
@@ -42,6 +42,7 @@ export default function FormsList({
       case 'DRAFT': return '#6B7280';
       case 'PENDING_SST': return '#F59E0B';
       case 'COMPLETED': return '#10B981';
+      case 'REJECTED': return '#EF4444';
       default: return '#6B7280';
     }
   };
@@ -51,6 +52,7 @@ export default function FormsList({
       case 'DRAFT': return 'Borrador';
       case 'PENDING_SST': return 'Pendiente SST';
       case 'COMPLETED': return 'Aprobado';
+      case 'REJECTED': return 'Rechazado';
       default: return status;
     }
   };
@@ -75,7 +77,7 @@ export default function FormsList({
 
   // Determinar el texto del botón según el rol y estado
   const getButtonText = (form: SgSstForm): string => {
-    if (userRole === 'SG-SST' && form.status === 'PENDING_SST') {
+    if (userRole === 'SGSST' && form.status === 'PENDING_SST') {
       return 'Firmar →';
     }
     return 'Ver detalles →';
@@ -83,7 +85,7 @@ export default function FormsList({
 
   // Determinar la clase del botón según el rol y estado
   const getButtonClass = (form: SgSstForm): string => {
-    if (userRole === 'SG-SST' && form.status === 'PENDING_SST') {
+    if (userRole === 'SGSST' && form.status === 'PENDING_SST') {
       return styles.signButton;
     }
     return styles.viewButton;

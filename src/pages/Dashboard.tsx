@@ -64,7 +64,7 @@ const mapServiceFromAPI = (service: ServiceFromAPI): Service => ({
   comentarios: service.comentarios || undefined,
 });
 
-// Función para ordenar Ordenes según el criterio especificado
+// Función para ordenar Órdenes según el criterio especificado
 const sortServices = (services: Service[]): Service[] => {
   const orderPriority: Record<string, number> = {
     "En Proceso": 1,
@@ -149,6 +149,7 @@ export default function Dashboard() {
     inProgressServices: 0,
     pendingServices: 0,
     unassignedServices: 0,
+    pausedServices: 0,
     assignedPendingServices: 0,
     cancelledServices: 0,
     myServices: 0,
@@ -162,6 +163,7 @@ export default function Dashboard() {
       inProgress: 0,
       completed: 0,
       canceled: 0,
+      paused: 0,
     },
     technicians: [] as {
       tecnico_id: number;
@@ -177,7 +179,7 @@ export default function Dashboard() {
   const [sgSstLoading, setSgSstLoading] = useState(false);
   const [sgSstError, setSgSstError] = useState<string | null>(null);
 
-  // Cargar datos del dashboard de Ordenes (solo si NO es SGSST)
+  // Cargar datos del dashboard de Órdenes (solo si NO es SGSST)
   useEffect(() => {
     if (!isAuthenticated || authLoading || isSgSst) return;
 
@@ -191,7 +193,7 @@ export default function Dashboard() {
 
         let servicesData: ServiceFromAPI[];
 
-        // Cargar Ordenes según el rol
+        // Cargar Órdenes según el rol
         if (isAdmin) {
           const response = await getServicesRequest({
             search: searchTerm || undefined,
@@ -222,6 +224,7 @@ export default function Dashboard() {
           myServices: metricsData.mis_servicios,
           billedServices: metricsData.facturadas,
           notBilledServices: metricsData.no_facturadas,
+          pausedServices: metricsData.pausados,
           totalRevenue: metricsData.ingresos_totales,
           completedThisMonth: metricsData.completadas_este_mes,
           statusCounts: {
@@ -230,11 +233,12 @@ export default function Dashboard() {
             inProgress: metricsData.status_counts?.en_proceso ?? 0,
             completed: metricsData.status_counts?.completado ?? 0,
             canceled: metricsData.status_counts?.cancelado ?? 0,
+            paused: metricsData.status_counts?.pausado ?? 0,
           },
           technicians: metricsData.technicians || [],
         });
 
-        // Mapear y ordenar Ordenes
+        // Mapear y ordenar Órdenes
         const mappedServices = servicesData.map(mapServiceFromAPI);
         const sortedServices = sortServices(mappedServices);
 
@@ -297,7 +301,7 @@ export default function Dashboard() {
     loadSgSstForms();
   }, [isAuthenticated, authLoading, isSgSst]);
 
-  // Filtro de Ordenes (solo tiene efecto cuando no es SGSST)
+  // Filtro de Órdenes (solo tiene efecto cuando no es SGSST)
   useEffect(() => {
     const filtered = services.filter((service) => {
       const clienteNombre = `${service.cliente.nombre} ${
@@ -379,6 +383,12 @@ export default function Dashboard() {
       className: styles.barInProgress,
     },
     {
+      key: "paused",
+      label: "Pausadas",
+      value: metrics.statusCounts.paused,
+      className: styles.barPaused,
+    },
+    {
       key: "completed",
       label: "Completadas",
       value: metrics.statusCounts.completed,
@@ -453,12 +463,12 @@ export default function Dashboard() {
             </h1>
             <p className={styles.pageSubtitle}>
               {isAdmin
-                ? "Resumen general y gestión de Ordenes técnicos"
+                ? "Resumen general y gestión de Órdenes técnicos"
                 : isSgSst
                   ? "Reportes SG-SST pendientes de firma"
                   : isClient
-                    ? `Mis Ordenes - ${user?.nombre} ${user?.apellido || ""}`
-                    : `Mis Ordenes asignados - ${user?.nombre} ${
+                    ? `Mis Órdenes - ${user?.nombre} ${user?.apellido || ""}`
+                    : `Mis Órdenes asignados - ${user?.nombre} ${
                         user?.apellido || ""
                       }`}
             </p>
@@ -559,15 +569,15 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ==== TODO lo de Ordenes SOLO si NO es SGSST ==== */}
+        {/* ==== TODO lo de Órdenes SOLO si NO es SGSST ==== */}
         {!isSgSst && (
           <>
-            {/* Métricas de Ordenes */}
+            {/* Métricas de Órdenes */}
             <div className={styles.metricsGrid}>
               <div className={styles.metricCard}>
                 <div className={styles.metricHeader}>
                   <div className={styles.metricTitle}>
-                    {isAdmin ? "Total Ordenes" : "Mis Ordenes"}
+                    {isAdmin ? "Total Órdenes" : "Mis Órdenes"}
                   </div>
                   <ClipboardDocumentListIcon className={styles.metricIcon} />
                 </div>
@@ -576,22 +586,11 @@ export default function Dashboard() {
                 </div>
                 <div className={styles.metricDescription}>
                   {isAdmin
-                    ? "Ordenes activos"
+                    ? "Órdenes activos"
                     : isClient
-                      ? "Mis Ordenes activas"
+                      ? "Mis Órdenes activas"
                       : "Asignados a mí"}
                 </div>
-              </div>
-
-              <div className={styles.metricCard}>
-                <div className={styles.metricHeader}>
-                  <div className={styles.metricTitle}>En Proceso</div>
-                  <ClockIcon className={styles.metricIcon} />
-                </div>
-                <div className={styles.metricValue}>
-                  {metrics.inProgressServices}
-                </div>
-                <div className={styles.metricDescription}>Por completar</div>
               </div>
 
               {isAdmin && (
@@ -623,6 +622,28 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+
+              <div className={styles.metricCard}>
+                <div className={styles.metricHeader}>
+                  <div className={styles.metricTitle}>En Proceso</div>
+                  <ClockIcon className={styles.metricIcon} />
+                </div>
+                <div className={styles.metricValue}>
+                  {metrics.inProgressServices}
+                </div>
+                <div className={styles.metricDescription}>Por completar</div>
+              </div>
+              
+              <div className={styles.metricCard}>
+                <div className={styles.metricHeader}>
+                  <div className={styles.metricTitle}>En Pausa</div>
+                  <ClockIcon className={styles.metricIcon} />
+                </div>
+                <div className={styles.metricValue}>
+                  {metrics.pausedServices}
+                </div>
+                <div className={styles.metricDescription}>Órdenes Pausadas</div>
+              </div>
 
               {isAdmin && (
                 <div className={styles.metricCard}>
@@ -712,7 +733,7 @@ export default function Dashboard() {
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitle}>
                     <UsersIcon className={styles.sectionIcon} />
-                    Ordenes por técnico
+                    Órdenes por técnico
                   </div>
                 </div>
                 <div className={styles.sectionContent}>
@@ -748,7 +769,7 @@ export default function Dashboard() {
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
                   <FunnelIcon className={styles.sectionIcon} />
-                  Filtros de Ordenes
+                  Filtros de Órdenes
                 </div>
                 <button
                   className={styles.clearFiltersButton}
@@ -825,7 +846,7 @@ export default function Dashboard() {
             {/* Resumen resultados */}
             <div className={styles.resultsSummary}>
               <div className={styles.resultsCount}>
-                {filteredServices.length} Ordenes encontrados
+                {filteredServices.length} Órdenes encontrados
                 {totalPages > 1 && ` - Página ${currentPage} de ${totalPages}`}
               </div>
               <div className={styles.activeFilters}>
@@ -847,12 +868,12 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Lista de Ordenes */}
+            {/* Lista de Órdenes */}
             <div className={styles.section}>
               <div className={styles.sectionHeader}>
                 <div className={styles.sectionTitle}>
                   <ClipboardDocumentListIcon className={styles.sectionIcon} />
-                  {isAdmin ? "Ordenes Recientes" : "Mis Ordenes"}
+                  {isAdmin ? "Órdenes Recientes" : "Mis Órdenes"}
                   <span className={styles.orderInfo}></span>
                 </div>
               </div>
@@ -861,7 +882,7 @@ export default function Dashboard() {
                 {loading ? (
                   <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
-                    <p>Cargando Ordenes...</p>
+                    <p>Cargando Órdenes...</p>
                   </div>
                 ) : (
                   <>
@@ -876,7 +897,7 @@ export default function Dashboard() {
                       ) : (
                         <div className={styles.noResults}>
                           <div className={styles.noResultsIcon}>📭</div>
-                          <h3>No se encontraron Ordenes</h3>
+                          <h3>No se encontraron Órdenes</h3>
                           <p>Intenta ajustar los filtros de búsqueda</p>
                           <button
                             className={styles.clearFiltersButton}

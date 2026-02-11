@@ -1,74 +1,551 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getAllOrdersRequest, getOrderByIdRequest } from "../api/orders"; // <--- Asegúrate de importar getOrderByIdRequest
+// src/hooks/useOrders.ts
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import {
+  getAllOrdersRequest,
+  getOrderByIdRequest,
+  createOrderRequest,
+  updateOrderRequest,
+  assignTechniciansRequest,
+  unassignTechnicianRequest,
+  removeSpecificTechnicianRequest,
+  cancelOrderRequest,
+  startTimerRequest,
+  stopTimerRequest,
+  addPauseRequest,
+  endPauseRequest,
+  getOrdersByClientAndCategoryRequest,
+} from "../api/orders";
+import {
+  getDashboardOrdersRequest,
+  getMyServicesRequest,
+  getDashboardMetricsRequest,
+} from "../api/dashboard";
 import { QUERY_KEYS } from "../api/keys";
-import type { Order } from "../interfaces/OrderInterfaces";
+import type {
+  Order,
+  CreateOrderData,
+  UpdateOrderData,
+} from "../interfaces/OrderInterfaces";
+import { useSocket } from "../context/SocketContext"; // <-- NUEVO
+import { useSocketEvent } from "./useSocketEvent"; // <-- NUEVO
 
-// Hook para la LISTA de órdenes
-export const useOrders = (
-  userRole: "cliente" | "tecnico" | "admin",
-  filter?: string
-) => {
+// ---------------------------------------------------------------------------
+// Helper global de tiempo real para órdenes
+// ---------------------------------------------------------------------------
+function useWorkOrdersRealtime() {
+  const socket = useSocket();
   const queryClient = useQueryClient();
 
-  const { data: orders = [], isLoading, error } = useQuery({
-    queryKey: [QUERY_KEYS.orders, userRole, filter],
-    queryFn: async () => {
-      const response = await getAllOrdersRequest();
-
-      if (userRole === "admin" && filter && filter !== "all") {
-        const filterMap: Record<string, string> = {
-          pending: "Pendiente",
-          assigned: "Asignada",
-          completed: "Completado",
-          cancelled: "Cancelada",
-        };
-
-        const targetEstado = filterMap[filter];
-        if (targetEstado) {
-          let filtered = response.filter((o) => o.estado === targetEstado);
-          
-          if (filter === "pending") filtered = filtered.filter((o) => !o.tecnico_id);
-          if (filter === "assigned") filtered = filtered.filter((o) => o.tecnico_id);
-          
-          return filtered;
-        }
-      }
-      return response;
-    },
-  });
-
-  return { 
-    orders, 
-    loading: isLoading, 
-    error: error ? (error as Error).message : null,
-    refreshOrders: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] })
+  const invalidateLists = () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
   };
-};
 
-// --- NUEVO HOOK ESPECÍFICO PARA DETALLE ---
-export const useOrderDetail = (orderId: number, initialData?: Order) => {
+  const invalidateMetrics = () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardMetrics] });
+  };
+
+  const invalidateDetails = () => {
+    // Invalida todos los detalles: ["orderDetail", id]
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orderDetail] });
+  };
+
+  const onChange = () => {
+    invalidateLists();
+    invalidateMetrics();
+    invalidateDetails();
+  };
+
+  // No dependemos del payload, sólo invalidamos cache
+  useSocketEvent(socket, "workOrders.created", onChange);
+  useSocketEvent(socket, "workOrders.updated", onChange);
+  useSocketEvent(socket, "workOrders.deleted", onChange);
+  useSocketEvent(socket, "workOrders.statusUpdated", onChange);
+  useSocketEvent(socket, "workOrders.invoiceUpdated", onChange);
+  useSocketEvent(socket, "workOrders.assigned", onChange);
+  useSocketEvent(socket, "workOrders.emergencyCreated", onChange);
+}
+
+// ---------------------------------------------------------------------------
+// LISTA de órdenes del dashboard (/dashboard/orders)
+// ---------------------------------------------------------------------------
+export const useDashboardOrders = (filters?: {
+  estado?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  tecnicoId?: number;
+  clienteId?: number;
+}) => {
   const queryClient = useQueryClient();
+  useWorkOrdersRealtime(); // activar WS
 
-  const { data: order, isLoading, error, refetch } = useQuery({
-    queryKey: ["orderDetail", orderId], // Clave única por orden
-    queryFn: () => getOrderByIdRequest(orderId),
-    initialData: initialData, // Muestra datos inmediatos mientras carga
-    
-    // AQUÍ ESTÁ LA MAGIA DEL "TIEMPO REAL" (POLLING)
-    // Consulta al servidor cada 4 segundos si hay cambios (sin sockets)
-    refetchInterval: 4000, 
-    refetchIntervalInBackground: true, // Sigue actualizando si cambias de pestaña
+  const { data, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.dashboardOrders, filters],
+    queryFn: () => getDashboardOrdersRequest(filters),
   });
 
   return {
-    order: order || initialData, // Fallback a datos iniciales si no ha cargado
+    orders: data?.services || [],
+    total: data?.total || 0,
+    page: data?.page || 1,
+    limit: data?.limit || 20,
+    totalPages: data?.totalPages || 1,
     loading: isLoading,
     error: error ? (error as Error).message : null,
-    // Esta función la llamaremos después de añadir/quitar insumos para actualizar YA
-    refreshOrder: async () => {
-      await refetch();
-      // Opcional: Actualizar también la lista general para que los estados coincidan
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
-    }
+    refreshOrders: () =>
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] }),
   };
 };
+
+// ---------------------------------------------------------------------------
+// MIS ÓRDENES (técnico/cliente) usando /work-orders
+// ---------------------------------------------------------------------------
+export const useMyOrders = (filters?: {
+  estado?: string; // "Pendiente", "Asignada", "En Proceso", ...
+}) => {
+  const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.orders, "my", filters],
+    queryFn: async () => {
+      const response = await getAllOrdersRequest();
+      let list: Order[] = response.services || [];
+
+      if (filters?.estado) {
+        list = list.filter((o) => o.estado === filters.estado);
+      }
+
+      return {
+        services: list,
+        total: list.length,
+        page: 1,
+        limit: list.length,
+        totalPages: 1,
+      };
+    },
+  });
+
+  return {
+    orders: data?.services || [],
+    total: data?.total || 0,
+    page: data?.page || 1,
+    limit: data?.limit || data?.services?.length || 0,
+    totalPages: data?.totalPages || 1,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refreshOrders: () =>
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] }),
+  };
+};
+
+// ---------------------------------------------------------------------------
+// MIS SERVICIOS (/dashboard/mis-servicios)
+// ---------------------------------------------------------------------------
+export const useMyServices = (filters: {
+  userRole: string;
+  userId: number;
+  estado?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.myServices, filters],
+    queryFn: () => getMyServicesRequest(filters),
+  });
+
+  return {
+    orders: data?.services || [],
+    total: data?.total || 0,
+    page: data?.page || 1,
+    limit: data?.limit || 20,
+    totalPages: data?.totalPages || 1,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refreshServices: () =>
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] }),
+  };
+};
+
+// ---------------------------------------------------------------------------
+// MÉTRICAS dashboard (/dashboard/metricas)
+// ---------------------------------------------------------------------------
+export const useDashboardMetrics = () => {
+  useWorkOrdersRealtime();
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: [QUERY_KEYS.dashboardMetrics],
+    queryFn: getDashboardMetricsRequest,
+    // Si confías sólo en WS, puedes quitar el polling:
+    // refetchInterval: 30000,
+  });
+
+  return {
+    metrics: data,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refreshMetrics: refetch,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// LISTA de órdenes en OrdersPage (/work-orders)
+// ---------------------------------------------------------------------------
+export const useOrders = (
+  userRole: "cliente" | "tecnico" | "admin" | "secretaria",
+  filter: "all" | "pending" | "assigned" | "completed" | "cancelled" = "all",
+) => {
+  const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: [QUERY_KEYS.orders, userRole, filter],
+    queryFn: async () => {
+      const response = await getAllOrdersRequest();
+      let list: Order[] = response.services || [];
+
+      const filterMap: Record<
+        "pending" | "assigned" | "completed" | "cancelled",
+        Order["estado"]
+      > = {
+        pending: "Pendiente",
+        assigned: "Asignada",
+        completed: "Completado",
+        cancelled: "Cancelada",
+      };
+
+      if (filter !== "all") {
+        const targetEstado = filterMap[filter];
+
+        if (targetEstado) {
+          list = list.filter((o) => o.estado === targetEstado);
+
+          if (userRole === "admin" || userRole === "secretaria") {
+            if (filter === "pending") {
+              list = list.filter((o) => (o.technicians?.length || 0) === 0);
+            }
+            if (filter === "assigned") {
+              list = list.filter((o) => (o.technicians?.length || 0) > 0);
+            }
+          }
+        }
+      }
+
+      return {
+        services: list,
+        total: list.length,
+        page: 1,
+        limit: list.length,
+        totalPages: 1,
+      };
+    },
+  });
+
+  const services = data?.services || [];
+
+  return {
+    orders: services,
+    total: data?.total || services.length,
+    page: data?.page || 1,
+    limit: data?.limit || services.length,
+    totalPages: data?.totalPages || 1,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refreshOrders: () =>
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] }),
+  };
+};
+
+// ---------------------------------------------------------------------------
+// DETALLE de orden
+// ---------------------------------------------------------------------------
+export const useOrderDetail = (orderId: number, initialData?: Order) => {
+  const queryClient = useQueryClient();
+  useWorkOrdersRealtime();
+
+  const {
+    data: order,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: [QUERY_KEYS.orderDetail, orderId],
+    queryFn: () => getOrderByIdRequest(orderId),
+    initialData,
+    // Puedes quitar el polling si ya tienes WS:
+    // refetchInterval: 4000,
+    // refetchIntervalInBackground: true,
+  });
+
+  return {
+    order: order || initialData,
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
+    refreshOrder: async () => {
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Mutaciones para órdenes (crear/actualizar/asignar/cancelar)
+// ---------------------------------------------------------------------------
+export const useOrderMutations = () => {
+  const queryClient = useQueryClient();
+
+  const createOrderMutation = useMutation({
+    mutationFn: (orderData: CreateOrderData) => createOrderRequest(orderData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+    },
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      data,
+    }: {
+      orderId: number;
+      data: UpdateOrderData;
+    }) => updateOrderRequest(orderId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+    },
+  });
+
+  const assignTechnicianMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      technicians,
+    }: {
+      orderId: number;
+      technicians: { tecnicoId: number; isLeader?: boolean }[];
+    }) => {
+      const technicianIds = technicians.map((t) => t.tecnicoId);
+      const leaderTechnicianId =
+        technicians.find((t) => t.isLeader)?.tecnicoId ||
+        technicians[0]?.tecnicoId;
+
+      return assignTechniciansRequest(orderId, {
+        technicianIds,
+        leaderTechnicianId,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+    },
+  });
+
+  const unassignTechnicianMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      tecnicoId,
+    }: {
+      orderId: number;
+      tecnicoId?: number;
+    }) => {
+      if (tecnicoId) {
+        return removeSpecificTechnicianRequest(orderId, tecnicoId);
+      }
+      return unassignTechnicianRequest(orderId);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+    },
+  });
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: (orderId: number) => cancelOrderRequest(orderId),
+    onSuccess: (_, orderId) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+    },
+  });
+
+  return {
+    createOrder: createOrderMutation,
+    updateOrder: updateOrderMutation,
+    assignTechnician: assignTechnicianMutation,
+    unassignTechnician: unassignTechnicianMutation,
+    cancelOrder: cancelOrderMutation,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Mutaciones para timers y pausas
+// ---------------------------------------------------------------------------
+export const useOrderTimerMutations = (orderId: number) => {
+  const queryClient = useQueryClient();
+
+  const startTimerMutation = useMutation({
+    mutationFn: () => startTimerRequest(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, orderId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.dashboardOrders],
+      });
+    },
+  });
+
+  const stopTimerMutation = useMutation({
+    mutationFn: () => stopTimerRequest(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, orderId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.dashboardOrders],
+      });
+    },
+  });
+
+  const addPauseMutation = useMutation({
+    mutationFn: (payload: { observacion: string; userId: number }) =>
+      addPauseRequest(orderId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, orderId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.dashboardOrders],
+      });
+    },
+  });
+
+  const endPauseMutation = useMutation({
+    mutationFn: () => endPauseRequest(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, orderId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.dashboardOrders],
+      });
+    },
+  });
+
+  return {
+    startTimer: startTimerMutation,
+    stopTimer: stopTimerMutation,
+    addPause: addPauseMutation,
+    endPause: endPauseMutation,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Órdenes por cliente/categoría (con cache local)
+// ---------------------------------------------------------------------------
+interface OrdersCache {
+  [key: string]: {
+    orders: Order[];
+    timestamp: number;
+  };
+}
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+export function useOrderLoader() {
+  const [ordersCache, setOrdersCache] = useState<OrdersCache>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadOrders = useCallback(
+    async (clientId: number, category: string): Promise<Order[]> => {
+      const cacheKey = `${clientId}-${category}`;
+      const now = Date.now();
+
+      const cachedData = ordersCache[cacheKey];
+      if (cachedData && now - cachedData.timestamp < CACHE_DURATION) {
+        setError(null);
+        return cachedData.orders;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const orders = await getOrdersByClientAndCategoryRequest(
+          clientId,
+          category,
+        );
+
+        setOrdersCache((prev) => ({
+          ...prev,
+          [cacheKey]: {
+            orders,
+            timestamp: now,
+          },
+        }));
+
+        return orders;
+      } catch (err: any) {
+        console.error("Error loading orders:", err);
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          `Error al cargar órdenes para categoría ${category}`;
+
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [ordersCache],
+  );
+
+  const clearCache = useCallback((key?: string) => {
+    if (key) {
+      setOrdersCache((prev) => {
+        const newCache = { ...prev };
+        delete newCache[key];
+        return newCache;
+      });
+    } else {
+      setOrdersCache({});
+    }
+  }, []);
+
+  return {
+    loadOrders,
+    loading,
+    error,
+    clearCache,
+    cacheSize: Object.keys(ordersCache).length,
+  };
+}

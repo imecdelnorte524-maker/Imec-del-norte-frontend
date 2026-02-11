@@ -1,5 +1,5 @@
 // src/api/sg-sst.ts
-import api from './axios';
+import api from "./axios";
 import type {
   AtsFormData,
   HeightWorkFormData,
@@ -9,33 +9,33 @@ import type {
   FormsListResponse,
   FormDetailResponse,
   SgSstStats,
-} from '../interfaces/SgSstInterface';
+  RejectFormPayload,
+  PreopChecklistTemplatePayload,
+} from "../interfaces/SgSstInterface";
 
 export const sgSstService = {
   // ========== FORMULARIOS ATS ==========
   createAts: async (data: AtsFormData): Promise<ApiResponse> => {
-    const response = await api.post('/sg-sst/ats', data);
+    const response = await api.post("/sg-sst/ats", data);
     return response.data;
   },
 
   // NUEVO ENDPOINT: Crear ATS con firma incluida
   createAtsWithSignature: async (data: AtsFormData): Promise<ApiResponse> => {
-    const response = await api.post('/sg-sst/ats-with-signature', data);
+    const response = await api.post("/sg-sst/ats-with-signature", data);
     return response.data;
   },
 
   createHeightWorkWithSignature: async (
     data: HeightWorkFormData,
   ): Promise<ApiResponse> => {
-    const response = await api.post('/sg-sst/height-work-with-signature', data);
+    const response = await api.post("/sg-sst/height-work-with-signature", data);
     return response.data;
   },
 
   // ========== TRABAJO EN ALTURAS ==========
-  createHeightWork: async (
-    data: HeightWorkFormData,
-  ): Promise<ApiResponse> => {
-    const response = await api.post('/sg-sst/height-work', data);
+  createHeightWork: async (data: HeightWorkFormData): Promise<ApiResponse> => {
+    const response = await api.post("/sg-sst/height-work", data);
     return response.data;
   },
 
@@ -43,7 +43,7 @@ export const sgSstService = {
   createPreoperational: async (
     data: PreoperationalFormData,
   ): Promise<ApiResponse> => {
-    const response = await api.post('/sg-sst/preoperational', data);
+    const response = await api.post("/sg-sst/preoperational", data);
     return response.data;
   },
 
@@ -51,9 +51,16 @@ export const sgSstService = {
     data: PreoperationalFormData,
   ): Promise<ApiResponse> => {
     const response = await api.post(
-      '/sg-sst/preoperational-with-signature',
+      "/sg-sst/preoperational-with-signature",
       data,
     );
+    return response.data;
+  },
+
+  createPreoperationalTemplate: async (
+    data: PreopChecklistTemplatePayload,
+  ): Promise<ApiResponse> => {
+    const response = await api.post("/sg-sst/preoperational-templates", data);
     return response.data;
   },
 
@@ -69,7 +76,7 @@ export const sgSstService = {
   // ========== CONSULTAS ==========
   getAllForms: async (userId?: number): Promise<FormsListResponse> => {
     const params = userId ? { userId } : {};
-    const response = await api.get('/sg-sst/forms', { params });
+    const response = await api.get("/sg-sst/forms", { params });
     return response.data;
   },
 
@@ -107,7 +114,7 @@ export const sgSstService = {
   // DESCARGA DIRECTA DE PDF (blob)
   downloadPdf: async (formId: number) => {
     const response = await api.get(`/sg-sst/forms/${formId}/download-pdf`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
     return response; // AxiosResponse<Blob>
   },
@@ -117,7 +124,7 @@ export const sgSstService = {
     userId?: number,
   ): Promise<ApiResponse<SgSstStats>> => {
     const params = userId ? { userId } : {};
-    const response = await api.get('/sg-sst/dashboard/stats', { params });
+    const response = await api.get("/sg-sst/dashboard/stats", { params });
     return response.data;
   },
 
@@ -129,9 +136,58 @@ export const sgSstService = {
       );
       return response.data;
     } catch (error) {
-      console.error('Error autorizando trabajo en alturas:', error);
+      console.error("Error autorizando trabajo en alturas:", error);
       throw error;
     }
+  },
+
+  // 🔹 Obtener plantilla de checklist preoperacional según tipo de herramienta
+  async getPreoperationalTemplate(toolType: string) {
+    const res = await api.get("/sg-sst/preoperational-templates/by-tool-type", {
+      params: { toolType },
+    });
+    return res.data.data as {
+      id: number;
+      toolType: string;
+      toolCategory: string;
+      estimatedTime: number;
+      additionalInstructions?: string;
+      requiresTools?: string[];
+      parameters: Array<{
+        id: number;
+        parameterCode?: string;
+        parameter: string;
+        description?: string;
+        category:
+          | "safety"
+          | "functional"
+          | "visual"
+          | "operational"
+          | "electrical";
+        required: boolean;
+        critical: boolean;
+        displayOrder: number;
+      }>;
+    };
+  },
+
+  rejectForm: async (
+    formId: number,
+    data: RejectFormPayload,
+  ): Promise<ApiResponse> => {
+    const response = await api.post(`/sg-sst/forms/${formId}/reject`, data);
+    return response.data;
+  },
+
+  updatePreoperationalTemplate: async (
+    id: number,
+    data: PreopChecklistTemplatePayload,
+  ): Promise<ApiResponse> => {
+    const response = await api.put(
+      `/sg-sst/preoperational-templates/${id}`,
+      data,
+    );
+    return response.data;
   },
 };
 

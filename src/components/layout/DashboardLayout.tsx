@@ -1,5 +1,11 @@
 // src/components/layout/DashboardLayout.tsx
-import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "../../styles/components/layouts/DashboardLayout.module.css";
@@ -192,11 +198,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const httpBaseUrl =
     (import.meta as any).env?.VITE_API_URL || "http://localhost:3000/api";
-  const wsBaseUrl =
-    (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:3000";
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications({ token, httpBaseUrl, wsBaseUrl });
+    useNotifications({ token, httpBaseUrl });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -216,7 +220,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Helper to determine if profile is complete
   const isProfileComplete = useCallback((u: any | undefined | null) => {
     if (!u) return true;
-    if (String(u.role?.nombreRol || "").toLowerCase() === "cliente") return true;
+    if (String(u.role?.nombreRol || "").toLowerCase() === "cliente")
+      return true;
 
     const get = (keys: string[]) => {
       for (const k of keys) {
@@ -236,11 +241,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const emergencyPhone =
       u.contactoEmergenciaTelefono ?? u.contactoEmergencia?.telefono ?? "";
     const emergencyRelation =
-      u.contactoEmergenciaParentesco ??
-      u.contactoEmergencia?.parentesco ??
-      "";
+      u.contactoEmergenciaParentesco ?? u.contactoEmergencia?.parentesco ?? "";
 
-    const fields = [ubic, arl, eps, afp, emergencyName, emergencyPhone, emergencyRelation];
+    const fields = [
+      ubic,
+      arl,
+      eps,
+      afp,
+      emergencyName,
+      emergencyPhone,
+      emergencyRelation,
+    ];
 
     return fields.every((v) => v && String(v).trim().length > 0);
   }, []);
@@ -248,7 +259,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // show reminder briefly (~17s)
   const showReminderOnce = useCallback(() => {
     setShowProfileReminder(true);
-    if (reminderTimeoutRef.current) window.clearTimeout(reminderTimeoutRef.current);
+    if (reminderTimeoutRef.current)
+      window.clearTimeout(reminderTimeoutRef.current);
     reminderTimeoutRef.current = window.setTimeout(() => {
       setShowProfileReminder(false);
     }, 17_000);
@@ -291,28 +303,37 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     // Show one now and then schedule every 15 minutes
     showReminderOnce();
 
-    reminderIntervalRef.current = window.setInterval(() => {
-      // Recheck localStorage (profile page may have set it)
-      if (localStorage.getItem(completedKey) === "true") {
-        stopReminderTimers();
-        return;
-      }
+    reminderIntervalRef.current = window.setInterval(
+      () => {
+        // Recheck localStorage (profile page may have set it)
+        if (localStorage.getItem(completedKey) === "true") {
+          stopReminderTimers();
+          return;
+        }
 
-      // Recheck server-side data (if user object updated via auth refresh)
-      if (isProfileComplete(user)) {
-        localStorage.setItem(completedKey, "true");
-        stopReminderTimers();
-        return;
-      }
+        // Recheck server-side data (if user object updated via auth refresh)
+        if (isProfileComplete(user)) {
+          localStorage.setItem(completedKey, "true");
+          stopReminderTimers();
+          return;
+        }
 
-      // Otherwise show again
-      showReminderOnce();
-    }, 15 * 60 * 1000); // 15 minutes
+        // Otherwise show again
+        showReminderOnce();
+      },
+      15 * 60 * 1000,
+    ); // 15 minutes
 
     return () => {
       stopReminderTimers();
     };
-  }, [user, isClientRole, isProfileComplete, showReminderOnce, stopReminderTimers]);
+  }, [
+    user,
+    isClientRole,
+    isProfileComplete,
+    showReminderOnce,
+    stopReminderTimers,
+  ]);
 
   // Utilities & UI helpers (existing)
   const sidebarUserMenuRef = useClickOutside(() => {
@@ -379,13 +400,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         (orderByType[a.moduleType] || 5) - (orderByType[b.moduleType] || 5)
       );
     });
-  }, [
-    user,
-    modules,
-    modulesLoading,
-    modulesError,
-    location.pathname,
-  ]);
+  }, [user, modules, modulesLoading, modulesError, location.pathname]);
 
   useEffect(() => {
     if (activeModuleRef.current) {
@@ -401,11 +416,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebarCollapsed = useCallback(
     () => setSidebarCollapsed((prev) => !prev),
-    []
+    [],
   );
   const toggleNotifications = useCallback(
     () => setShowNotifications((prev) => !prev),
-    []
+    [],
   );
 
   const handleNavigation = useCallback(
@@ -413,7 +428,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       closeSidebar();
       navigate(href);
     },
-    [closeSidebar, navigate]
+    [closeSidebar, navigate],
   );
 
   const handleLogout = useCallback(() => {
@@ -454,7 +469,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           return null;
       }
     },
-    []
+    [],
   );
 
   const handleNotificationClick = useCallback(
@@ -470,7 +485,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       setShowNotifications(false);
     },
-    [markAsRead, getNotificationTargetPath, navigate]
+    [markAsRead, getNotificationTargetPath, navigate],
   );
 
   const getUserInitials = useCallback(() => {
@@ -633,7 +648,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* ===== USER FOOTER (DESKTOP) ===== */}
         <div className={styles.sidebarFooter} ref={sidebarUserMenuRef}>
-          <div className={styles.userProfile} onClick={() => setShowUserMenu((s) => !s)}>
+          <div
+            className={styles.userProfile}
+            onClick={() => setShowUserMenu((s) => !s)}
+          >
             <div className={styles.userAvatar}>
               {userPhoto?.url ? (
                 <img
@@ -813,7 +831,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           aria-live="polite"
         >
           <div className={styles.reminderContent}>
-            <p className={styles.reminderTitle}>Por favor completa tu información</p>
+            <p className={styles.reminderTitle}>
+              Por favor completa tu información
+            </p>
             <p style={{ margin: 0, fontSize: 13 }}>
               Diligencia ubicación, ARL, EPS, AFP y un contacto de emergencia.
             </p>

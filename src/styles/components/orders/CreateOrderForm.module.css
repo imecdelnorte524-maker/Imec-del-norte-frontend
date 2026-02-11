@@ -1,10 +1,9 @@
-/* src/styles/components/orders/CreateOrderForm.module.css */
-
 .container {
   padding: var(--spacing-lg);
   max-width: 800px;
   margin: 0 auto;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .header {
@@ -23,6 +22,8 @@
   font-size: var(--font-size-2xl);
   font-weight: 700;
   margin: 0;
+  flex: 1;
+  min-width: 250px;
 }
 
 .cancelButton {
@@ -35,6 +36,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
+  white-space: nowrap;
 }
 
 .cancelButton:hover {
@@ -48,6 +50,7 @@
   border: 1px solid var(--gray-200);
   box-shadow: var(--shadow-sm);
   box-sizing: border-box;
+  width: 100%;
 }
 
 .error {
@@ -58,10 +61,13 @@
   border-radius: var(--border-radius);
   margin-bottom: var(--spacing-lg);
   text-align: center;
+  font-size: var(--font-size-sm);
+  word-break: break-word;
 }
 
 .formGroup {
   margin-bottom: var(--spacing-lg);
+  width: 100%;
 }
 
 .formGroup label {
@@ -83,6 +89,7 @@
   transition: all 0.2s;
   background: var(--white);
   box-sizing: border-box;
+  font-family: inherit;
 }
 
 .formGroup input:focus,
@@ -93,11 +100,43 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.formGroup input:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+}
+
 .formGroup textarea {
   resize: vertical;
   min-height: 120px;
   font-family: inherit;
 }
+
+/* --------- NUEVO: input genérico para el modal --------- */
+
+.formInput {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-base);
+  transition: all 0.2s;
+  background: var(--white);
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.formInput:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------- */
 
 .formActions {
   display: flex;
@@ -119,6 +158,8 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 120px;
+  text-align: center;
 }
 
 .primaryButton:hover:not(:disabled) {
@@ -142,6 +183,8 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 120px;
+  text-align: center;
 }
 
 .secondaryButton:hover {
@@ -153,6 +196,7 @@
   margin-top: 4px;
   font-size: var(--font-size-xs);
   color: var(--gray-500);
+  line-height: 1.4;
 }
 
 /* Etiquetas de categoría, tipo de trabajo y mantenimiento */
@@ -170,25 +214,28 @@
   padding: 2px 10px;
   font-size: var(--font-size-xs);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .tagSecondary {
-  background: #dbeafe; /* azul suave */
+  background: #dbeafe;
   color: #1d4ed8;
   border-radius: var(--border-radius-full);
   padding: 2px 10px;
   font-size: var(--font-size-xs);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .tagMaintenance {
-  background: #fef3c7; /* amarillo suave */
+  background: #fef3c7;
   color: #b45309;
   border-radius: var(--border-radius-full);
   padding: 2px 10px;
   font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 /* Info text para mensajes informativos */
@@ -196,47 +243,167 @@
   margin-top: 4px;
   font-size: var(--font-size-xs);
   color: var(--gray-600);
+  line-height: 1.4;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .container {
-    padding: var(--spacing-md);
-  }
-
-  .header {
-    flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: stretch;
-  }
-
-  .form {
-    padding: var(--spacing-lg);
-  }
-
-  .formActions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .primaryButton,
-  .secondaryButton,
-  .cancelButton {
-    width: 100%;
-    text-align: center;
-  }
+/* Campo con botón (+ agregar nuevo) */
+.fieldHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
 }
 
-@media (max-width: 480px) {
-  .header h1 {
-    font-size: var(--font-size-xl);
-  }
-
-  .form {
-    padding: var(--spacing-md);
-  }
+.addButton {
+  background: none;
+  border: 1px solid var(--primary-500);
+  color: var(--primary-500);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
+.addButton:hover {
+  background: var(--primary-500);
+  color: white;
+}
+
+/* Modal para crear tipo de mantenimiento */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+}
+
+.modal {
+  background: white;
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal h3 {
+  margin-top: 0;
+  margin-bottom: var(--spacing-lg);
+  color: var(--gray-800);
+  font-size: var(--font-size-lg);
+  line-height: 1.3;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-xl);
+  flex-wrap: wrap;
+}
+
+.modalActions button {
+  min-width: 100px;
+}
+
+/* Warning para equipos */
+.warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #b45309;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+/* Equipment selection */
+.equipmentSelection {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm);
+  background: var(--white);
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Buscador dentro de la selección de equipos */
+.equipmentSearchWrapper {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--white);
+  padding-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.equipmentSearchInput {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  font-size: var(--font-size-sm);
+  box-sizing: border-box;
+  background: var(--white);
+}
+
+.equipmentCheckbox {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-xs);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.equipmentCheckbox:last-child {
+  border-bottom: none;
+}
+
+.equipmentCheckbox input[type="checkbox"] {
+  margin-right: var(--spacing-sm);
+  min-width: 18px;
+  min-height: 18px;
+  flex-shrink: 0;
+  width: 18px;
+}
+
+.equipmentCheckbox label {
+  margin: 0;
+  font-weight: normal;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  flex: 1;
+  line-height: 1.4;
+  word-break: break-word;
+  width: 100%;
+  padding: var(--spacing-sm);
+}
+
+.selectedCount {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs);
+  background: var(--gray-100);
+  border-radius: var(--border-radius);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  line-height: 1.4;
+}
+
+/* MultiSelect mejorado (por si lo usas luego) */
 .multiSelectContainer {
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
@@ -245,6 +412,7 @@
   overflow-y: auto;
   background-color: var(--white);
   margin-top: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .equipmentOption {
@@ -276,6 +444,7 @@
   cursor: pointer;
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
 }
 
 .equipmentLabel {
@@ -283,12 +452,14 @@
   font-weight: 500;
   color: var(--gray-800);
   line-height: 1.3;
+  word-break: break-word;
 }
 
 .equipmentInfo {
   color: var(--gray-600);
   font-size: var(--font-size-xs);
-  margin-left: 24px; /* Para alinear con el texto */
+  margin-left: 28px;
+  line-height: 1.4;
 }
 
 .selectedInfo {
@@ -299,6 +470,7 @@
   color: var(--gray-700);
   font-size: var(--font-size-xs);
   text-align: center;
+  line-height: 1.4;
 }
 
 .selectedInfo small {
@@ -317,20 +489,330 @@
   outline-offset: 2px;
 }
 
-/* Estilos responsivos */
+/* ========== RESPONSIVE COMPLETO ========== */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+  .container {
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
+  .form {
+    padding: var(--spacing-lg);
+  }
+
+  .header h1 {
+    font-size: var(--font-size-xl);
+  }
+
+  .modal {
+    padding: var(--spacing-lg);
+  }
+}
+
+/* Tablet Pequeña (576px - 768px) */
 @media (max-width: 768px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
+  .header {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-size: var(--font-size-lg);
+    min-width: auto;
+  }
+
+  .form {
+    padding: var(--spacing-md);
+  }
+
+  .formActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-sm);
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .cancelButton {
+    width: 100%;
+    min-width: auto;
+    padding: var(--spacing-md);
+  }
+
+  .modal {
+    padding: var(--spacing-md);
+    max-height: 85vh;
+  }
+
+  .modalActions {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .modalActions button {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .fieldHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xs);
+  }
+
+  .addButton {
+    align-self: flex-start;
+  }
+
   .multiSelectContainer {
     max-height: 150px;
   }
-  
+
   .equipmentOption label {
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--spacing-sm);
   }
-  
+
   .equipmentInfo {
     margin-left: 0;
     margin-top: 2px;
+  }
+}
+
+/* Mobile (480px - 576px) */
+@media (max-width: 576px) {
+  .container {
+    padding: var(--spacing-sm);
+  }
+
+  .header h1 {
+    font-size: var(--font-size-md);
+  }
+
+  .form {
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+  }
+
+  .formGroup {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .formGroup input,
+  .formGroup select,
+  .formGroup textarea,
+  .formInput {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .cancelButton {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
+  }
+
+  .modal {
+    padding: var(--spacing-md);
+    margin: var(--spacing-sm);
+  }
+
+  .modal h3 {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .modalActions {
+    margin-top: var(--spacing-lg);
+  }
+
+  .equipmentSelection {
+    max-height: 150px;
+  }
+
+  .equipmentCheckbox {
+    padding: 8px 4px;
+    width: 80vw;
+  }
+
+  .equipmentCheckbox label {
+    font-size: var(--font-size-xs);
+  }
+
+  .equipmentSearchInput {
+    padding: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Mobile Pequeño (0px - 480px) */
+@media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-xs);
+  }
+
+  .header {
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+  }
+
+  .header h1 {
+    font-size: var(--font-size-base);
+    line-height: 1.3;
+  }
+
+  .form {
+    padding: var(--spacing-md) var(--spacing-sm);
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .error {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .formGroup label {
+    font-size: var(--font-size-xs);
+  }
+
+  .formGroup input,
+  .formGroup select,
+  .formGroup textarea,
+  .formInput {
+    font-size: var(--font-size-xs);
+    padding: 10px;
+  }
+
+  .formGroup textarea {
+    min-height: 100px;
+  }
+
+  .modalOverlay {
+    padding: var(--spacing-sm);
+  }
+
+  .modal {
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    max-width: 100%;
+  }
+
+  .modal h3 {
+    font-size: var(--font-size-base);
+  }
+
+  .addButton {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .equipmentSelection {
+    max-height: 120px;
+    font-size: 12px;
+  }
+
+  .serviceTags {
+    gap: 4px;
+  }
+
+  .tag,
+  .tagSecondary,
+  .tagMaintenance {
+    font-size: 10px;
+    padding: 1px 8px;
+  }
+
+  .multiSelectContainer {
+    max-height: 120px;
+  }
+
+  .equipmentOption {
+    padding: 6px 4px;
+  }
+
+  .equipmentOption input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+  }
+
+  .equipmentSearchInput {
+    font-size: var(--font-size-xs);
+    padding: 8px;
+  }
+}
+
+/* Orientación landscape en móviles */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal {
+    max-height: 75vh;
+    max-width: 90vw;
+  }
+
+  .modalOverlay {
+    padding: var(--spacing-sm);
+  }
+
+  .equipmentSelection,
+  .multiSelectContainer {
+    max-height: 120px;
+  }
+
+  .form {
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Pantallas muy grandes */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 900px;
+  }
+
+  .form {
+    padding: var(--spacing-2xl);
+  }
+}
+
+/* Mejoras de accesibilidad para touch */
+@media (hover: none) and (pointer: coarse) {
+  .primaryButton,
+  .secondaryButton,
+  .cancelButton,
+  .addButton {
+    min-height: 44px;
+  }
+
+  .formGroup input,
+  .formGroup select,
+  .formGroup textarea,
+  .formInput {
+    min-height: 44px;
+    font-size: 16px; /* Evita zoom en iOS */
+  }
+
+  .equipmentOption label,
+  .equipmentCheckbox label {
+    padding: 12px;
+    min-height: 44px;
+  }
+
+  .equipmentOption input[type="checkbox"],
+  .equipmentCheckbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
   }
 }

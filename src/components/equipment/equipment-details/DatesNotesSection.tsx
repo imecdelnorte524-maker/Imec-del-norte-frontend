@@ -11,8 +11,20 @@ export default function DatesNotesSection({
 }: DatesNotesSectionProps) {
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return "No especificada";
+
     try {
-      return new Date(dateString).toLocaleDateString();
+      // Tomamos solo la parte de fecha (YYYY-MM-DD) ignorando la hora/Z
+      const [datePart] = dateString.split("T"); // "2026-04-30"
+      const [year, month, day] = datePart.split("-").map(Number);
+
+      if (!year || !month || !day) {
+        // Si no cumple el formato esperado, usamos el fallback normal
+        return new Date(dateString).toLocaleDateString();
+      }
+
+      // Creamos la fecha en zona local sin convertir desde UTC
+      const localDate = new Date(year, month - 1, day);
+      return localDate.toLocaleDateString();
     } catch {
       return dateString;
     }

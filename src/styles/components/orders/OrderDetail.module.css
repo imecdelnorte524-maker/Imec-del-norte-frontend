@@ -1,4 +1,5 @@
-/* src/styles/components/orders/OrderDetails.module.css */
+/* src/styles/components/orders/OrderDetail.module.css */
+
 .container {
   padding: var(--spacing-lg);
   max-width: 1200px;
@@ -69,25 +70,30 @@
   color: #d97706;
   border: 1px solid #fed7aa;
 }
+
 .statusInProgress {
   background: #dbeafe;
   color: #1d4ed8;
   border: 1px solid #93c5fd;
 }
+
+/* 🔹 NUEVO: estado PAUSADA con estilo propio */
+.statusPaused {
+  background: #fef9c3;
+  color: #a16207;
+  border: 1px solid #facc15;
+}
+
 .statusCompleted {
   background: #f0fdf4;
   color: #16a34a;
   border: 1px solid #86efac;
 }
+
 .statusCancelled {
   background: #f3f4f6;
   color: #6b7280;
   border: 1px solid #d1d5db;
-}
-.statusRejected {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fca5a5;
 }
 
 .billingNotBilled {
@@ -95,6 +101,7 @@
   color: #92400e;
   border: 1px solid #c959139b;
 }
+
 .billingBilled {
   background: #dcfce7;
   color: #166534;
@@ -117,24 +124,28 @@
   white-space: nowrap;
 }
 
-/* --- GRID DE INFORMACIÓN --- */
+/* --- GRID / LAYOUT DE INFORMACIÓN --- */
+/* Ahora es una sola columna hacia abajo, ya no un grid de tarjetas */
 .detailsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
   box-sizing: border-box;
 }
 
+/* Las secciones ya no son "tarjetas": sin fondo blanco ni borde envolvente,
+   solo se separan con un borde inferior para que parezca una página continua */
 .section,
 .problemSection,
 .commentsSection {
-  background: var(--white);
-  padding: var(--spacing-lg);
-  border-radius: var(--border-radius-lg);
-  border: 1px solid var(--gray-200);
+  background: transparent;
+  padding: 0 0 var(--spacing-lg) 0;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--gray-200);
   box-sizing: border-box;
-  height: fit-content;
+  height: auto;
   overflow-wrap: break-word;
   min-width: 0;
 }
@@ -164,17 +175,77 @@
   font-weight: 600;
   font-size: var(--font-size-sm);
   flex-shrink: 0;
+  min-width: 120px;
 }
 
 .detailItem span {
   color: var(--gray-600);
   font-size: var(--font-size-sm);
   text-align: right;
+  flex: 1;
 }
 
 .unassigned {
-  color: var(--gray-400) !important;
+  color: var(--gray-400);
   font-style: italic;
+}
+
+/* --- LISTA DE TÉCNICOS --- */
+.techniciansList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.technicianItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  background: var(--gray-50);
+  gap: var(--spacing-sm);
+}
+
+.technicianInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.technicianInfo strong {
+  color: var(--gray-800);
+  font-size: var(--font-size-sm);
+}
+
+.technicianInfo span {
+  color: var(--gray-600);
+  font-size: var(--font-size-xs);
+}
+
+.removeTechnicianButton {
+  background: #fca5a5;
+  color: #7f1d1d;
+  border: none;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.removeTechnicianButton:hover:not(:disabled) {
+  background: #f87171;
+  color: white;
+}
+
+.removeTechnicianButton:disabled {
+  background: var(--gray-300);
+  color: var(--gray-500);
+  cursor: not-allowed;
 }
 
 /* --- TABLAS (Insumos / Herramientas) --- */
@@ -332,7 +403,7 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center; /* Centrado vertical en escritorio */
+  align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: var(--spacing-lg);
@@ -396,15 +467,15 @@ select {
   width: 100%;
 }
 
-.modalActions,
+/* Acciones genéricas en formularios dentro de modales */
 .formActions {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+  margin-top: var(--spacing-lg);
 }
 
-.modalActions button,
 .formActions button {
   padding: 10px 16px;
   border-radius: 6px;
@@ -413,13 +484,37 @@ select {
   font-weight: 600;
 }
 
-.modalActions button:first-child,
 .formActions button:first-child {
   background: var(--gray-200);
   color: var(--gray-700);
 }
-.modalActions button:last-child,
 .formActions button:last-child {
+  background: var(--primary-500);
+  color: white;
+}
+
+/* 🔹 NUEVO: acciones de modales (emergencia, pausa) */
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-lg);
+}
+
+.modalActions button {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalActions button:first-child {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+.modalActions button:last-child {
   background: var(--primary-500);
   color: white;
 }
@@ -454,23 +549,11 @@ select {
   margin-bottom: var(--spacing-md);
   display: block;
 }
-.confirmationTitle {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--gray-800);
-  margin: 0 0 var(--spacing-sm);
-}
-.confirmationText {
-  color: var(--gray-600);
-  font-size: var(--font-size-base);
-  margin-bottom: var(--spacing-xl);
-  line-height: 1.5;
-}
-
 .confirmationActions {
   display: flex;
   gap: var(--spacing-md);
   justify-content: center;
+  margin-top: var(--spacing-lg);
 }
 
 .confirmDeleteButton {
@@ -494,6 +577,7 @@ select {
   flex: 1;
 }
 
+/* --- MENSAJES DE ERROR Y LOADING --- */
 .error {
   background: #fef2f2;
   border: 1px solid #fecaca;
@@ -505,8 +589,28 @@ select {
   overflow-wrap: break-word;
 }
 
-/* --- RESPONSIVE MEDIA QUERIES --- */
+.loading {
+  text-align: center;
+  padding: var(--spacing-lg);
+  color: var(--gray-600);
+}
 
+.warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-md);
+}
+
+.helperText {
+  color: var(--gray-500);
+  font-size: var(--font-size-xs);
+  margin-top: 4px;
+}
+
+/* --- RESPONSIVE MEDIA QUERIES --- */
 @media (max-width: 768px) {
   .container {
     padding: var(--spacing-md);
@@ -533,8 +637,9 @@ select {
     justify-content: center;
   }
 
+  /* Ya no usamos grid, solo ajustamos el gap si queremos más compacto en mobile */
   .detailsGrid {
-    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
 
   .detailItem {
@@ -543,12 +648,27 @@ select {
     align-items: flex-start;
   }
 
+  .detailItem strong {
+    min-width: auto;
+  }
+
   .detailItem span {
     text-align: left;
   }
 
+  .technicianItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .removeTechnicianButton {
+    width: 100%;
+  }
+
   .actions {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .adminActions {
@@ -583,15 +703,11 @@ select {
   select {
     font-size: 14px;
     max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-}
 
-@media (max-width: 480px) {
   .confirmationActions {
-    flex-direction: column-reverse;
+    flex-direction: column;
+    gap: var(--spacing-sm);
   }
 
   .confirmDeleteButton,
@@ -600,9 +716,24 @@ select {
     padding: 14px;
   }
 
+  .modalActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modalActions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
   .itemsTable th,
   .itemsTable td {
     font-size: 12px;
     padding: 8px 4px;
+  }
+
+  .technicianSelect {
+    height: 120px;
   }
 }

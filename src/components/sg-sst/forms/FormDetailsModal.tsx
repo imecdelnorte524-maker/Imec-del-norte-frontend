@@ -1,19 +1,18 @@
-import { useState, useEffect } from "react";
-import type { SgSstForm, SignatureType } from "../../interfaces/SgSstInterface";
-import type { Usuario } from "../../interfaces/UserInterfaces";
-import { sgSstService } from "../../api/sg-sst";
-import { usersApi } from "../../api/users";
-import SignaturePad from "./SignaturePad";
-import styles from "../../styles/components/sg-sst/FormDetailsModal.module.css";
+// src/components/sg-sst/forms/FormDetailsModal.tsx
+import { useState } from "react";
+import type { SgSstForm, SignerType } from "../../../interfaces/SgSstInterface";
+import type { Usuario } from "../../../interfaces/UserInterfaces";
+import { sgSstService } from "../../../api/sg-sst";
+import SignaturePad from "../SignaturePad";
+import styles from "../../../styles/components/sg-sst/forms/FormDetailsModal.module.css";
 
 interface FormDetailsModalProps {
   isOpen: boolean;
   form: SgSstForm;
   onClose: () => void;
-  onFormSigned: () => void;
+  onFormSigned: () => void; // se usa tanto para "firmar" como para "rechazar" (refresca lista + cierra)
   canSignAsSST: boolean;
   currentUser?: Usuario | null;
-  // NUEVO: descarga PDF
   onDownloadPdf?: (formId: number) => void;
   pdfLoading?: boolean;
 }
@@ -30,58 +29,12 @@ export default function FormDetailsModal({
 }: FormDetailsModalProps) {
   const [signatureData, setSignatureData] = useState<string>("");
   const [isSigning, setIsSigning] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "sign" | "authorize">(
-    "details"
-  );
+  const [activeTab, setActiveTab] = useState<"details" | "sign">("details");
 
-  // Estados para autorización de Trabajo en Alturas
-  const [authorizationData, setAuthorizationData] = useState({
-    physicalCondition: false,
-    instructionsReceived: false,
-    fitForHeightWork: false,
-    authorizerName: "",
-    authorizerIdentification: "",
-    authorizationDate: "",
-    authorizationTime: "",
-  });
-
-  // Estados para autocompletado del autorizador
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [suggestions, setSuggestions] = useState<Usuario[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-
-  useEffect(() => {
-    // Inicializar datos de autorización si existe
-    if (form.formType === "HEIGHT_WORK" && form.heightWork) {
-      setAuthorizationData((prev) => ({
-        ...prev,
-        physicalCondition: form.heightWork?.physicalCondition || false,
-        instructionsReceived: form.heightWork?.instructionsReceived || false,
-        fitForHeightWork: form.heightWork?.fitForHeightWork || false,
-        authorizerName: form.heightWork?.authorizerName || "",
-        authorizerIdentification:
-          form.heightWork?.authorizerIdentification || "",
-        authorizationDate: new Date().toISOString().split("T")[0],
-        authorizationTime: new Date().toTimeString().slice(0, 5),
-      }));
-    }
-
-    // Cargar usuarios para autocompletado
-    loadUsers();
-  }, [form]);
-
-  const loadUsers = async () => {
-    try {
-      setIsLoadingUsers(true);
-      const usuariosData = await usersApi.getAllUsers();
-      setUsuarios(usuariosData || []);
-    } catch (error) {
-      console.error("Error cargando usuarios:", error);
-    } finally {
-      setIsLoadingUsers(false);
-    }
-  };
+  // Estados para rechazo
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [showRejectArea, setShowRejectArea] = useState(false);
 
   if (!isOpen) return null;
 
@@ -93,59 +46,7 @@ export default function FormDetailsModal({
     setSignatureData("");
   };
 
-  // Manejar cambios en el nombre del autorizador con autocompletado
-  const handleAuthorizerNameChange = (value: string) => {
-    setAuthorizationData((prev) => ({
-      ...prev,
-      authorizerName: value,
-      authorizerIdentification: "",
-    }));
-
-    if (value.length > 1) {
-      const filtered = usuarios.filter((usuario) =>
-        `${usuario.nombre} ${usuario.apellido}`
-          .toLowerCase()
-          .includes(value.toLowerCase())
-      );
-      setSuggestions(filtered.slice(0, 5));
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
-  };
-
-  // Seleccionar usuario del autocompletado
-  const handleSelectAuthorizer = (usuario: Usuario) => {
-    const nombreCompleto = `${usuario.nombre} ${usuario.apellido}`;
-    setAuthorizationData((prev) => ({
-      ...prev,
-      authorizerName: nombreCompleto,
-      authorizerIdentification: usuario.cedula || "",
-    }));
-    setShowSuggestions(false);
-  };
-
-  // Manejar cambios en los campos de autorización
-  const handleAuthorizationChange = (field: string, value: any) => {
-    setAuthorizationData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Validar datos de autorización
-  const isAuthorizationValid = () => {
-    return (
-      authorizationData.physicalCondition &&
-      authorizationData.instructionsReceived &&
-      authorizationData.fitForHeightWork &&
-      authorizationData.authorizerName.trim() !== "" &&
-      authorizationData.authorizerIdentification.trim() !== "" &&
-      signatureData !== ""
-    );
-  };
-
-  // Función para firmar formularios normales (no trabajo en alturas)
+  // Función para firmar formularios como SST (cualquier tipo)
   const handleSignForm = async () => {
     if (!signatureData || !currentUser) {
       alert("Debe firmar el formulario antes de enviarlo");
@@ -162,9 +63,9 @@ export default function FormDetailsModal({
     try {
       const signData = {
         signatureData: signatureData,
-        signerType: "SST" as SignatureType,
+        signerType: "SST" as SignerType,
         userId: currentUser.usuarioId,
-        userName: `${currentUser.nombre} ${currentUser.apellido}`,
+        userName: `${currentUser.nombre} ${currentUser.apellido || ""}`.trim(),
       };
 
       const response = await sgSstService.signForm(form.id, signData);
@@ -176,59 +77,47 @@ export default function FormDetailsModal({
     } catch (error: any) {
       console.error("Error firmando formulario:", error);
       alert(
-        `Error al firmar: ${error.response?.data?.message || error.message}`
+        `Error al firmar: ${error.response?.data?.message || error.message}`,
       );
     } finally {
       setIsSigning(false);
     }
   };
 
-  // Función para autorizar Trabajo en Alturas
-  const handleAuthorizeHeightWork = async () => {
-    if (!isAuthorizationValid()) {
-      alert(
-        "Por favor complete todos los campos de autorización y firme el formulario"
-      );
+  // Función para rechazar formulario como SST
+  const handleRejectForm = async () => {
+    if (!currentUser) {
+      alert("Error: Usuario no válido");
       return;
     }
 
-    if (!currentUser || !signatureData) {
-      alert("Error: Debe estar autenticado y firmar el formulario");
+    if (!window.confirm("¿Seguro que deseas rechazar este formulario?")) {
       return;
     }
 
-    setIsSigning(true);
-
+    setIsRejecting(true);
     try {
-      const authorizationPayload = {
-        physicalCondition: authorizationData.physicalCondition,
-        instructionsReceived: authorizationData.instructionsReceived,
-        fitForHeightWork: authorizationData.fitForHeightWork,
-        authorizerName: authorizationData.authorizerName,
-        authorizerIdentification: authorizationData.authorizerIdentification,
-        signatureData: signatureData,
-        signerType: "SST" as SignatureType,
+      const payload = {
         userId: currentUser.usuarioId,
-        userName: `${currentUser.nombre} ${currentUser.apellido}`,
+        userName: `${currentUser.nombre} ${currentUser.apellido || ""}`.trim(),
+        reason: rejectReason || undefined,
       };
 
-      const response = await sgSstService.authorizeHeightWork(
-        form.id,
-        authorizationPayload
-      );
+      const response = await sgSstService.rejectForm(form.id, payload as any);
 
       if (response.success) {
-        alert("Trabajo en Alturas autorizado exitosamente");
+        alert("Formulario rechazado exitosamente");
         onFormSigned();
+      } else {
+        alert(response.message || "Error al rechazar formulario");
       }
     } catch (error: any) {
-      console.error("Error autorizando trabajo en alturas:", error);
-      console.error("Detalles del error:", error.response?.data);
+      console.error("Error rechazando formulario:", error);
       alert(
-        `Error al autorizar: ${error.response?.data?.message || error.message}`
+        `Error al rechazar: ${error.response?.data?.message || error.message}`,
       );
     } finally {
-      setIsSigning(false);
+      setIsRejecting(false);
     }
   };
 
@@ -274,6 +163,8 @@ export default function FormDetailsModal({
         return "Pendiente de Autorización SST";
       case "COMPLETED":
         return "Autorizado";
+      case "REJECTED":
+        return "Rechazado";
       default:
         return status;
     }
@@ -287,6 +178,8 @@ export default function FormDetailsModal({
         return "#F59E0B";
       case "COMPLETED":
         return "#10b981";
+      case "REJECTED":
+        return "#dc2626";
       default:
         return "#6B7280";
     }
@@ -558,10 +451,16 @@ export default function FormDetailsModal({
     if (checks.length === 0) return null;
 
     const goodChecks = checks.filter((check) => check.value === "GOOD").length;
+    const regularChecks = checks.filter(
+      (checks) => checks.value === "REGULAR",
+    ).length;
     const badChecks = checks.filter((check) => check.value === "BAD").length;
     const totalChecks = checks.length;
-    const percentageGood =
-      totalChecks > 0 ? Math.round((goodChecks / totalChecks) * 100) : 0;
+    // Asignar pesos: GOOD=1, REGULAR=0.5, BAD=0
+    const totalScore = goodChecks * 1 + regularChecks * 0.5 + badChecks * 0;
+    const maxScore = totalChecks;
+    const percentageScore =
+      maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
     return (
       <>
@@ -575,6 +474,10 @@ export default function FormDetailsModal({
                 <span className={styles.statNumber}>{goodChecks}</span>
                 <span className={styles.statLabel}>Correctos</span>
               </div>
+              <div className={`${styles.statItem} ${styles.regularStat}`}>
+                <span className={styles.statNumber}>{regularChecks}</span>
+                <span className={styles.statLabel}>Regular</span>
+              </div>
               <div className={`${styles.statItem} ${styles.badStat}`}>
                 <span className={styles.statNumber}>{badChecks}</span>
                 <span className={styles.statLabel}>Incorrectos</span>
@@ -584,7 +487,7 @@ export default function FormDetailsModal({
                 <span className={styles.statLabel}>Total</span>
               </div>
               <div className={`${styles.statItem} ${styles.percentageStat}`}>
-                <span className={styles.statNumber}>{percentageGood}%</span>
+                <span className={styles.statNumber}>{percentageScore}%</span>
                 <span className={styles.statLabel}>Aprobación</span>
               </div>
             </div>
@@ -611,7 +514,11 @@ export default function FormDetailsModal({
                         : styles.badValue
                     }`}
                   >
-                    {check.value === "GOOD" ? "✅ BUENO" : "❌ MALO"}
+                    {check.value === "GOOD"
+                      ? "✅ BUENO"
+                      : check.value === "REGULAR"
+                        ? "⚠️ REGULAR"
+                        : "❌ MALO"}
                   </span>
                 </div>
                 {check.observations && (
@@ -700,6 +607,24 @@ export default function FormDetailsModal({
               <span>{formatDate(form.updatedAt)}</span>
             </div>
           </div>
+
+          {/* Motivo de rechazo (si aplica) */}
+          {form.status === "REJECTED" && (
+            <div className={styles.rejectionBox}>
+              <h4>Motivo de rechazo</h4>
+              <p>
+                <strong>
+                  {form.rejectedByUserName || "Rechazado por SG-SST"}:
+                </strong>{" "}
+                {form.rejectionReason || "Sin motivo especificado"}
+              </p>
+              {form.rejectedAt && (
+                <p className={styles.rejectionDate}>
+                  Fecha: {formatDate(form.rejectedAt)}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* FIRMAS */}
@@ -793,277 +718,6 @@ export default function FormDetailsModal({
     );
   };
 
-  const renderAuthorizationTab = () => {
-    if (!canSignAsSST) {
-      return (
-        <div className={styles.unauthorized}>
-          <p>No tienes permisos para autorizar trabajos en alturas.</p>
-        </div>
-      );
-    }
-
-    if (form.status === "COMPLETED") {
-      return (
-        <div className={styles.alreadySigned}>
-          <p>✅ Este trabajo en alturas ya ha sido autorizado.</p>
-          <div className={styles.authorizationDetails}>
-            <h4>Detalles de la autorización:</h4>
-            <p>
-              <strong>Autorizador:</strong> {form.heightWork?.authorizerName}
-            </p>
-            <p>
-              <strong>Fecha de autorización:</strong>{" "}
-              {formatDate(form.sstSignatureDate)}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    if (form.status !== "PENDING_SST") {
-      return (
-        <div className={styles.unauthorized}>
-          <p>Este formulario no está pendiente de autorización.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className={styles.authorizationContent}>
-        <div className={styles.authorizationInfo}>
-          <h3>🚧 Autorización de Trabajo en Alturas</h3>
-          <p>
-            Estás autorizando el trabajo en alturas del trabajador{" "}
-            <strong>{form.heightWork?.workerName}</strong>.
-          </p>
-          <p className={styles.warning}>
-            ⚠️ Al autorizar, confirmas que el trabajador cumple con todos los
-            requisitos de seguridad.
-          </p>
-        </div>
-
-        {/* Verificaciones de seguridad */}
-        <div className={styles.verificationsSection}>
-          <h4>✅ Verificaciones de Seguridad</h4>
-
-          <div className={styles.verificationsList}>
-            <label className={styles.verificationCheckbox}>
-              <input
-                type="checkbox"
-                checked={authorizationData.physicalCondition}
-                onChange={(e) =>
-                  handleAuthorizationChange(
-                    "physicalCondition",
-                    e.target.checked
-                  )
-                }
-                required
-              />
-              <span className={styles.verificationLabel}>
-                El trabajador posee condiciones físicas adecuadas para trabajar
-                en alturas
-              </span>
-            </label>
-
-            <label className={styles.verificationCheckbox}>
-              <input
-                type="checkbox"
-                checked={authorizationData.instructionsReceived}
-                onChange={(e) =>
-                  handleAuthorizationChange(
-                    "instructionsReceived",
-                    e.target.checked
-                  )
-                }
-                required
-              />
-              <span className={styles.verificationLabel}>
-                El trabajador recibió instrucciones completas para trabajar en
-                alturas
-              </span>
-            </label>
-
-            <label className={styles.verificationCheckbox}>
-              <input
-                type="checkbox"
-                checked={authorizationData.fitForHeightWork}
-                onChange={(e) =>
-                  handleAuthorizationChange(
-                    "fitForHeightWork",
-                    e.target.checked
-                  )
-                }
-                required
-              />
-              <span className={styles.verificationLabel}>
-                El trabajador está declarado apto para trabajo seguro en alturas
-              </span>
-            </label>
-          </div>
-
-          {/* Datos del autorizador */}
-          <div className={styles.authorizerSection}>
-            <h4>👤 Datos del Autorizador</h4>
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Nombre Completo *
-                  {!authorizationData.authorizerName && (
-                    <span className={styles.requiredIndicator}>
-                      {" "}
-                      (Requerido)
-                    </span>
-                  )}
-                </label>
-                <div className={styles.autocompleteContainer}>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={authorizationData.authorizerName}
-                    onChange={(e) => handleAuthorizerNameChange(e.target.value)}
-                    onBlur={() =>
-                      setTimeout(() => setShowSuggestions(false), 200)
-                    }
-                    onFocus={() => {
-                      if (authorizationData.authorizerName.length > 1) {
-                        setShowSuggestions(true);
-                      }
-                    }}
-                    required
-                    placeholder="Escriba para buscar autorizador..."
-                  />
-                  {isLoadingUsers && (
-                    <div className={styles.loadingIndicator}>Cargando...</div>
-                  )}
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div className={styles.suggestionsList}>
-                      {suggestions.map((usuario) => (
-                        <div
-                          key={usuario.usuarioId}
-                          className={styles.suggestionItem}
-                          onClick={() => handleSelectAuthorizer(usuario)}
-                        >
-                          <div className={styles.suggestionName}>
-                            {usuario.nombre} {usuario.apellido}
-                          </div>
-                          <div className={styles.suggestionDetails}>
-                            <span className={styles.suggestionDetail}>
-                              Cédula: {usuario.cedula || "No registrada"}
-                            </span>
-                            {usuario.role?.nombreRol && (
-                              <span className={styles.suggestionDetail}>
-                                Cargo: {usuario.role.nombreRol}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Identificación *
-                  {!authorizationData.authorizerIdentification && (
-                    <span className={styles.requiredIndicator}>
-                      {" "}
-                      (Requerido)
-                    </span>
-                  )}
-                </label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={authorizationData.authorizerIdentification}
-                  onChange={(e) =>
-                    handleAuthorizationChange(
-                      "authorizerIdentification",
-                      e.target.value
-                    )
-                  }
-                  required
-                  placeholder="Se completa automáticamente"
-                  readOnly={!!authorizationData.authorizerName}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Fecha de Autorización</label>
-                <input
-                  type="date"
-                  className={styles.input}
-                  value={authorizationData.authorizationDate}
-                  onChange={(e) =>
-                    handleAuthorizationChange(
-                      "authorizationDate",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Hora de Autorización</label>
-                <input
-                  type="time"
-                  className={styles.input}
-                  value={authorizationData.authorizationTime}
-                  onChange={(e) =>
-                    handleAuthorizationChange(
-                      "authorizationTime",
-                      e.target.value
-                    )
-                  }
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Firma del autorizador SST */}
-        <div className={styles.signatureSection}>
-          <h4>✍️ Firma del Autorizador SST</h4>
-          <SignaturePad
-            onSignatureSave={handleSignatureSave}
-            onClear={handleSignatureClear}
-          />
-
-          {signatureData && (
-            <div className={styles.signaturePreview}>
-              <strong>Firma guardada:</strong>
-              <img
-                src={signatureData}
-                alt="Firma del autorizador SST"
-                className={styles.signatureImage}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Botones de acción */}
-        <div className={styles.authorizationActions}>
-          <button
-            type="button"
-            className={styles.cancelButton}
-            onClick={() => setActiveTab("details")}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className={styles.authorizeButton}
-            onClick={handleAuthorizeHeightWork}
-            disabled={!isAuthorizationValid() || isSigning}
-          >
-            {isSigning ? "Autorizando..." : "✅ Autorizar Trabajo en Alturas"}
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   const renderStandardSignTab = () => {
     if (!canSignAsSST) {
       return (
@@ -1077,6 +731,14 @@ export default function FormDetailsModal({
       return (
         <div className={styles.alreadySigned}>
           <p>✅ Este formulario ya ha sido aprobado.</p>
+        </div>
+      );
+    }
+
+    if (form.status === "REJECTED") {
+      return (
+        <div className={styles.alreadySigned}>
+          <p>❌ Este formulario ha sido rechazado.</p>
         </div>
       );
     }
@@ -1144,14 +806,60 @@ export default function FormDetailsModal({
             {isSigning ? "Firmando..." : "Aprobar y Firmar"}
           </button>
         </div>
+
+        {/* Bloque de rechazo */}
+        <div className={styles.rejectSection}>
+          {!showRejectArea ? (
+            <button
+              type="button"
+              className={styles.rejectToggleButton}
+              onClick={() => setShowRejectArea(true)}
+            >
+              Rechazar formulario
+            </button>
+          ) : (
+            <div className={styles.rejectBox}>
+              <h4>Rechazar formulario</h4>
+              <p>
+                Indique el motivo del rechazo. El formulario quedará marcado
+                como <strong>Rechazado</strong> y no podrá ser editado por el
+                técnico.
+              </p>
+              <textarea
+                className={styles.rejectTextarea}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Motivo del rechazo..."
+              />
+              <div className={styles.rejectActions}>
+                <button
+                  type="button"
+                  className={styles.cancelRejectButton}
+                  onClick={() => {
+                    setShowRejectArea(false);
+                    setRejectReason("");
+                  }}
+                  disabled={isRejecting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={styles.rejectButton}
+                  onClick={handleRejectForm}
+                  disabled={isRejecting}
+                >
+                  {isRejecting ? "Rechazando..." : "Rechazar formulario"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
   const renderSignTab = () => {
-    if (form.formType === "HEIGHT_WORK") {
-      return renderAuthorizationTab();
-    }
     return renderStandardSignTab();
   };
 
@@ -1177,27 +885,16 @@ export default function FormDetailsModal({
             📋 Detalles Completos
           </button>
 
-          {form.status === "PENDING_SST" &&
-            canSignAsSST &&
-            (form.formType === "HEIGHT_WORK" ? (
-              <button
-                className={`${styles.tab} ${
-                  activeTab === "authorize" ? styles.activeTab : ""
-                }`}
-                onClick={() => setActiveTab("authorize")}
-              >
-                🚧 Autorizar Trabajo en Alturas
-              </button>
-            ) : (
-              <button
-                className={`${styles.tab} ${
-                  activeTab === "sign" ? styles.activeTab : ""
-                }`}
-                onClick={() => setActiveTab("sign")}
-              >
-                ✍️ Firmar como SST
-              </button>
-            ))}
+          {form.status === "PENDING_SST" && canSignAsSST && (
+            <button
+              className={`${styles.tab} ${
+                activeTab === "sign" ? styles.activeTab : ""
+              }`}
+              onClick={() => setActiveTab("sign")}
+            >
+              ✍️ Firmar / Rechazar
+            </button>
+          )}
         </div>
 
         <div className={styles.content}>

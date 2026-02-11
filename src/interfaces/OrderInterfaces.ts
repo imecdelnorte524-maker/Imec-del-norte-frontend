@@ -1,14 +1,13 @@
-// src/interfaces/OrderInterfaces.ts
-
 export type OrderEstado =
   | 'Pendiente'
   | 'Asignada'
   | 'En Proceso'
+  | 'Pausada'
   | 'Completado'
   | 'Cancelada'
   | 'Rechazada';
 
-export type BillingEstado = 'No facturado' | 'Facturado';
+export type BillingEstado = "" | "Sin facturar" | 'Por facturar' | 'Facturado' | 'Garantía';
 
 export interface SupplyDetail {
   detalleInsumoId: number;
@@ -30,19 +29,50 @@ export interface MaintenanceType {
   descripcion?: string;
 }
 
-// ⚠️ NUEVO: Interface para información de equipos asociados
 export interface AssociatedEquipment {
   equipmentId: number;
   code?: string;
   category: string;
   description?: string;
+  status?: string;
+}
+
+export interface UserInfo {
+  usuario_id: number;
+  nombre: string;
+  apellido: string | null;
+  email: string;
+  telefono: string | null;
+  cedula?: string;
+}
+
+export interface TechnicianAssignment {
+  id: number;
+  tecnicoId: number;
+  isLeader: boolean;
+  technician: UserInfo;
+}
+
+export interface TimerInfo {
+  timerId: number;
+  startTime: string;
+  endTime?: string | null;
+  totalSeconds: number;
+}
+
+export interface PauseInfo {
+  pauseId: number;
+  startTime: string;
+  endTime?: string | null;
+  observacion: string;
+  user: UserInfo;
 }
 
 export interface Order {
   orden_id: number;
   servicio_id: number;
   cliente_id: number;
-  tecnico_id: number | null;
+  cliente_empresa_id?: number | null;
   fecha_solicitud: string;
   fecha_inicio: string | null;
   fecha_finalizacion: string | null;
@@ -52,6 +82,8 @@ export interface Order {
   maintenance_type?: MaintenanceType | null;
   estado_facturacion: BillingEstado;
   factura_pdf_url?: string | null;
+  isEmergency?: boolean;
+  plan_mantenimiento_id?: number | null;
 
   servicio: {
     servicio_id: number;
@@ -63,21 +95,8 @@ export interface Order {
     tipo_mantenimiento?: string | null;
   };
 
-  cliente: {
-    usuario_id: number;
-    nombre: string;
-    apellido: string | null;
-    email: string;
-    telefono: string | null;
-  };
-
-  tecnico: {
-    usuario_id: number;
-    nombre: string;
-    apellido: string | null;
-    email: string;
-  } | null;
-
+  cliente?: UserInfo;
+  
   cliente_empresa?: {
     id_cliente: number;
     nombre: string;
@@ -90,39 +109,59 @@ export interface Order {
     id_usuario_contacto?: number | null;
   } | null;
 
-  // ⚠️ CAMBIO: De 'equipo' (singular) a 'equipos' (plural)
-  equipos?: AssociatedEquipment[];
+  // ✅ CAMBIO IMPORTANTE: De tecnico singular a array de technicians
+  technicians: TechnicianAssignment[];
+  
+  // Para compatibilidad con código existente, mantenemos tecnico_id como el primer técnico
+  tecnico_id: number | null;
+  tecnico?: UserInfo | null;
 
-  supplyDetails?: SupplyDetail[];
-  toolDetails?: ToolDetail[];
-
-  costo_total_insumos?: number;
-  costo_total_estimado?: number;
+  equipos: AssociatedEquipment[];
+  supplyDetails: SupplyDetail[];
+  toolDetails: ToolDetail[];
+  
+  timers?: TimerInfo[];
+  pauses?: PauseInfo[];
+  
+  costo_total_insumos: number;
+  tiempo_total?: number;
 }
 
 export interface CreateOrderData {
   servicio_id: number;
   comentarios?: string;
-  cliente_empresa_id: number;
-  tecnico_id?: number;
-  // ⚠️ CAMBIO: De 'equipo_id' (singular) a 'equipmentIds' (array)
+  cliente_empresa_id?: number;
+  cliente_id?: number;
+  // ✅ CAMBIO: Ahora podemos asignar múltiples técnicos
+  technicians?: {
+    tecnicoId: number;
+    isLeader?: boolean;
+  }[];
   equipmentIds?: number[];
   tipo_servicio?: string;
   maintenance_type_id?: number;
+  isEmergency?: boolean;
+  plan_mantenimiento_id?: number | null;
 }
 
 export interface UpdateOrderData {
-  tecnico_id?: number | null;
   estado?: Order['estado'];
   comentarios?: string;
   fecha_inicio?: string | null;
   fecha_finalizacion?: string | null;
-  // ⚠️ CAMBIO: De 'equipo_id' a 'equipmentIds'
-  equipmentIds?: number[] | null;
+  technicians?: {
+    tecnicoId: number;
+    isLeader?: boolean;
+  }[];
+  equipmentIds?: number[];
+  estado_facturacion?: BillingEstado;
+  tipo_servicio?: string;
+  maintenance_type_id?: number;
+  pause_observation?: string;
 }
 
 export interface OrdersResponse {
-  orders: Order[];
+  services: Order[];
   total: number;
   page?: number;
   limit?: number;

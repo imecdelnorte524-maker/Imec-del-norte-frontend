@@ -1,26 +1,42 @@
+// src/hooks/useUsers.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "../api/users";
 import { rolesApi } from "../api/roles";
 import { QUERY_KEYS } from "../api/keys";
 import type { UpdateUsuarioDto } from "../interfaces/UserInterfaces";
+import { useSocket } from "../context/SocketContext"; // <-- NUEVO
+import { useSocketEvent } from "./useSocketEvent"; // <-- NUEVO
 
 export const useUsers = () => {
   const queryClient = useQueryClient();
+  const socket = useSocket(); // <-- NUEVO
 
-  // 1. Obtener Usuarios
-  const { data: usuarios = [], isLoading: loadingUsers, error: errorUsers } = useQuery({
+  const {
+    data: usuarios = [],
+    isLoading: loadingUsers,
+    error: errorUsers,
+  } = useQuery({
     queryKey: [QUERY_KEYS.users],
     queryFn: usersApi.getAllUsers,
   });
 
-  // 2. Obtener Roles (necesario para formularios de usuarios)
   const { data: roles = [], isLoading: loadingRoles } = useQuery({
     queryKey: [QUERY_KEYS.roles],
     queryFn: rolesApi.getAllRoles,
   });
 
-  // --- MUTATIONS ---
+  // Tiempo real
+  useSocketEvent(socket, "users.created", () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+  });
+  useSocketEvent(socket, "users.updated", () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+  });
+  useSocketEvent(socket, "users.deleted", () => {
+    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
+  });
 
+  // Mutations como ya las tienes
   const createUserMutation = useMutation({
     mutationFn: usersApi.createUser,
     onSuccess: () => {
@@ -52,11 +68,11 @@ export const useUsers = () => {
     roles,
     loading,
     error,
-    
     createUser: createUserMutation.mutateAsync,
-    updateUser: (id: number, data: UpdateUsuarioDto) => updateUserMutation.mutateAsync({ id, data }),
-    toggleUserStatus: (id: number, isActive: boolean) => toggleStatusMutation.mutateAsync({ id, isActive }),
-    
+    updateUser: (id: number, data: UpdateUsuarioDto) =>
+      updateUserMutation.mutateAsync({ id, data }),
+    toggleUserStatus: (id: number, isActive: boolean) =>
+      toggleStatusMutation.mutateAsync({ id, isActive }),
     refetch: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.users] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.roles] });

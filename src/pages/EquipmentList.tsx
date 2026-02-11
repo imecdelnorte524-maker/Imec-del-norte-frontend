@@ -6,7 +6,8 @@ import { useAuth } from "../hooks/useAuth";
 import {
   getEquipmentByClientRequest,
   createEquipmentRequest,
-  addEquipmentPhotoRequest, // ⬅️ IMPORTADO
+  addEquipmentPhotoRequest,
+  exportMaintenancePlanExcelRequest,
 } from "../api/equipment";
 import {
   addEquipmentToOrderRequest,
@@ -104,6 +105,7 @@ export default function EquipmentListPage() {
 
   // Estados para órdenes seleccionadas (múltiples)
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [exportingPlan, setExportingPlan] = useState(false);
 
   const [createForm, setCreateForm] = useState({
     clientId: selectedClientId,
@@ -121,6 +123,10 @@ export default function EquipmentListPage() {
     roleName === "Secretaria" ||
     roleName === "Técnico";
   const canCreate = roleName === "Administrador" || roleName === "Técnico";
+  const canExport =
+    roleName === "Administrador" ||
+    roleName === "Cliente" ||
+    roleName === "Secretaria";
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
@@ -297,12 +303,17 @@ export default function EquipmentListPage() {
     }
 
     const filtered = allEquipments.filter((eq) => {
-      const code = eq.code?.toLowerCase() ?? "";
-      const clientName = eq.client?.nombre?.toLowerCase() ?? "";
-      const idStr = String(eq.equipmentId);
+      const code = eq.code?.toLocaleLowerCase() ?? "";
+      const areaName = eq.area?.nombreArea.toLowerCase() ?? "";
+      const subAreaName = eq.subArea?.nombreSubArea.toLowerCase() ?? "";
+      const typeAirConditioner =
+        eq.airConditionerType?.name.toLowerCase() ?? "";
 
       return (
-        code.includes(term) || clientName.includes(term) || idStr.includes(term)
+        code.includes(term) ||
+        areaName.includes(term) ||
+        subAreaName.includes(term) ||
+        typeAirConditioner.includes(term)
       );
     });
 
@@ -709,6 +720,34 @@ export default function EquipmentListPage() {
     }
   };
 
+  // Justo después de handleOpenCreateForm o donde prefieras en la zona de handlers
+
+  const handleExportMaintenancePlan = async () => {
+    if (!selectedClientId || selectedClientId === 0) {
+      setEquipmentError(
+        "Debe seleccionar una empresa para exportar el plan de mantenimiento.",
+      );
+      return;
+    }
+
+    try {
+      setEquipmentError(null);
+      setExportingPlan(true);
+
+      // Puedes permitir seleccionar año más adelante; ahora usamos el actual
+      await exportMaintenancePlanExcelRequest(selectedClientId);
+    } catch (err: any) {
+      console.error("Error exportando plan de mantenimiento:", err);
+      setEquipmentError(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "Error al exportar el plan de mantenimiento.",
+      );
+    } finally {
+      setExportingPlan(false);
+    }
+  };
+
   // Obtener tipo de AC seleccionado
   const selectedAcType = airConditionerTypes.find(
     (type) => type.id === Number.parseInt(createForm.airConditionerTypeId),
@@ -777,15 +816,32 @@ export default function EquipmentListPage() {
           </button>
           <h1>Equipos por Empresa</h1>
 
-          {canCreate && selectedClientId && selectedClientId !== 0 && (
-            <button
-              type="button"
-              className={listStyles.createButton}
-              onClick={handleOpenCreateForm}
-              disabled={!selectedClientId || createLoading}
-            >
-              + Crear equipo
-            </button>
+          {selectedClientId && selectedClientId !== 0 && (
+            <div className={listStyles.headerActions}>
+              {canExport && (
+                <button
+                  type="button"
+                  className={listStyles.exportButton}
+                  onClick={handleExportMaintenancePlan}
+                  disabled={!selectedClientId || exportingPlan}
+                >
+                  {exportingPlan
+                    ? "Exportando..."
+                    : "Exportar plan mantenimiento"}
+                </button>
+              )}
+
+              {canCreate && (
+                <button
+                  type="button"
+                  className={listStyles.createButton}
+                  onClick={handleOpenCreateForm}
+                  disabled={!selectedClientId || createLoading}
+                >
+                  + Crear equipo
+                </button>
+              )}
+            </div>
           )}
         </div>
 

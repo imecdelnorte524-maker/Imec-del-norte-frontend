@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createOrderRequest } from "../../api/orders";
-import { getMaintenanceTypesRequest } from "../../api/maintenance"; // <--- Nuevo import
+import {
+  getMaintenanceTypesRequest,
+  createMaintenanceTypeRequest,
+} from "../../api/maintenance";
 import api from "../../api/axios";
 import { useAuth } from "../../hooks/useAuth";
 import type {
@@ -45,38 +48,39 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
     comentarios: "",
     cliente_empresa_id: 0,
     tipo_servicio: "",
-    maintenance_type_id: undefined, // <--- Nuevo campo
+    maintenance_type_id: undefined,
   });
 
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [servicios, setServicios] = useState<ServiceOption[]>([]);
   const [empresas, setEmpresas] = useState<ClientCompanyOption[]>([]);
-  const [, setEquipmentOptions] = useState<Equipment[]>([]);
+  const [equipmentOptions, setEquipmentOptions] = useState<Equipment[]>([]);
   const [selectedEquipmentIds, setSelectedEquipmentIds] = useState<number[]>(
     [],
   );
-
-  // Nuevo estado para la lista de tipos de mantenimiento
+  const [equipmentSearch, setEquipmentSearch] = useState(""); // 🔍 buscador de equipos
   const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>(
     [],
   );
-
-  const [, setSelectedService] = useState<ServiceOption | null>(
+  const [selectedService, setSelectedService] = useState<ServiceOption | null>(
     null,
   );
-
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
-  const [, setLoadingEquipment] = useState(false);
+  const [loadingEquipment, setLoadingEquipment] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [, setEquipmentError] = useState<string | null>(null);
+  const [equipmentError, setEquipmentError] = useState<string | null>(null);
+
+  // Nuevos estados para crear tipo de mantenimiento
+  const [showNewMaintenanceModal, setShowNewMaintenanceModal] = useState(false);
+  const [newMaintenanceName, setNewMaintenanceName] = useState("");
+  const [creatingMaintenance, setCreatingMaintenance] = useState(false);
 
   const roleName = user?.role?.nombreRol || "";
   const isSecretaria = roleName === "Secretaria";
   const isCliente = roleName === "Cliente";
 
-  // Lógica para mostrar equipos
   const isEquipmentCategory = (categoria?: string | null) =>
     [
       "Aires Acondicionados",
@@ -84,7 +88,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
       "Redes Contra Incendios",
     ].includes(categoria || "");
 
-  // Lógica para mostrar Tipos de Mantenimiento (Preventivo/Correctivo)
   const requiresMaintenanceType = (): boolean => {
     return (
       formData.tipo_servicio === "Mantenimiento" ||
@@ -106,7 +109,11 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
     if (client) {
       setEmpresas((prev) => [
         ...prev,
-        { idCliente: client.idCliente, nombre: client.nombre, nit: client.nit },
+        {
+          idCliente: client.idCliente,
+          nombre: client.nombre,
+          nit: client.nit,
+        },
       ]);
       setFormData((prev) => ({
         ...prev,
@@ -117,14 +124,50 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
     handleCloseModal();
   };
 
-  // Cargar datos iniciales
+  // Función para crear nuevo tipo de mantenimiento
+  const handleCreateMaintenanceType = async () => {
+    if (!newMaintenanceName.trim()) {
+      setError("Ingrese un nombre para el tipo de mantenimiento");
+      return;
+    }
+
+    setCreatingMaintenance(true);
+    setError(null);
+
+    try {
+      const newType = await createMaintenanceTypeRequest({
+        nombre: newMaintenanceName.trim(),
+        descripcion: "",
+      });
+
+      // Agregar el nuevo tipo a la lista
+      setMaintenanceTypes((prev) => [...prev, newType]);
+
+      // Seleccionar automáticamente
+      setFormData((prev) => ({
+        ...prev,
+        maintenance_type_id: newType.id,
+      }));
+
+      // Cerrar modal y limpiar
+      setShowNewMaintenanceModal(false);
+      setNewMaintenanceName("");
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || "Error al crear tipo de mantenimiento",
+      );
+      playErrorSound();
+    } finally {
+      setCreatingMaintenance(false);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoadingData(true);
         setError(null);
 
-        // 1. Cargar servicios
         const servicesRes = await api.get("/services");
         const servicesData = servicesRes.data?.data || [];
         const mappedServices: ServiceOption[] = servicesData.map((s: any) => ({
@@ -138,7 +181,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
         }));
         setServicios(mappedServices);
 
-        // 2. Cargar Tipos de Mantenimiento
         try {
           const types = await getMaintenanceTypesRequest();
           setMaintenanceTypes(types);
@@ -148,7 +190,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
 
         if (!user) return;
 
-        // 3. Cargar Empresas
         if (isAdmin || isSecretaria) {
           const clientsRes = await api.get("/clients");
           const clientsData = clientsRes.data?.data || [];
@@ -196,7 +237,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
     loadData();
   }, [user, isAdmin, isSecretaria, isCliente]);
 
-  // Cargar equipos
   useEffect(() => {
     const service =
       servicios.find((s) => s.servicioId === formData.servicio_id) || null;
@@ -204,6 +244,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
     setEquipmentOptions([]);
     setSelectedEquipmentIds([]);
     setEquipmentError(null);
+    setEquipmentSearch(""); // limpiar búsqueda al cambiar servicio/empresa
 
     if (
       !service ||
@@ -217,7 +258,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
       try {
         setLoadingEquipment(true);
         const equipment = await getEquipmentByClientRequest(
-          formData.cliente_empresa_id,
+          formData.cliente_empresa_id as number,
         );
         setEquipmentOptions(equipment);
         if (equipment.length === 0) {
@@ -236,6 +277,24 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
 
     loadEquipment();
   }, [formData.servicio_id, formData.cliente_empresa_id, servicios]);
+
+  // Lista filtrada de equipos por código, área y subárea
+  const filteredEquipmentOptions = useMemo(() => {
+    const term = equipmentSearch.trim().toLowerCase();
+    if (!term) return equipmentOptions;
+
+    return equipmentOptions.filter((eq) => {
+      const code = eq.code?.toLowerCase() ?? "";
+      const areaName = eq.area?.nombreArea?.toLowerCase() ?? "";
+      const subAreaName = eq.subArea?.nombreSubArea?.toLowerCase() ?? "";
+
+      return (
+        code.includes(term) ||
+        areaName.includes(term) ||
+        subAreaName.includes(term)
+      );
+    });
+  }, [equipmentOptions, equipmentSearch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -312,6 +371,14 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
     }));
   };
 
+  const handleEquipmentToggle = (equipmentId: number) => {
+    setSelectedEquipmentIds((prev) =>
+      prev.includes(equipmentId)
+        ? prev.filter((id) => id !== equipmentId)
+        : [...prev, equipmentId],
+    );
+  };
+
   if (loadingData) {
     return (
       <div className={styles.container}>
@@ -353,7 +420,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
           </div>
         )}
 
-        {/* Empresa */}
         {(isAdmin || isSecretaria || (isCliente && empresas.length > 1)) && (
           <div className={styles.formGroup}>
             <label htmlFor="cliente_empresa_id">Empresa *</label>
@@ -373,6 +439,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
             </select>
           </div>
         )}
+
         {isCliente && empresas.length === 1 && (
           <div className={styles.formGroup}>
             <label>Empresa</label>
@@ -383,6 +450,7 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
             />
           </div>
         )}
+
         {isCliente && empresas.length === 0 && !error && (
           <div className={styles.formGroup}>
             <p className={styles.infoText}>No tiene empresa. Cree una.</p>
@@ -396,7 +464,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
           </div>
         )}
 
-        {/* Servicio */}
         <div className={styles.formGroup}>
           <label htmlFor="servicio_id">Servicio *</label>
           <select
@@ -415,7 +482,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
           </select>
         </div>
 
-        {/* Tipo de servicio */}
         <div className={styles.formGroup}>
           <label htmlFor="tipo_servicio">Tipo de servicio *</label>
           <select
@@ -434,12 +500,21 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
           </select>
         </div>
 
-        {/* NUEVO SELECT: Tipo de Mantenimiento (Preventivo, Correctivo) */}
         {requiresMaintenanceType() && (
           <div className={styles.formGroup}>
-            <label htmlFor="maintenance_type_id">
-              Clase de Mantenimiento *
-            </label>
+            <div className={styles.fieldHeader}>
+              <label htmlFor="maintenance_type_id">
+                Clase de Mantenimiento *
+              </label>
+              {/* Si quieres permitir creación de tipos desde aquí, descomenta: */}
+              <button
+                type="button"
+                className={styles.addButton}
+                onClick={() => setShowNewMaintenanceModal(true)}
+              >
+                + Agregar nuevo
+              </button>
+            </div>
             <select
               id="maintenance_type_id"
               name="maintenance_type_id"
@@ -457,7 +532,75 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
           </div>
         )}
 
-        {/* Comentarios */}
+        {selectedService &&
+          isEquipmentCategory(selectedService.categoriaServicio) &&
+          formData.cliente_empresa_id && (
+            <div className={styles.formGroup}>
+              <label>Equipos asociados (opcional)</label>
+              {loadingEquipment ? (
+                <p>Cargando equipos...</p>
+              ) : equipmentError ? (
+                <div className={styles.warning}>{equipmentError}</div>
+              ) : equipmentOptions.length === 0 ? (
+                <p>No hay equipos registrados para esta empresa.</p>
+              ) : (
+                <div className={styles.equipmentSelection}>
+                  {/* Buscador de equipos */}
+                  <div className={styles.equipmentSearchWrapper}>
+                    <input
+                      type="text"
+                      value={equipmentSearch}
+                      onChange={(e) => setEquipmentSearch(e.target.value)}
+                      placeholder="Buscar por código, área o subárea..."
+                      className={styles.equipmentSearchInput}
+                    />
+                  </div>
+
+                  {/* Lista filtrada */}
+                  {filteredEquipmentOptions.length === 0 ? (
+                    <p className={styles.infoText}>
+                      No hay equipos que coincidan con la búsqueda.
+                    </p>
+                  ) : (
+                    filteredEquipmentOptions.map((equipment) => (
+                      <div
+                        key={equipment.equipmentId}
+                        className={styles.equipmentCheckbox}
+                      >
+                        <input
+                          type="checkbox"
+                          id={`equipment-${equipment.equipmentId}`}
+                          checked={selectedEquipmentIds.includes(
+                            equipment.equipmentId,
+                          )}
+                          onChange={() =>
+                            handleEquipmentToggle(equipment.equipmentId)
+                          }
+                        />
+                        <label htmlFor={`equipment-${equipment.equipmentId}`}>
+                          {equipment.code} - {equipment.category} -{" "}
+                          {equipment.area?.nombreArea}
+                          {equipment.subArea &&
+                            ` - ${equipment.subArea.nombreSubArea}`}
+                          {equipment.notes && ` (${equipment.notes})`}
+                        </label>
+                      </div>
+                    ))
+                  )}
+
+                  {selectedEquipmentIds.length > 0 && (
+                    <p className={styles.selectedCount}>
+                      {selectedEquipmentIds.length} equipo
+                      {selectedEquipmentIds.length !== 1 ? "s" : ""}{" "}
+                      seleccionado
+                      {selectedEquipmentIds.length !== 1 ? "s" : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
         <div className={styles.formGroup}>
           <label htmlFor="comentarios">Comentarios</label>
           <textarea
@@ -496,6 +639,48 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
         onSuccess={handleModalSuccess}
         editingClient={editingClient}
       />
+
+      {/* Modal para crear nuevo tipo de mantenimiento */}
+      {showNewMaintenanceModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h3>Crear nuevo tipo de mantenimiento</h3>
+            <div className={styles.formGroup}>
+              <label>Nombre del tipo *</label>
+              <input
+                type="text"
+                value={newMaintenanceName}
+                onChange={(e) => setNewMaintenanceName(e.target.value)}
+                placeholder="Ej: Preventivo, Correctivo, Predictivo..."
+                autoFocus
+                className={styles.formInput}
+              />
+            </div>
+            {error && <div className={styles.error}>{error}</div>}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewMaintenanceModal(false);
+                  setNewMaintenanceName("");
+                  setError(null);
+                }}
+                className={styles.secondaryButton}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateMaintenanceType}
+                disabled={creatingMaintenance || !newMaintenanceName.trim()}
+                className={styles.primaryButton}
+              >
+                {creatingMaintenance ? "Creando..." : "Crear"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,8 @@
+// src/hooks/useNotifications.ts
 import { useEffect, useState, useRef, useCallback } from "react";
-import { io, Socket } from "socket.io-client";
 import axios from "axios";
+import { useSocket } from "../context/SocketContext"; // <-- NUEVO
+import { useSocketEvent } from "./useSocketEvent"; // <-- NUEVO
 
 export interface Notification {
   notificacionId: number;
@@ -16,18 +18,16 @@ export interface Notification {
 interface UseNotificationsOptions {
   token: string | null;
   httpBaseUrl: string; // ej: https://.../api
-  wsBaseUrl: string;   // ej: https://...  (sin /api)
 }
 
 export function useNotifications({
   token,
   httpBaseUrl,
-  wsBaseUrl,
 }: UseNotificationsOptions) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const socketRef = useRef<Socket | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const socket = useSocket(); // <-- NUEVO
 
   // Inicializar audio
   useEffect(() => {
@@ -37,11 +37,7 @@ export function useNotifications({
   const playSound = useCallback(() => {
     if (!audioRef.current) return;
     audioRef.current.currentTime = 0;
-    audioRef.current
-      .play()
-      .catch(() => {
-        // El navegador puede bloquear el autoplay si no hubo interacción previa
-      });
+    audioRef.current.play().catch(() => {});
   }, []);
 
   // Cargar notificaciones iniciales
@@ -63,35 +59,14 @@ export function useNotifications({
       });
   }, [token, httpBaseUrl]);
 
-  // WebSocket
-  useEffect(() => {
-    if (!token || !wsBaseUrl) return;
-
-    const socket = io(wsBaseUrl, {
-      auth: { token },
-      transports: ["websocket"],
-    });
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {});
-
-    socket.on("connect_error", (err) => {
-      console.error("[WS] Error de conexión:", err.message);
-    });
-
-    socket.on("notification", (notif: Notification) => {
-      setNotifications((prev) => [notif, ...prev]);
-      if (!notif.leida) {
-        setUnreadCount((prev) => prev + 1);
-      }
-      playSound();
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [token, wsBaseUrl, playSound]);
+  // Tiempo real: escuchar evento "notification" desde el socket global
+  useSocketEvent<Notification>(socket, "notification", (notif) => {
+    setNotifications((prev) => [notif, ...prev]);
+    if (!notif.leida) {
+      setUnreadCount((prev) => prev + 1);
+    }
+    playSound();
+  });
 
   const markAsRead = async (id: number) => {
     if (!token || !httpBaseUrl) return;
@@ -99,17 +74,11 @@ export function useNotifications({
     await axios.patch(
       `${httpBaseUrl}/notifications/${id}/read`,
       {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${token}` } },
     );
 
     setNotifications((prev) =>
-      prev.map((n) =>
-        n.notificacionId === id ? { ...n, leida: true } : n
-      )
+      prev.map((n) => (n.notificacionId === id ? { ...n, leida: true } : n)),
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
   };
@@ -120,11 +89,7 @@ export function useNotifications({
     await axios.patch(
       `${httpBaseUrl}/notifications/read-all`,
       {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      { headers: { Authorization: `Bearer ${token}` } },
     );
 
     setNotifications((prev) => prev.map((n) => ({ ...n, leida: true })));

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type React from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import {
@@ -18,6 +19,7 @@ import type {
   CondenserData,
   AirConditionerTypeOption,
   WorkOrderInfo,
+  PlanMantenimientoData,
 } from "../interfaces/EquipmentInterfaces";
 import type { Order } from "../interfaces/OrderInterfaces";
 import { useAuth } from "../hooks/useAuth";
@@ -48,6 +50,12 @@ const MULTIPLE_COMPONENT_TYPES = [
   "Variable Refrigerant Flow",
   "Sistema Multi Split",
 ];
+
+interface NewAcTypeFormState {
+  name: string;
+  hasEvaporator: boolean;
+  hasCondenser: boolean;
+}
 
 export default function EquipmentDetailPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>();
@@ -82,8 +90,14 @@ export default function EquipmentDetailPage() {
   );
 
   // Tipos de aire
-  const [, setAirConditionerTypes] = useState<AirConditionerTypeOption[]>([]);
+  const [airConditionerTypes, setAirConditionerTypes] = useState<
+    AirConditionerTypeOption[]
+  >([]);
   const [selectedAcTypeId, setSelectedAcTypeId] = useState<number | null>(null);
+
+  // Plan de mantenimiento (completo)
+  const [planMantenimiento, setPlanMantenimiento] =
+    useState<PlanMantenimientoData | null>(null);
 
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -109,6 +123,16 @@ export default function EquipmentDetailPage() {
 
   // Error local para validaciones de edición
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Modal para crear nuevo tipo de aire
+  const [showAcTypeModal, setShowAcTypeModal] = useState(false);
+  const [creatingAcType, setCreatingAcType] = useState(false);
+  const [acTypeError, setAcTypeError] = useState<string | null>(null);
+  const [newAcTypeForm, setNewAcTypeForm] = useState<NewAcTypeFormState>({
+    name: "",
+    hasEvaporator: true,
+    hasCondenser: true,
+  });
 
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
@@ -169,9 +193,7 @@ export default function EquipmentDetailPage() {
     if (!equipment) return;
     try {
       setLoadingWorkOrders(true);
-      const orders = await getEquipmentWorkOrdersRequest(
-        equipment.equipmentId,
-      );
+      const orders = await getEquipmentWorkOrdersRequest(equipment.equipmentId);
       setWorkOrders(orders);
     } catch (error) {
       console.error("Error cargando órdenes del equipo:", error);
@@ -210,7 +232,8 @@ export default function EquipmentDetailPage() {
   // Sincronizar formulario cuando carga/cambia el equipo
   useEffect(() => {
     if (equipment) {
-      setLocalError(null); // limpiar error local al cargar equipo
+      setLocalError(null);
+
       setEditForm({
         code: equipment.code || "",
         installationDate: equipment.installationDate || "",
@@ -218,13 +241,25 @@ export default function EquipmentDetailPage() {
         status: equipment.status || "Activo",
       });
 
-      // Inicializar arrays de componentes
+      // Componentes
       setEvaporators(equipment.evaporators || []);
       setCondensers(equipment.condensers || []);
 
-      setSelectedAcTypeId(equipment.airConditionerTypeId || null);
+      // 🔹 Tipo de aire: usar id plano o, si no viene, el id del objeto anidado
+      const acTypeIdFromEquipment =
+        equipment.airConditionerTypeId ??
+        equipment.airConditionerType?.id ??
+        null;
+      setSelectedAcTypeId(acTypeIdFromEquipment);
+
+      // Ubicación
       setSelectedAreaId(equipment.area?.idArea || null);
       setSelectedSubAreaId(equipment.subArea?.idSubArea || null);
+
+      // 🔹 Plan de mantenimiento: copiar lo que venga del backend
+      setPlanMantenimiento(
+        equipment.planMantenimiento ? { ...equipment.planMantenimiento } : null,
+      );
 
       loadHierarchicalAreas(equipment);
       loadAirConditionerTypes();
@@ -239,7 +274,7 @@ export default function EquipmentDetailPage() {
     }
   }, [showOrderModal, equipment]);
 
-  // Handlers de formulario
+  // Handlers de formulario básicos
   const handleEditChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -258,7 +293,7 @@ export default function EquipmentDetailPage() {
     setCondensers(newCondensers);
   };
 
-  // Handlers de selectores
+  // Handlers de selectores de ubicación
   const handleEditAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value ? Number(e.target.value) : null;
     setSelectedAreaId(value);
@@ -270,6 +305,81 @@ export default function EquipmentDetailPage() {
     setSelectedSubAreaId(value);
   };
 
+  // Handler de tipo de aire acondicionado
+  const handleEditAcTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value ? Number(e.target.value) : null;
+    setSelectedAcTypeId(value);
+  };
+
+  // Handler genérico de Plan de Mantenimiento
+  const handlePlanMantenimientoChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+
+    setPlanMantenimiento((prev) => {
+      // Limpiar todo el plan si se borra la unidad de frecuencia
+      if (name === "unidadFrecuencia") {
+        if (!value) {
+          return null;
+        }
+        return {
+          ...(prev || {}),
+          unidadFrecuencia: value as PlanMantenimientoData["unidadFrecuencia"],
+        };
+      }
+
+      // Si no había plan antes y se empieza a editar otro campo
+      if (!prev) {
+        const base: PlanMantenimientoData = {};
+        if (name === "diaDelMes") {
+          return {
+            ...base,
+            diaDelMes: value ? Number(value) : null,
+          };
+        }
+        if (name === "fechaProgramada") {
+          return {
+            ...base,
+            fechaProgramada: value || null,
+          };
+        }
+        if (name === "notas") {
+          return {
+            ...base,
+            notas: value || null,
+          };
+        }
+        return base;
+      }
+
+      if (name === "diaDelMes") {
+        return {
+          ...prev,
+          diaDelMes: value ? Number(value) : null,
+        };
+      }
+
+      if (name === "fechaProgramada") {
+        return {
+          ...prev,
+          fechaProgramada: value || null,
+        };
+      }
+
+      if (name === "notas") {
+        return {
+          ...prev,
+          notas: value || null,
+        };
+      }
+
+      return prev;
+    });
+  };
+
   // GUARDAR
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,8 +387,19 @@ export default function EquipmentDetailPage() {
 
     setLocalError(null);
 
-    // Validar múltiple evaporador/condensador/compresor según tipo de aire
-    const typeName = equipment.airConditionerType?.name?.toLowerCase() ?? "";
+    // Determinar el tipo de aire seleccionado (para validaciones)
+    const selectedTypeId =
+      selectedAcTypeId ?? equipment.airConditionerTypeId ?? null;
+
+    let typeName = "";
+
+    if (selectedTypeId && airConditionerTypes.length > 0) {
+      const type = airConditionerTypes.find((t) => t.id === selectedTypeId);
+      if (type?.name) typeName = type.name.toLowerCase();
+    } else if (equipment.airConditionerType?.name) {
+      typeName = equipment.airConditionerType.name.toLowerCase();
+    }
+
     const canHaveMultipleComponents = MULTIPLE_COMPONENT_TYPES.some((multi) =>
       typeName.includes(multi.toLowerCase()),
     );
@@ -322,6 +443,8 @@ export default function EquipmentDetailPage() {
       airConditionerTypeId: selectedAcTypeId,
       evaporators: evaporators,
       condensers: condensers,
+      // Plan de mantenimiento completo (o null si no hay)
+      planMantenimiento: planMantenimiento ?? null,
     };
 
     const success = await updateEquipment(payload);
@@ -407,6 +530,60 @@ export default function EquipmentDetailPage() {
     }
   };
 
+  // --- Creación de nuevo tipo de aire acondicionado ---
+  const handleOpenNewAcTypeForm = () => {
+    setAcTypeError(null);
+    setNewAcTypeForm({
+      name: "",
+      hasEvaporator: true,
+      hasCondenser: true,
+    });
+    setShowAcTypeModal(true);
+  };
+
+  const handleNewAcTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setNewAcTypeForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const handleCreateNewAcType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAcTypeError(null);
+
+    if (!newAcTypeForm.name.trim()) {
+      setAcTypeError("El nombre del tipo de aire es obligatorio.");
+      return;
+    }
+
+    try {
+      setCreatingAcType(true);
+      const res = await api.post("/air-conditioner-types", {
+        name: newAcTypeForm.name.trim(),
+        hasEvaporator: newAcTypeForm.hasEvaporator,
+        hasCondenser: newAcTypeForm.hasCondenser,
+      });
+
+      const created: AirConditionerTypeOption = res.data?.data;
+      if (!created || !created.id) {
+        throw new Error("Respuesta inesperada al crear tipo de aire.");
+      }
+
+      // Actualizar lista local y seleccionar el nuevo tipo
+      setAirConditionerTypes((prev) => [...prev, created]);
+      setSelectedAcTypeId(created.id);
+
+      setShowAcTypeModal(false);
+    } catch (err) {
+      console.error("Error creando tipo de aire:", err);
+      setAcTypeError("Error al crear el tipo de aire acondicionado.");
+    } finally {
+      setCreatingAcType(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className={styles.container}>
@@ -443,7 +620,14 @@ export default function EquipmentDetailPage() {
             />
 
             {!editing ? (
-              <EquipmentInfoSection equipment={equipment} />
+              <>
+                <EquipmentInfoSection equipment={equipment} />
+                <LocationSection
+                  equipment={equipment}
+                  editing={editing}
+                  areasWithTree={areas}
+                />
+              </>
             ) : (
               <EquipmentEditForm
                 equipment={equipment}
@@ -456,22 +640,23 @@ export default function EquipmentDetailPage() {
                 saving={saving}
                 loadingLocations={loadingLocations}
                 locationsError={locationsError}
+                airConditionerTypes={airConditionerTypes}
+                selectedAcTypeId={selectedAcTypeId}
+                planMantenimiento={planMantenimiento}
                 onEditChange={handleEditChange}
                 onAreaChange={handleEditAreaChange}
                 onSubAreaChange={handleEditSubAreaChange}
+                onAcTypeChange={handleEditAcTypeChange}
+                onOpenNewAcTypeForm={handleOpenNewAcTypeForm}
+                onPlanMantenimientoChange={handlePlanMantenimientoChange}
                 onEvaporatorsChange={handleEvaporatorsChange}
                 onCondensersChange={handleCondensersChange}
                 onSubmit={handleSave}
                 onCancel={() => setEditing(false)}
               />
             )}
-
             {!editing && <ComponentsReadOnly equipment={equipment} />}
-            <LocationSection
-              equipment={equipment}
-              editing={editing}
-              areasWithTree={areas}
-            />
+
             {!editing && <DatesNotesSection equipment={equipment} />}
 
             {/* Sección de Órdenes Asociadas */}
@@ -484,10 +669,7 @@ export default function EquipmentDetailPage() {
                 ) : workOrders.length > 0 ? (
                   <div className={styles.workOrdersList}>
                     {workOrders.map((order) => (
-                      <div
-                        key={order.workOrderId}
-                        className={styles.orderItem}
-                      >
+                      <div key={order.workOrderId} className={styles.orderItem}>
                         <div className={styles.orderInfo}>
                           <strong>Orden #{order.workOrderId}</strong>
                           <span className={styles.orderDescription}>
@@ -575,9 +757,7 @@ export default function EquipmentDetailPage() {
                 equipmentId={equipment.equipmentId}
                 clientId={equipment.client.idCliente}
                 category={equipment.category}
-                existingOrderIds={workOrders.map(
-                  (order) => order.workOrderId,
-                )}
+                existingOrderIds={workOrders.map((order) => order.workOrderId)}
                 availableOrders={availableOrders}
                 loading={loadingAvailableOrders}
                 error={ordersError}
@@ -588,6 +768,106 @@ export default function EquipmentDetailPage() {
           </>
         )}
       </div>
+
+      {/* Modal simple para crear nuevo tipo de aire acondicionado */}
+      {showAcTypeModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "1.5rem",
+              borderRadius: "8px",
+              maxWidth: "420px",
+              width: "100%",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: "1rem" }}>
+              Nuevo Tipo de Aire Acondicionado
+            </h3>
+
+            {acTypeError && (
+              <p style={{ color: "red", marginBottom: "0.75rem" }}>
+                {acTypeError}
+              </p>
+            )}
+
+            <form onSubmit={handleCreateNewAcType}>
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label style={{ display: "block", marginBottom: "0.25rem" }}>
+                  Nombre *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={newAcTypeForm.name}
+                  onChange={handleNewAcTypeChange}
+                  disabled={creatingAcType}
+                  style={{ width: "100%", padding: "0.4rem" }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "0.75rem" }}>
+                <label style={{ display: "block", marginBottom: "0.25rem" }}>
+                  Componentes
+                </label>
+                <label style={{ display: "block", fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    name="hasEvaporator"
+                    checked={newAcTypeForm.hasEvaporator}
+                    onChange={handleNewAcTypeChange}
+                    disabled={creatingAcType}
+                    style={{ marginRight: "0.35rem" }}
+                  />
+                  Tiene evaporadora
+                </label>
+                <label style={{ display: "block", fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    name="hasCondenser"
+                    checked={newAcTypeForm.hasCondenser}
+                    onChange={handleNewAcTypeChange}
+                    disabled={creatingAcType}
+                    style={{ marginRight: "0.35rem" }}
+                  />
+                  Tiene condensadora
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "0.5rem",
+                  marginTop: "1rem",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowAcTypeModal(false)}
+                  disabled={creatingAcType}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" disabled={creatingAcType}>
+                  {creatingAcType ? "Creando..." : "Crear tipo"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
