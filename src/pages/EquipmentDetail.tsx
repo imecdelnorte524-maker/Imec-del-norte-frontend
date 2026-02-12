@@ -40,6 +40,8 @@ import AssociateOrderModal from "../components/equipment/equipment-details/Assoc
 import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import type { AreaSimple } from "../interfaces/AreaInterfaces";
 import { useEquipmentDetail } from "../hooks/useEquipmentDetail";
+import pdfIcon from "../../public/Assets/icons/document-pdf.svg";
+import EquipmentDocumentsModal from "../components/equipment/equipment-details/EquipmentDocumentsModal";
 
 // Tipos de aire acondicionado que permiten múltiples componentes
 const MULTIPLE_COMPONENT_TYPES = [
@@ -88,6 +90,7 @@ export default function EquipmentDetailPage() {
   const [selectedSubAreaId, setSelectedSubAreaId] = useState<number | null>(
     null,
   );
+  const [showDocsModal, setShowDocsModal] = useState(false);
 
   // Tipos de aire
   const [airConditionerTypes, setAirConditionerTypes] = useState<
@@ -867,6 +870,27 @@ export default function EquipmentDetailPage() {
             </form>
           </div>
         </div>
+      )}
+      {equipment && (
+        <>
+          <button
+            type="button"
+            className={styles.floatingPdfButton}
+            onClick={() => setShowDocsModal(true)}
+            aria-label="Abrir documentos PDF"
+            title="Documentos PDF"
+          >
+            <img src={pdfIcon} alt="" />
+          </button>
+
+          {showDocsModal && (
+            <EquipmentDocumentsModal
+              isOpen={showDocsModal}
+              equipmentId={equipment.equipmentId}
+              onClose={() => setShowDocsModal(false)}
+            />
+          )}
+        </>
       )}
     </DashboardLayout>
   );

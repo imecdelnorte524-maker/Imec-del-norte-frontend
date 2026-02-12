@@ -219,3 +219,15 @@ export type EquipmentStatus =
   (typeof EquipmentStatus)[keyof typeof EquipmentStatus];
 
 export type UnidadFrecuencia = "DIA" | "SEMANA" | "MES";
+
+export interface EquipmentDocument {
+  id: number;
+  equipmentId: number;
+  originalName: string;
+  mimeType: string;
+  size: number | null;
+  createdAt: string;
+  url: string; // puede venir relativo o absoluto
+  downloadUrl: string; // puede venir relativo o absoluto
+  publicId?: string;
+}

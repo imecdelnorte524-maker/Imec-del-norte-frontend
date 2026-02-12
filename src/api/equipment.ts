@@ -11,6 +11,7 @@ import type {
   CompressorData,
   PlanMantenimientoData,
   WorkOrderInfo,
+  EquipmentDocument,
 } from "../interfaces/EquipmentInterfaces";
 
 // ────────────────────────────────────────────────────────────────
@@ -481,4 +482,27 @@ export const exportMaintenancePlanExcelRequest = async (
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+};
+
+export const getEquipmentDocumentsRequest = async (equipmentId: number) => {
+  const res = await api.get(`/equipment/${equipmentId}/documents`);
+  return res.data?.data as EquipmentDocument[];
+};
+
+export const addEquipmentDocumentRequest = async (
+  equipmentId: number,
+  file: File,
+) => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await api.post(`/equipment/${equipmentId}/documents`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  return res.data?.data as EquipmentDocument;
+};
+
+export const deleteEquipmentDocumentRequest = async (documentId: number) => {
+  await api.delete(`/equipment-documents/${documentId}`);
 };

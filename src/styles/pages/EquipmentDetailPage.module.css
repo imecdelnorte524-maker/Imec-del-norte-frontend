@@ -621,7 +621,7 @@
   .container {
     padding: var(--spacing-md);
   }
-  
+
   .formGrid,
   .componentsGrid,
   .locationInfo {
@@ -636,51 +636,51 @@
     align-items: stretch;
     gap: var(--spacing-md);
   }
-  
+
   .headerActions {
     width: 100%;
     flex-direction: column;
   }
-  
+
   .headerActions button {
     width: 100%;
     justify-content: center;
   }
-  
+
   .formGrid,
   .componentsGrid,
   .locationInfo {
     grid-template-columns: 1fr;
   }
-  
+
   .detailItem {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .detailItem strong {
     flex: none;
     width: 100%;
   }
-  
+
   .detailItem span {
     text-align: left;
     width: 100%;
   }
-  
+
   .formActions {
     flex-direction: column;
   }
-  
+
   .formActions button {
     width: 100%;
   }
-  
+
   .modalOverlay {
     padding: var(--spacing-sm);
   }
-  
+
   .addPhotoModal,
   .photoViewModal {
     max-height: 95vh;
@@ -692,7 +692,7 @@
   .container {
     padding: var(--spacing-sm);
   }
-  
+
   .section,
   .editFormContainer,
   .componentsSection,
@@ -700,7 +700,7 @@
   .datesNotesSection {
     padding: var(--spacing-md);
   }
-  
+
   .modalHeader,
   .modalBody,
   .modalFooter {
@@ -911,5 +911,249 @@
 
   .associateOrderButton {
     width: 100%;
+  }
+}
+
+/* ===== Floating PDF Button ===== */
+.floatingPdfButton {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-200);
+  background: var(--primary-500);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 900;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
+}
+
+.floatingPdfButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+  background: var(--primary-800);
+}
+
+.floatingPdfButton img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+/* ===== Documents Modal ===== */
+.docsModal {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+}
+
+.docsUploadBox {
+  background: var(--gray-50);
+  border: 1px dashed var(--gray-300);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.docsUploadLabel {
+  display: block;
+}
+
+.docsFileInput {
+  width: 100%;
+}
+
+.docsUploadHint {
+  display: block;
+  margin-top: var(--spacing-xs);
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+}
+
+.docsSelectedList {
+  margin-top: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.docsSelectedItem {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 8px 10px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+}
+
+.docsFileName {
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
+  word-break: break-word;
+}
+
+.docsFileMeta {
+  color: var(--gray-500);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.docsUploadActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+}
+
+.docsPrimaryButton {
+  background: var(--primary-500);
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.docsPrimaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.docsSecondaryButton {
+  background: var(--white);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.docsListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.docsListHeader h4 {
+  margin: 0;
+  color: var(--gray-800);
+}
+
+.docsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.docsItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  background: var(--white);
+  flex-wrap: wrap;
+}
+
+.docsItemInfo {
+  flex: 1 1 280px;
+  min-width: 220px;
+}
+
+.docsItemName {
+  color: var(--gray-800);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.docsItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-500);
+  font-size: var(--font-size-xs);
+}
+
+.docsItemActions {
+  display: inline-flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.iconButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--gray-200);
+  background: var(--white);
+  color: var(--gray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
+  text-decoration: none;
+}
+
+.iconButton:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+  transform: translateY(-1px);
+}
+
+.iconDanger {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fff;
+}
+
+.iconDanger:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.iconSvg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .floatingPdfButton {
+    right: 12px;
+    bottom: 12px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .docsItem {
+    align-items: flex-start;
+  }
+
+  .docsItemActions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

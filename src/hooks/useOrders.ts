@@ -15,6 +15,7 @@ import {
   addPauseRequest,
   endPauseRequest,
   getOrdersByClientAndCategoryRequest,
+  rateTechniciansRequest,
 } from "../api/orders";
 import {
   getDashboardOrdersRequest,
@@ -66,6 +67,7 @@ function useWorkOrdersRealtime() {
   useSocketEvent(socket, "workOrders.invoiceUpdated", onChange);
   useSocketEvent(socket, "workOrders.assigned", onChange);
   useSocketEvent(socket, "workOrders.emergencyCreated", onChange);
+  useSocketEvent(socket, "workOrders.techniciansRated", onChange);
 }
 
 // ---------------------------------------------------------------------------
@@ -393,12 +395,31 @@ export const useOrderMutations = () => {
     },
   });
 
+  const rateTechniciansMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      ratings,
+    }: {
+      orderId: number;
+      ratings: { technicianId: number; rating: number }[];
+    }) => rateTechniciansRequest(orderId, ratings),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orders] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardOrders] });
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, variables.orderId],
+      });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.myServices] });
+    },
+  });
+
   return {
     createOrder: createOrderMutation,
     updateOrder: updateOrderMutation,
     assignTechnician: assignTechnicianMutation,
     unassignTechnician: unassignTechnicianMutation,
     cancelOrder: cancelOrderMutation,
+    rateTechnicians: rateTechniciansMutation, // NUEVO
   };
 };
 

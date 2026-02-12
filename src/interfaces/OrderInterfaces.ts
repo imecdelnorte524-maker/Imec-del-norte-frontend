@@ -57,6 +57,9 @@ export interface TechnicianAssignment {
   tecnicoId: number;
   isLeader: boolean;
   technician: UserInfo;
+  rating?: number | null;
+  ratedByUserId?: number | null;
+  ratedAt?: string | null;
 }
 
 export interface TimerInfo {
