@@ -1332,6 +1332,14 @@
   }
 }
 
-.equipmentLink{
+.equipmentLink {
   text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: all 0.2s ease;
+}
+
+.equipmentLink:hover {
+  background-color: #f3f4f6;
+  border-radius: 6px;
 }

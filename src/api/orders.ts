@@ -120,6 +120,9 @@ const mapTechnicianAssignment = (apiTech: any): TechnicianAssignment => ({
   tecnicoId: apiTech.tecnicoId,
   isLeader: apiTech.isLeader || false,
   technician: mapUserInfo(apiTech.technician || {}),
+  rating: apiTech.rating ?? null,
+  ratedByUserId: apiTech.ratedByUserId ?? null,
+  ratedAt: apiTech.ratedAt ?? null,
 });
 
 // Hacemos export para poder reutilizarlo desde api/dashboard.ts si se quiere
@@ -310,25 +313,31 @@ export const getOrdersByClientAndCategoryRequest = async (
     // 🔥 FILTRO CORREGIDO: SOLO órdenes que cumplen TODAS las condiciones
     const filteredOrders = orders.filter((order: Order) => {
       // 1. Estado válido: Pendiente o Asignada
-      const isValidStatus = 
-        order.estado === "Pendiente" || 
-        order.estado === "Asignada";
-      
+      const isValidStatus =
+        order.estado === "Pendiente" || order.estado === "Asignada";
+
       // 2. Sin equipos asociados
       const hasNoEquipment = !order.equipos || order.equipos.length === 0;
-      
+
       // 3. NO es orden automática de plan de mantenimiento
       const isNotAutomatic = order.plan_mantenimiento_id === null;
-      
+
       // 4. Mismo cliente
-      const isSameClient = order.cliente_empresa?.id_cliente === clienteEmpresaId;
-      
+      const isSameClient =
+        order.cliente_empresa?.id_cliente === clienteEmpresaId;
+
       // 5. Misma categoría
-      const isSameCategory = 
-        order.servicio.categoria_servicio?.toLowerCase() === 
+      const isSameCategory =
+        order.servicio.categoria_servicio?.toLowerCase() ===
         category.toLowerCase();
 
-      return isValidStatus && hasNoEquipment && isNotAutomatic && isSameClient && isSameCategory;
+      return (
+        isValidStatus &&
+        hasNoEquipment &&
+        isNotAutomatic &&
+        isSameClient &&
+        isSameCategory
+      );
     });
 
     return filteredOrders;
@@ -359,18 +368,24 @@ const getOrdersByClientAndCategoryFallback = async (
 
     const filteredOrders = orders.filter((order: Order) => {
       // MISMOS FILTROS QUE ARRIBA
-      const isValidStatus = 
-        order.estado === "Pendiente" || 
-        order.estado === "Asignada";
-      
+      const isValidStatus =
+        order.estado === "Pendiente" || order.estado === "Asignada";
+
       const hasNoEquipment = !order.equipos || order.equipos.length === 0;
       const isNotAutomatic = order.plan_mantenimiento_id === null;
-      const isSameClient = order.cliente_empresa?.id_cliente === clienteEmpresaId;
-      const isSameCategory = 
-        order.servicio.categoria_servicio?.toLowerCase() === 
+      const isSameClient =
+        order.cliente_empresa?.id_cliente === clienteEmpresaId;
+      const isSameCategory =
+        order.servicio.categoria_servicio?.toLowerCase() ===
         category.toLowerCase();
 
-      return isValidStatus && hasNoEquipment && isNotAutomatic && isSameClient && isSameCategory;
+      return (
+        isValidStatus &&
+        hasNoEquipment &&
+        isNotAutomatic &&
+        isSameClient &&
+        isSameCategory
+      );
     });
 
     return filteredOrders;
@@ -707,6 +722,17 @@ export const createEmergencyOrderRequest = async (
   },
 ): Promise<Order> => {
   const response = await api.post(`/work-orders/${orderId}/emergency`, payload);
+  const apiOrder = response.data?.data;
+  return mapApiOrderToOrder(apiOrder);
+};
+
+export const rateTechniciansRequest = async (
+  orderId: number,
+  ratings: { technicianId: number; rating: number }[],
+): Promise<Order> => {
+  const response = await api.post(`/work-orders/${orderId}/rate-technicians`, {
+    ratings,
+  });
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
 };
