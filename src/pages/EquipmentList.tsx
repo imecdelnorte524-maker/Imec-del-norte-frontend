@@ -8,6 +8,7 @@ import {
   createEquipmentRequest,
   addEquipmentPhotoRequest,
   exportMaintenancePlanExcelRequest,
+  getMyEquipmentRequest,
 } from "../api/equipment";
 import {
   addEquipmentToOrderRequest,
@@ -40,7 +41,6 @@ export default function EquipmentListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Interface para el estado de la ruta
   interface RouteStateType {
     clientId?: number;
     clientName?: string;
@@ -55,7 +55,6 @@ export default function EquipmentListPage() {
     routeState.clientId ?? 0,
   );
 
-  // 🔧 NUEVO: Estado para el cliente seleccionado (objeto completo)
   const [selectedClient, setSelectedClient] = useState<ClientOption | null>(
     null,
   );
@@ -82,13 +81,11 @@ export default function EquipmentListPage() {
     null,
   );
 
-  // Arrays de componentes
   const [evaporators, setEvaporators] = useState<EvaporatorData[]>([]);
   const [condensers, setCondensers] = useState<CondenserData[]>([]);
   const [planMantenimiento, setPlanMantenimiento] =
     useState<PlanMantenimientoData>({});
 
-  // Estados para crear tipo de aire acondicionado
   const [showNewAcTypeForm, setShowNewAcTypeForm] = useState(false);
   const [newAcTypeForm, setNewAcTypeForm] = useState({
     name: "",
@@ -98,12 +95,10 @@ export default function EquipmentListPage() {
   const [creatingAcType, setCreatingAcType] = useState(false);
   const [acTypeError, setAcTypeError] = useState<string | null>(null);
 
-  // Estados para órdenes del cliente
   const [ordersForClient, setOrdersForClient] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
 
-  // Estados para órdenes seleccionadas (múltiples)
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [exportingPlan, setExportingPlan] = useState(false);
 
@@ -118,25 +113,27 @@ export default function EquipmentListPage() {
   });
 
   const roleName = user?.role?.nombreRol;
+  const isClient = roleName === "Cliente";
+
   const canView =
     roleName === "Administrador" ||
     roleName === "Secretaria" ||
-    roleName === "Técnico";
+    roleName === "Técnico" ||
+    roleName === "Cliente";
+
   const canCreate = roleName === "Administrador" || roleName === "Técnico";
+
   const canExport =
     roleName === "Administrador" ||
-    roleName === "Cliente" ||
-    roleName === "Secretaria";
+    roleName === "Secretaria" ||
+    roleName === "Cliente";
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
-  // 🔧 NUEVO: Actualizar selectedClient cuando cambia selectedClientId
   useEffect(() => {
     if (selectedClientId && clients.length > 0) {
       const client = clients.find((c) => c.idCliente === selectedClientId);
-      if (client) {
-        setSelectedClient(client);
-      }
+      if (client) setSelectedClient(client);
     } else {
       setSelectedClient(null);
     }
@@ -147,6 +144,12 @@ export default function EquipmentListPage() {
     if (!canView) {
       setError("No tiene permisos para ver el listado de equipos.");
       playErrorSound();
+      setLoadingClients(false);
+      return;
+    }
+
+    // Para CLIENTE: no necesitamos /clients global, lo derivamos de los equipos
+    if (isClient) {
       setLoadingClients(false);
       return;
     }
@@ -227,6 +230,7 @@ export default function EquipmentListPage() {
     }
   }, [
     canView,
+    isClient,
     hasFixedClientFromRoute,
     routeState.clientId,
     routeState.clientName,
@@ -234,7 +238,6 @@ export default function EquipmentListPage() {
     selectedClientId,
   ]);
 
-  // Cargar tipos de aire acondicionado
   const loadAirConditionerTypes = async () => {
     try {
       const res = await api.get("/air-conditioner-types");
@@ -270,13 +273,46 @@ export default function EquipmentListPage() {
   // Cargar equipos
   useEffect(() => {
     const loadEquipment = async () => {
-      if (!selectedClientId || !canView) return;
+      if (!canView) return;
 
       try {
         setLoadingEquipment(true);
         setEquipmentError(null);
 
-        const equipments = await getEquipmentByClientRequest(selectedClientId);
+        let equipments: Equipment[] = [];
+
+        if (isClient) {
+          // Cliente: el backend ya filtra por las empresas asignadas a ese usuario
+          equipments = await getMyEquipmentRequest();
+
+          // 🔴 NUEVO: derivar las empresas desde los equipos, para mostrar el nombre correcto
+          const clientMap = new Map<number, ClientOption>();
+          equipments.forEach((eq) => {
+            if (eq.client) {
+              clientMap.set(eq.client.idCliente, {
+                idCliente: eq.client.idCliente,
+                nombre: eq.client.nombre,
+                nit: eq.client.nit,
+              });
+            }
+          });
+          const derivedClients = Array.from(clientMap.values());
+          setClients(derivedClients);
+
+          if (derivedClients.length > 0 && !selectedClientId) {
+            setSelectedClientId(derivedClients[0].idCliente);
+            setSelectedClient(derivedClients[0]);
+          }
+        } else {
+          // Admin / Técnica / Secretaria: por empresa seleccionada
+          if (!selectedClientId) {
+            setAllEquipments([]);
+            setEquipmentList([]);
+            return;
+          }
+          equipments = await getEquipmentByClientRequest(selectedClientId);
+        }
+
         setAllEquipments(equipments);
         setEquipmentList(equipments);
       } catch (err: any) {
@@ -291,9 +327,9 @@ export default function EquipmentListPage() {
     };
 
     loadEquipment();
-  }, [selectedClientId, canView]);
+  }, [selectedClientId, canView, isClient]);
 
-  // Filtrar equipos
+  // Filtrar equipos por búsqueda
   useEffect(() => {
     const term = search.trim().toLowerCase();
 
@@ -320,7 +356,6 @@ export default function EquipmentListPage() {
     setEquipmentList(filtered);
   }, [search, allEquipments]);
 
-  // Cargar áreas jerárquicas
   const loadHierarchicalAreas = async () => {
     try {
       const areasRes = await api.get("/areas", {
@@ -362,7 +397,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Cargar órdenes del cliente por categoría
   const loadOrdersForClient = async (clientId: number, category: string) => {
     if (!clientId || !category) {
       setOrdersForClient([]);
@@ -387,16 +421,13 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Cargar órdenes cuando cambia la categoría en el modal
   useEffect(() => {
     if (showCreateForm && selectedClientId && createForm.category) {
       loadOrdersForClient(selectedClientId, createForm.category);
-      // Resetear selección de órdenes cuando cambia la categoría
       setSelectedOrderIds([]);
     }
   }, [showCreateForm, createForm.category, selectedClientId]);
 
-  // Handlers
   const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = Number.parseInt(e.target.value, 10);
     const newClientId = isNaN(value) ? 0 : value;
@@ -404,7 +435,6 @@ export default function EquipmentListPage() {
     setSelectedClientId(newClientId);
     setSearch("");
 
-    // 🔧 ACTUALIZAR selectedClient
     const client = clients.find((c) => c.idCliente === newClientId);
     setSelectedClient(client || null);
   };
@@ -420,7 +450,7 @@ export default function EquipmentListPage() {
   const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value ? Number.parseInt(e.target.value, 10) : null;
     setSelectedAreaId(value);
-    setSelectedSubAreaId(null); // Resetear subárea
+    setSelectedSubAreaId(null);
   };
 
   const handleSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -428,14 +458,9 @@ export default function EquipmentListPage() {
     setSelectedSubAreaId(value);
   };
 
-  // Handlers para arrays de componentes
-  const handleAddEvaporator = () => {
-    setEvaporators([...evaporators, {}]);
-  };
+  const handleAddEvaporator = () => setEvaporators([...evaporators, {}]);
 
-  const handleAddCondenser = () => {
-    setCondensers([...condensers, {}]);
-  };
+  const handleAddCondenser = () => setCondensers([...condensers, {}]);
 
   const handleRemoveEvaporator = (index: number) => {
     setEvaporators(evaporators.filter((_, i) => i !== index));
@@ -492,7 +517,6 @@ export default function EquipmentListPage() {
       [name]: value,
     }));
 
-    // Si cambia la categoría, recargar órdenes
     if (name === "category" && showCreateForm && selectedClientId) {
       loadOrdersForClient(selectedClientId, value);
     }
@@ -517,7 +541,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Handler para selección múltiple de órdenes
   const handleOrderSelectionChange = (orderId: number, isSelected: boolean) => {
     if (isSelected) {
       setSelectedOrderIds([...selectedOrderIds, orderId]);
@@ -526,7 +549,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Abrir formulario de creación
   const handleOpenCreateForm = async () => {
     if (!selectedClientId || !selectedClient) {
       setCreateError("Debe seleccionar una empresa primero.");
@@ -537,7 +559,6 @@ export default function EquipmentListPage() {
       setCreateError(null);
       setCreateLoading(true);
 
-      // Actualizar clientId en el form
       setCreateForm((prev) => ({
         ...prev,
         clientId: selectedClientId,
@@ -546,15 +567,11 @@ export default function EquipmentListPage() {
       await loadHierarchicalAreas();
       await loadAirConditionerTypes();
 
-      // CARGAR ÓRDENES DEL CLIENTE CON LA CATEGORÍA ACTUAL
       await loadOrdersForClient(selectedClientId, createForm.category);
 
-      // Resetear selecciones
       setSelectedAreaId(null);
       setSelectedSubAreaId(null);
       setSelectedOrderIds([]);
-
-      // Resetear arrays de componentes
       setEvaporators([]);
       setCondensers([]);
       setPlanMantenimiento({});
@@ -570,7 +587,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Crear nuevo tipo de AC
   const handleCreateNewAcType = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAcTypeForm.name.trim()) {
@@ -622,7 +638,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Crear equipo con asociación a órdenes y foto principal
   const handleSubmitCreate = async (
     e: React.FormEvent<HTMLFormElement>,
     mainPhoto?: File | null,
@@ -665,15 +680,12 @@ export default function EquipmentListPage() {
         payload.airConditionerTypeId = Number(createForm.airConditionerTypeId);
       }
 
-      // 1. Crear el equipo
       const newEquipment = await createEquipmentRequest(payload);
 
-      // 2. Subir foto principal si existe
       if (mainPhoto) {
         await addEquipmentPhotoRequest(newEquipment.equipmentId, mainPhoto);
       }
 
-      // 3. Asociar a órdenes seleccionadas (si hay)
       if (selectedOrderIds.length > 0) {
         try {
           await Promise.all(
@@ -683,16 +695,13 @@ export default function EquipmentListPage() {
           );
         } catch (associationError) {
           console.error("Error asociando órdenes:", associationError);
-          // Continuar aunque falle la asociación, el equipo ya está creado
         }
       }
 
-      // 4. Recargar equipos
       const equipments = await getEquipmentByClientRequest(selectedClientId);
       setAllEquipments(equipments);
       setEquipmentList(equipments);
 
-      // 5. Resetear todo
       setShowCreateForm(false);
       setSelectedOrderIds([]);
       setCreateForm({
@@ -720,8 +729,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Justo después de handleOpenCreateForm o donde prefieras en la zona de handlers
-
   const handleExportMaintenancePlan = async () => {
     if (!selectedClientId || selectedClientId === 0) {
       setEquipmentError(
@@ -734,7 +741,6 @@ export default function EquipmentListPage() {
       setEquipmentError(null);
       setExportingPlan(true);
 
-      // Puedes permitir seleccionar año más adelante; ahora usamos el actual
       await exportMaintenancePlanExcelRequest(selectedClientId);
     } catch (err: any) {
       console.error("Error exportando plan de mantenimiento:", err);
@@ -748,48 +754,70 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Obtener tipo de AC seleccionado
   const selectedAcType = airConditionerTypes.find(
     (type) => type.id === Number.parseInt(createForm.airConditionerTypeId),
   );
 
-  // Función para renderizar el estado adecuado
   const renderContent = () => {
-    // Caso 1: Sin permisos
+    if (isClient) {
+      if (!canView) {
+        return (
+          <div className={styles.error}>
+            No tiene permisos para ver los equipos.
+          </div>
+        );
+      }
+
+      if (loadingEquipment) {
+        return <p className={styles.loading}>Cargando equipos...</p>;
+      }
+
+      if (equipmentError) {
+        return <div className={styles.error}>{equipmentError}</div>;
+      }
+
+      if (equipmentList.length === 0 && !loadingEquipment) {
+        return (
+          <EmptyState message="No se encontraron equipos registrados para sus empresas." />
+        );
+      }
+
+      return (
+        <EquipmentGrid
+          equipmentList={equipmentList}
+          onOpenEquipment={handleOpenEquipment}
+        />
+      );
+    }
+
     if (error) {
       return <div className={styles.error}>{error}</div>;
     }
 
-    // Caso 2: Cargando clientes
     if (loadingClients) {
       return <p className={styles.loading}>Cargando clientes...</p>;
     }
 
-    // Caso 3: No hay clientes disponibles
     if (clients.length === 0 && !loadingClients && !hasFixedClientFromRoute) {
       return (
         <EmptyState message="No hay clientes registrados en el sistema. Para gestionar equipos, primero debe crear un cliente." />
       );
     }
 
-    // Caso 4: No hay cliente seleccionado
     if (!selectedClientId || selectedClientId === 0) {
       return (
         <EmptyState message="Seleccione un cliente de la lista para ver sus equipos." />
       );
     }
 
-    // Caso 5: Cargando equipos
     if (loadingEquipment) {
       return <p className={styles.loading}>Cargando equipos...</p>;
     }
 
-    // Caso 6: Error al cargar equipos
     if (equipmentError) {
       return <div className={styles.error}>{equipmentError}</div>;
     }
 
-    // Caso 7: No hay equipos para el cliente seleccionado
     if (equipmentList.length === 0 && !loadingEquipment) {
       return (
         <EmptyState
@@ -798,7 +826,6 @@ export default function EquipmentListPage() {
       );
     }
 
-    // Caso 8: Mostrar equipos
     return (
       <EquipmentGrid
         equipmentList={equipmentList}
@@ -814,7 +841,7 @@ export default function EquipmentListPage() {
           <button className={styles.backButton} onClick={() => navigate(-1)}>
             ← Volver
           </button>
-          <h1>Equipos por Empresa</h1>
+          <h1>{isClient ? "Mis Equipos" : "Equipos por Empresa"}</h1>
 
           {selectedClientId && selectedClientId !== 0 && (
             <div className={listStyles.headerActions}>
@@ -849,7 +876,6 @@ export default function EquipmentListPage() {
 
         {!error && (
           <>
-            {/* Solo mostrar filtros si hay clientes */}
             {clients.length > 0 && (
               <EquipmentFilters
                 clients={clients}
@@ -862,10 +888,10 @@ export default function EquipmentListPage() {
                 fixedClientNit={routeState.clientNit}
                 onClientChange={handleClientChange}
                 onSearchChange={handleSearchChange}
+                isClientUser={isClient}
               />
             )}
 
-            {/* Mostrar contenido principal */}
             {renderContent()}
           </>
         )}

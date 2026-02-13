@@ -10,6 +10,7 @@ import {
   removeToolDetailRequest,
   removeSupplyDetailRequest,
   createEmergencyOrderRequest,
+  signOrderReceiptRequest,
 } from "../../api/orders";
 import { usersApi } from "../../api/users";
 import { inventory } from "../../api/inventory";
@@ -26,6 +27,9 @@ import styles from "../../styles/components/orders/OrderDetail.module.css";
 import type { Inventory } from "../../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../../utils/sounds";
 import { useAuth } from "../../hooks/useAuth";
+import OrderSignatureModal from "./OrderSignatureModal";
+import OrderEvidenceSection from "./OrderEvidenceSection";
+import OrderEvidenceModal from "./OrderEvidenceModal";
 
 interface Props {
   order: Order;
@@ -121,6 +125,8 @@ export default function OrderDetail({
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | "">(
     "",
   );
+  // borrar
+  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedBillingStatus, setSelectedBillingStatus] =
@@ -142,6 +148,10 @@ export default function OrderDetail({
   const [selectedEmergencyTechId, setSelectedEmergencyTechId] = useState<
     number | null
   >(null);
+
+  // dentro del componente
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureLoading, setSignatureLoading] = useState(false);
 
   // --- Modal Pausa ---
   const [showPauseModal, setShowPauseModal] = useState(false);
@@ -631,6 +641,37 @@ export default function OrderDetail({
     });
   };
 
+  const handleSubmitSignature = async (data: {
+    name: string;
+    position: string;
+    signatureData: string | null;
+  }) => {
+    setSignatureLoading(true);
+    setError(null);
+    try {
+      await signOrderReceiptRequest(currentOrder.orden_id, {
+        name: data.name,
+        position: data.position,
+        signatureData: data.signatureData,
+      });
+
+      await refreshData();
+      setShowSignatureModal(false);
+
+      // Ahora sí, completar la orden
+      await handleStatusUpdate(validStatuses.COMPLETADO);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error guardando firma de recibido",
+      );
+      playErrorSound();
+    } finally {
+      setSignatureLoading(false);
+    }
+  };
+
   const getStatusColor = (st: string) => {
     if (st === validStatuses.PENDIENTE || st === validStatuses.ASIGNADA)
       return styles.statusPending;
@@ -708,6 +749,15 @@ export default function OrderDetail({
     !isReadOnly &&
     (currentOrder.estado === validStatuses.ASIGNADA ||
       currentOrder.estado === validStatuses.EN_PROCESO);
+
+  const hasReceiptSignature =
+    !!currentOrder.received_by_name &&
+    !!currentOrder.received_by_position &&
+    !!currentOrder.received_by_signature_data;
+
+  const canEditEvidence =
+    !isReadOnly &&
+    (isAdminOrSecretaria || (isTechnician && !!isTechnicianAssigned));
 
   return (
     <div className={styles.container}>
@@ -1050,6 +1100,10 @@ export default function OrderDetail({
         </div>
       )}
 
+      <OrderEvidenceSection
+        orderId={currentOrder.orden_id}
+        canEdit={canEditEvidence}
+      />
       {currentOrder.comentarios && (
         <div className={styles.commentsSection}>
           <h3>Comentarios</h3>
@@ -1154,7 +1208,15 @@ export default function OrderDetail({
         {canTechnicianCompleteOrder && (
           <button
             className={styles.completeButton}
-            onClick={() => handleStatusUpdate(validStatuses.COMPLETADO)}
+            onClick={() => {
+              // si ya hay firma registrada, permitimos completar directo
+              if (hasReceiptSignature) {
+                handleStatusUpdate(validStatuses.COMPLETADO);
+              } else {
+                // abrimos modal de firma
+                setShowSignatureModal(true);
+              }
+            }}
             disabled={loading}
           >
             Completar Orden
@@ -1726,6 +1788,20 @@ export default function OrderDetail({
           </div>
         </div>
       )}
+
+      <OrderSignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onSubmit={handleSubmitSignature}
+        loading={signatureLoading}
+      />
+      {/* MODAL EVIDENCIAS */}
+      <OrderEvidenceModal
+        orderId={currentOrder.orden_id}
+        isOpen={showEvidenceModal}
+        onClose={() => setShowEvidenceModal(false)}
+        canEdit={canEditEvidence}
+      />
     </div>
   );
 }

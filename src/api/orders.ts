@@ -12,6 +12,7 @@ import type {
   UserInfo,
   PauseInfo,
   TimerInfo,
+  WorkOrderImage,
 } from "../interfaces/OrderInterfaces";
 
 // Helpers de mapeo de estados backend ↔ frontend
@@ -292,6 +293,15 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
     costo_total_insumos:
       apiOrder.costo_total_insumos || apiOrder.costoTotalInsumos || 0,
     tiempo_total: apiOrder.tiempoTotal || apiOrder.tiempo_total || 0,
+    received_by_name:
+      apiOrder.receivedByName || apiOrder.received_by_name || null,
+    received_by_position:
+      apiOrder.receivedByPosition || apiOrder.received_by_position || null,
+    received_by_signature_data:
+      apiOrder.receivedBySignatureData ||
+      apiOrder.received_by_signature_data ||
+      null,
+    received_at: apiOrder.receivedAt || apiOrder.received_at || null,
   };
 };
 
@@ -735,4 +745,49 @@ export const rateTechniciansRequest = async (
   });
   const apiOrder = response.data?.data;
   return mapApiOrderToOrder(apiOrder);
+};
+
+export const signOrderReceiptRequest = async (
+  orderId: number,
+  payload: {
+    name: string;
+    position: string;
+    signatureData: string | null;
+  },
+): Promise<Order> => {
+  const response = await api.post(
+    `/work-orders/${orderId}/sign-receipt`,
+    payload,
+  );
+  const apiOrder = response.data?.data;
+  return mapApiOrderToOrder(apiOrder);
+};
+
+export const getWorkOrderImagesRequest = async (
+  orderId: number,
+): Promise<WorkOrderImage[]> => {
+  const response = await api.get(`/images/work-order/${orderId}`);
+  const data = response.data?.data || [];
+  return data as WorkOrderImage[];
+};
+
+export const uploadWorkOrderImagesRequest = async (
+  orderId: number,
+  files: File[],
+): Promise<WorkOrderImage[]> => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+
+  const response = await api.post(`/images/work-order/${orderId}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  const data = response.data?.data || [];
+  return data as WorkOrderImage[];
+};
+
+export const deleteWorkOrderImageRequest = async (
+  imageId: number,
+): Promise<void> => {
+  await api.delete(`/images/${imageId}`);
 };
