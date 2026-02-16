@@ -506,3 +506,19 @@ export const addEquipmentDocumentRequest = async (
 export const deleteEquipmentDocumentRequest = async (documentId: number) => {
   await api.delete(`/equipment-documents/${documentId}`);
 };
+
+export const getMyEquipmentRequest = async (
+  search?: string,
+): Promise<Equipment[]> => {
+  const params = new URLSearchParams();
+  if (search) params.append("search", search);
+
+  const url = `/equipment${params.toString() ? `?${params.toString()}` : ""}`;
+  const response = await api.get<EquipmentResponse>(url);
+  const data = response.data.data;
+
+  if (Array.isArray(data)) {
+    return data.map(mapEquipmentFromBackend);
+  }
+  return [];
+};

@@ -134,6 +134,10 @@ export interface Order {
 
   costo_total_insumos: number;
   tiempo_total?: number;
+  received_by_name?: string | null;
+  received_by_position?: string | null;
+  received_by_signature_data?: string | null;
+  received_at?: string | null;
 }
 
 export interface CreateOrderData {
@@ -175,4 +179,12 @@ export interface OrdersResponse {
   page?: number;
   limit?: number;
   totalPages?: number;
+}
+
+export interface WorkOrderImage {
+  id: number;
+  url: string;
+  public_id: string;
+  folder: string;
+  created_at: string;
 }
