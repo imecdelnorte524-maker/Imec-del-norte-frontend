@@ -1,5 +1,3 @@
-// src/components/orders/ClientOrdersView.tsx
-
 import { useState } from 'react';
 import OrderList from './OrderList';
 import CreateOrderForm from './CreateOrderForm';
@@ -10,12 +8,14 @@ import styles from '../../styles/components/orders/ClientOrdersView.module.css';
 interface Props {
   activeView: 'list' | 'create' | 'detail';
   setActiveView: (view: 'list' | 'create' | 'detail') => void;
-  initialOrderId?: number; // <- NUEVO
+  onBackToList: () => void;
+  initialOrderId?: number;
 }
 
 export default function ClientOrdersView({
   activeView,
   setActiveView,
+  onBackToList,
   initialOrderId,
 }: Props) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -29,16 +29,16 @@ export default function ClientOrdersView({
     setActiveView('detail');
   };
 
-  const handleBackToList = () => {
-    setSelectedOrder(null);
-    setActiveView('list');
+  const handleBack = () => {
+    setSelectedOrder(null); // 👈 LIMPIAR EL ESTADO LOCAL
+    onBackToList();
   };
 
   if (activeView === 'create') {
     return (
       <CreateOrderForm
-        onSuccess={handleBackToList}
-        onCancel={handleBackToList}
+        onSuccess={onBackToList}
+        onCancel={onBackToList}
       />
     );
   }
@@ -47,7 +47,7 @@ export default function ClientOrdersView({
     return (
       <OrderDetail
         order={selectedOrder}
-        onBack={handleBackToList}
+        onBack={handleBack}
         userRole="cliente"
       />
     );

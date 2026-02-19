@@ -694,7 +694,7 @@ export default function EquipmentDetailPage() {
                         </div>
                         <div className={styles.orderActions}>
                           <Link
-                            to={`/orders/${order.workOrderId}`}
+                            to={`/orders/?ordenId=${order.workOrderId}`}
                             className={styles.viewOrderButton}
                           >
                             Ver Orden

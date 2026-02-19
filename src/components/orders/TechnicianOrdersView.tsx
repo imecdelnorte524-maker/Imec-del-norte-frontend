@@ -1,39 +1,39 @@
-// src/components/orders/TechnicianOrdersView.tsx
-
-import { useState } from 'react';
-import OrderList from './OrderList';
-import OrderDetail from './OrderDetail';
-import type { Order } from '../../interfaces/OrderInterfaces';
-import styles from '../../styles/components/orders/TechnicianOrdersView.module.css';
+import { useState } from "react";
+import OrderList from "./OrderList";
+import OrderDetail from "./OrderDetail";
+import type { Order } from "../../interfaces/OrderInterfaces";
+import styles from "../../styles/components/orders/TechnicianOrdersView.module.css";
 
 interface Props {
-  activeView: 'list' | 'create' | 'detail';
-  setActiveView: (view: 'list' | 'create' | 'detail') => void;
-  initialOrderId?: number; // <- NUEVO
+  activeView: "list" | "create" | "detail";
+  setActiveView: (view: "list" | "create" | "detail") => void;
+  onBackToList: () => void;
+  initialOrderId?: number;
 }
 
 export default function TechnicianOrdersView({
   activeView,
   setActiveView,
+  onBackToList,
   initialOrderId,
 }: Props) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
-    setActiveView('detail');
+    setActiveView("detail");
   };
 
-  const handleBackToList = () => {
-    setSelectedOrder(null);
-    setActiveView('list');
+  const handleBack = () => {
+    setSelectedOrder(null); // 👈 LIMPIAR EL ESTADO LOCAL
+    onBackToList();
   };
 
-  if (activeView === 'detail' && selectedOrder) {
+  if (activeView === "detail" && selectedOrder) {
     return (
       <OrderDetail
         order={selectedOrder}
-        onBack={handleBackToList}
+        onBack={handleBack}
         userRole="tecnico"
       />
     );
@@ -42,11 +42,11 @@ export default function TechnicianOrdersView({
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1>Mis Órdenes Asignadas</h1>
+        <h1>Todas las Órdenes de Servicio</h1>
       </div>
 
       <OrderList
-        userRole="tecnico"
+        userRole="admin"
         onViewOrder={handleViewOrder}
         initialOrderId={initialOrderId}
       />

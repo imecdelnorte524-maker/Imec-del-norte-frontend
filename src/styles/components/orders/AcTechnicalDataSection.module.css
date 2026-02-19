@@ -1,0 +1,213 @@
+.container {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.mainTitle {
+  font-size: 1.25rem;
+  color: var(--gray-800);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+/* TABS DE EQUIPOS */
+.tabsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.tabButton {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tabButton:hover {
+  background: #e5f0ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.tabActive {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+/* LISTA DE CARDS */
+.cardsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.inspectionCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08);
+}
+
+.phaseHeader {
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.bgBefore {
+  background-color: #64748b; /* Gris acero */
+}
+
+.bgAfter {
+  background-color: #2563eb; /* Azul */
+}
+
+.phaseHeader small {
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+/* CUERPO TÉCNICO */
+.technicalBody {
+  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.unitSection h5 {
+  font-size: 0.9rem;
+  color: #1e293b;
+  margin: 0 0 1rem 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.dataGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dataItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.dataItem span {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.dataItem strong {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+/* PIE DE OBSERVACIÓN */
+.observationFooter {
+  padding: 1rem 1.5rem;
+  background-color: #fffbeb;
+  border-top: 1px solid #fef3c7;
+}
+
+.observationFooter strong {
+  display: block;
+  font-size: 0.75rem;
+  color: #92400e;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.observationFooter p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+/* CUADRO SIN DATOS */
+.noDataBox {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  text-align: center;
+}
+
+.noDataBox p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .technicalBody {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .tabsContainer {
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .tabButton {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mainTitle {
+    font-size: 1.1rem;
+  }
+
+  .inspectionCard {
+    border-radius: 10px;
+  }
+
+  .technicalBody {
+    padding: 1rem;
+  }
+}
+
+.actionsRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.editInspectionButton {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editInspectionButton:hover {
+  background: #dbeafe;
+  border-color: #1d4ed8;
+}

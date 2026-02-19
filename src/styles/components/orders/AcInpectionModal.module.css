@@ -1,0 +1,474 @@
+.modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modalHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modalHeaderRow h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.modalCloseButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.modalCloseButton:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.error {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #b91c1c;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+form {
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  flex: 1;
+}
+
+/* Scrollbar personalizado */
+form::-webkit-scrollbar {
+  width: 6px;
+}
+
+form::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+form::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+
+.section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section h4 {
+  margin: 0 0 0.75rem 0;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
+}
+
+.formRow label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.formRow input,
+.rejectTextarea {
+  padding: 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.formRow input:focus,
+.rejectTextarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.formRow input:disabled,
+.rejectTextarea:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.rejectTextarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.customLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* --- ESTILOS DE PREVIEW Y ELIMINAR --- */
+.previewHeader {
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.previewCard {
+  position: relative;
+  aspect-ratio: 1/1;
+  border-radius: 8px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.previewCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.previewCard img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+
+.previewCard:hover img {
+  transform: scale(1.05);
+}
+
+.removeBadge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.removeBadge:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.noImages {
+  margin-top: 0.75rem;
+  padding: 1.5rem;
+  background: #f1f5f9;
+  border-radius: 8px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+/* --- UPLOAD DESIGN --- */
+.fileUploadContainer {
+  width: 100%;
+}
+
+.fileUploadLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 120px;
+}
+
+.fileUploadLabel:hover {
+  background: #f1f5f9;
+  border-color: #2563eb;
+}
+
+.uploadIcon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.uploadText {
+  font-size: 0.875rem;
+  color: #475569;
+  text-align: center;
+  font-weight: 500;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.formActions button {
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.cancelBtn {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.submitBtn {
+  background: #2563eb;
+  color: white;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.formActions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- MEDIA QUERIES RESPONSIVE --- */
+@media (max-width: 768px) {
+  .modal {
+    padding: 0;
+  }
+
+  .modalContent {
+    padding: 1rem;
+    max-height: 100vh;
+    border-radius: 0;
+    height: 100vh;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .section {
+    padding: 0.75rem;
+  }
+
+  .section h4 {
+    margin-bottom: 0.5rem;
+  }
+
+  .previewGrid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem;
+    max-height: 250px;
+  }
+
+  .fileUploadLabel {
+    padding: 1rem;
+    min-height: 100px;
+  }
+
+  .uploadIcon {
+    font-size: 1.5rem;
+  }
+
+  .uploadText {
+    font-size: 0.8rem;
+  }
+
+  .formActions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .formActions button {
+    width: 100%;
+    padding: 0.75rem;
+  }
+
+  .modalHeaderRow h3 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalContent {
+    padding: 0.75rem;
+  }
+
+  .previewGrid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  }
+
+  .removeBadge {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+
+  .noImages {
+    padding: 1rem;
+  }
+}
+
+/* Para pantallas muy pequeñas */
+@media (max-width: 360px) {
+  .previewGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Añade estos estilos al final de tu archivo CSS */
+
+.previewCount {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-left: 0.5rem;
+}
+
+.noImagesSub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+/* Mejora para el botón de upload como botón real */
+.fileUploadLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 120px;
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.fileUploadLabel:hover {
+  background: #f1f5f9;
+  border-color: #2563eb;
+}
+
+.fileUploadLabel:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Mejora para los campos requeridos */
+.formRow label:after {
+  content: " *";
+  color: #ef4444;
+}
+
+/* Excluir observaciones y evidencias de los campos requeridos */
+.formRow:has(textarea) label:after,
+.formRow:has(.fileUploadContainer) label:after {
+  content: "";
+}

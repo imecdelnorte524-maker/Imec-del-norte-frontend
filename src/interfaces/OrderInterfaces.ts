@@ -14,6 +14,33 @@ export type BillingEstado =
   | "Facturado"
   | "Garantía";
 
+export type WorkOrderEvidencePhase = "BEFORE" | "DURING" | "AFTER";
+
+export type AcInspectionPhase = "BEFORE" | "AFTER";
+
+export interface AcInspection {
+  id: number;
+  equipmentId: number;
+  phase: AcInspectionPhase;
+  evapTempSupply: number;
+  evapTempReturn: number;
+  evapTempAmbient: number;
+  evapTempOutdoor: number;
+  evapMotorRpm: number;
+  evapMicrofarads?: number | null;
+  condHighPressure: number;
+  condLowPressure: number;
+  condAmperage: number;
+  condVoltage: number;
+  condTempIn: number;
+  condTempDischarge: number;
+  condMotorRpm: number;
+  condMicrofarads?: number | null;
+  compressorOhmio?: number | null;
+  observation?: string | null;
+  createdAt: string;
+}
+
 export interface SupplyDetail {
   detalleInsumoId: number;
   cantidadUsada: number;
@@ -138,6 +165,8 @@ export interface Order {
   received_by_position?: string | null;
   received_by_signature_data?: string | null;
   received_at?: string | null;
+  acInspections?: AcInspection[];
+  images?: WorkOrderImage[];
 }
 
 export interface CreateOrderData {
@@ -187,4 +216,6 @@ export interface WorkOrderImage {
   public_id: string;
   folder: string;
   created_at: string;
+  evidencePhase?: WorkOrderEvidencePhase | null;
+  observation?: string | null;
 }

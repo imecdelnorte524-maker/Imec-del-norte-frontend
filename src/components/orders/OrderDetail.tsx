@@ -15,11 +15,12 @@ import {
 import { usersApi } from "../../api/users";
 import { inventory } from "../../api/inventory";
 import { getEquipmentByClientRequest } from "../../api/equipment";
-import { useOrderDetail, useOrderMutations } from "../../hooks/useOrders";
+import { useOrderMutations } from "../../hooks/useOrders";
 import type {
   BillingEstado,
   Order,
   UpdateOrderData,
+  AssociatedEquipment,
 } from "../../interfaces/OrderInterfaces";
 import type { Usuario } from "../../interfaces/UserInterfaces";
 import type { Equipment } from "../../interfaces/EquipmentInterfaces";
@@ -29,7 +30,10 @@ import { playErrorSound } from "../../utils/sounds";
 import { useAuth } from "../../hooks/useAuth";
 import OrderSignatureModal from "./OrderSignatureModal";
 import OrderEvidenceSection from "./OrderEvidenceSection";
-import OrderEvidenceModal from "./OrderEvidenceModal";
+import OrderEditModal from "./OrderEditModal";
+import AcInspectionModal from "./AcInspectionModal";
+import AcTechnicalDataSection from "./AcTechnicalDataSection";
+import EquipmentSelectionModal from "./EquipmentSelectionModal";
 
 interface Props {
   order: Order;
@@ -57,17 +61,14 @@ const normalizeUserRole = (role: string): string => {
 
 type PendingPostRatingAction = "openBillingModal" | "openInvoiceModal" | null;
 
-export default function OrderDetail({
-  order: initialOrderData,
-  onBack,
-  userRole,
-}: Props) {
+export default function OrderDetail({ order, onBack, userRole }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { order } = useOrderDetail(initialOrderData.orden_id, initialOrderData);
-  const currentOrder = order || initialOrderData;
+  // Usaremos siempre la orden recibida por props
+  const currentOrder = order;
+
   const {
     updateOrder,
     assignTechnician,
@@ -100,6 +101,11 @@ export default function OrderDetail({
     RECHAZADA: "Rechazada" as const,
   };
 
+  // ¿Es una orden de Aires Acondicionados?
+  const isAirConditioningOrder =
+    (currentOrder.servicio.categoria_servicio || "").toLowerCase().trim() ===
+    "aires acondicionados";
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,8 +131,6 @@ export default function OrderDetail({
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | "">(
     "",
   );
-  // borrar
-  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedBillingStatus, setSelectedBillingStatus] =
@@ -145,9 +149,16 @@ export default function OrderDetail({
   const [selectedEmergencyEquipments, setSelectedEmergencyEquipments] =
     useState<number[]>([]);
   const [loadingEquipments, setLoadingEquipments] = useState(false);
-  const [selectedEmergencyTechId, setSelectedEmergencyTechId] = useState<
-    number | null
-  >(null);
+
+  // Técnicos para la emergencia (uno o varios)
+  const [selectedEmergencyTechnicians, setSelectedEmergencyTechnicians] =
+    useState<number[]>([]);
+  const [emergencyLeaderId, setEmergencyLeaderId] = useState<number | null>(
+    null,
+  );
+
+  // Comentario para la orden de emergencia
+  const [emergencyComment, setEmergencyComment] = useState("");
 
   // dentro del componente
   const [showSignatureModal, setShowSignatureModal] = useState(false);
@@ -157,8 +168,26 @@ export default function OrderDetail({
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [pauseObservation, setPauseObservation] = useState("");
 
+  // --- Modal Edición Orden ---
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // --- Modal Inspección AC & Selección Equipo ---
+  const [showAcInspectionModal, setShowAcInspectionModal] = useState(false);
+  const [showEqSelector, setShowEqSelector] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] =
+    useState<AssociatedEquipment | null>(null);
+  const [acPhase, setAcPhase] = useState<"BEFORE" | "AFTER">("BEFORE");
+
   const supplyDetails = currentOrder.supplyDetails ?? [];
   const toolDetails = currentOrder.toolDetails ?? [];
+
+  const [activeEquipmentId, setActiveEquipmentId] = useState<number | null>(
+    currentOrder.equipos?.[0]?.equipmentId ?? null,
+  );
+
+  useEffect(() => {
+    setActiveEquipmentId(currentOrder.equipos?.[0]?.equipmentId ?? null);
+  }, [currentOrder.orden_id, currentOrder.equipos?.length]);
 
   // --- Rating ---
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -169,6 +198,35 @@ export default function OrderDetail({
   const [showRatingNotice, setShowRatingNotice] = useState(false);
 
   const isSavingRatings = rateTechnicians.status === "pending";
+
+  const handleOpenAcInspectionForEquipment = (eq: AssociatedEquipment) => {
+    setSelectedEquipment(eq);
+
+    const hasBefore =
+      currentOrder.acInspections?.some(
+        (insp) =>
+          insp.equipmentId === eq.equipmentId && insp.phase === "BEFORE",
+      ) ?? false;
+
+    const hasAfter =
+      currentOrder.acInspections?.some(
+        (insp) => insp.equipmentId === eq.equipmentId && insp.phase === "AFTER",
+      ) ?? false;
+
+    let nextPhase: "BEFORE" | "AFTER" = "BEFORE";
+
+    if (!hasBefore) {
+      nextPhase = "BEFORE";
+    } else if (hasBefore && !hasAfter) {
+      nextPhase = "AFTER";
+    } else {
+      // Ya hay BEFORE y AFTER → abrimos BEFORE para edición
+      nextPhase = "BEFORE";
+    }
+
+    setAcPhase(nextPhase);
+    setShowAcInspectionModal(true);
+  };
 
   useEffect(() => {
     if (!isAdminOrSecretaria) return;
@@ -194,12 +252,103 @@ export default function OrderDetail({
     }
   }, [selectedTechnicians, leaderTechnicianId]);
 
+  // Mantener coherencia del líder de emergencia
+  useEffect(() => {
+    if (
+      selectedEmergencyTechnicians.length > 0 &&
+      !selectedEmergencyTechnicians.includes(emergencyLeaderId || 0)
+    ) {
+      setEmergencyLeaderId(selectedEmergencyTechnicians[0]);
+    } else if (selectedEmergencyTechnicians.length === 0) {
+      setEmergencyLeaderId(null);
+    }
+  }, [selectedEmergencyTechnicians, emergencyLeaderId]);
+
   const refreshData = async () => {
-    queryClient.invalidateQueries({
+    await queryClient.invalidateQueries({
       queryKey: ["orderDetail", currentOrder.orden_id],
     });
-    queryClient.invalidateQueries({ queryKey: ["dashboardOrders"] });
-    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    await queryClient.refetchQueries({
+      queryKey: ["orderDetail", currentOrder.orden_id],
+    });
+  };
+
+  const hasBillingStatus = currentOrder.estado_facturacion !== "";
+
+  // Solo admin/secretaria puede editar, y solo si la orden no está completada
+  const canEditOrderDetails =
+    isAdminOrSecretaria &&
+    currentOrder.estado !== validStatuses.COMPLETADO &&
+    !hasBillingStatus;
+
+  // --- Lógica Inspección AC (por equipo) ---
+  const handleStartOrderClick = () => {
+    if (isAirConditioningOrder) {
+      setAcPhase("BEFORE");
+      if (currentOrder.equipos.length === 1) {
+        // Solo un equipo → ir directo al modal de inspección
+        setSelectedEquipment(currentOrder.equipos[0]);
+        setShowAcInspectionModal(true);
+      } else {
+        // Varios equipos → mostrar selector
+        setShowEqSelector(true);
+      }
+    } else {
+      handleStatusUpdate(validStatuses.EN_PROCESO);
+    }
+  };
+
+  const handleCompleteOrderClick = () => {
+    if (isAirConditioningOrder) {
+      const totalEq = currentOrder.equipos.length;
+      const completedInspections =
+        currentOrder.acInspections?.filter((i) => i.phase === "AFTER").length ||
+        0;
+
+      if (completedInspections < totalEq) {
+        setAcPhase("AFTER");
+
+        if (currentOrder.equipos.length === 1) {
+          // Solo un equipo → ir directo al modal de inspección final
+          setSelectedEquipment(currentOrder.equipos[0]);
+          setShowAcInspectionModal(true);
+        } else {
+          // Varios equipos → abrir selector
+          setShowEqSelector(true);
+        }
+      } else if (!hasReceiptSignature) {
+        setShowSignatureModal(true);
+      } else {
+        handleStatusUpdate(validStatuses.COMPLETADO);
+      }
+    } else {
+      // Flujo normal (no AC)
+      if (hasReceiptSignature) {
+        handleStatusUpdate(validStatuses.COMPLETADO);
+      } else {
+        setShowSignatureModal(true);
+      }
+    }
+  };
+
+  const handleEquipmentSelected = (eq: AssociatedEquipment) => {
+    setSelectedEquipment(eq);
+    setShowEqSelector(false);
+    setShowAcInspectionModal(true);
+  };
+
+  const handleAcInspectionSuccess = async () => {
+    setShowAcInspectionModal(false);
+    await refreshData();
+
+    // Si es la primera inspección inicial y la orden no ha iniciado, iniciarla
+    if (
+      acPhase === "BEFORE" &&
+      (currentOrder.estado === "Pendiente" ||
+        currentOrder.estado === "Asignada")
+    ) {
+      await handleStatusUpdate(validStatuses.EN_PROCESO);
+    }
   };
 
   // --- Emergencia ---
@@ -207,12 +356,15 @@ export default function OrderDetail({
     setShowEmergencyModal(true);
     setLoadingEquipments(true);
     setSelectedEmergencyEquipments([]);
+    setSelectedEmergencyTechnicians([]);
+    setEmergencyLeaderId(null);
+    setEmergencyComment("");
 
     const currentTechs = currentOrder.technicians || [];
     if (currentTechs.length === 1) {
-      setSelectedEmergencyTechId(currentTechs[0].tecnicoId);
-    } else {
-      setSelectedEmergencyTechId(null);
+      const onlyTechId = currentTechs[0].tecnicoId;
+      setSelectedEmergencyTechnicians([onlyTechId]);
+      setEmergencyLeaderId(onlyTechId);
     }
 
     try {
@@ -229,15 +381,50 @@ export default function OrderDetail({
     }
   };
 
+  // Cargar equipos del cliente para edición (si no están ya cargados)
+  const handleOpenEditModal = async () => {
+    setError(null);
+    if (
+      currentOrder.cliente_empresa?.id_cliente &&
+      clientEquipments.length === 0
+    ) {
+      try {
+        setLoadingEquipments(true);
+        const data = await getEquipmentByClientRequest(
+          currentOrder.cliente_empresa.id_cliente,
+        );
+        setClientEquipments(data);
+      } catch (err) {
+        console.error("Error cargando equipos para edición", err);
+      } finally {
+        setLoadingEquipments(false);
+      }
+    }
+    setShowEditModal(true);
+  };
+
   const toggleEmergencyEquipment = (eqId: number) => {
     setSelectedEmergencyEquipments((prev) =>
       prev.includes(eqId) ? prev.filter((id) => id !== eqId) : [...prev, eqId],
     );
   };
 
+  const toggleEmergencyTechnician = (techId: number) => {
+    setSelectedEmergencyTechnicians((prev) =>
+      prev.includes(techId)
+        ? prev.filter((id) => id !== techId)
+        : [...prev, techId],
+    );
+  };
+
   const confirmEmergencyOrder = async () => {
-    if (!selectedEmergencyTechId) {
-      alert("Debe seleccionar un técnico para la emergencia.");
+    if (selectedEmergencyTechnicians.length === 0) {
+      alert("Debe seleccionar al menos un técnico para la emergencia.");
+      return;
+    }
+
+    if (selectedEmergencyEquipments.length === 0) {
+      alert("Debe seleccionar al menos un equipo para la emergencia.");
       return;
     }
 
@@ -246,20 +433,34 @@ export default function OrderDetail({
 
     try {
       const equipmentIds = selectedEmergencyEquipments;
+      const technicianIds = selectedEmergencyTechnicians;
+
+      const leaderId =
+        emergencyLeaderId && technicianIds.includes(emergencyLeaderId)
+          ? emergencyLeaderId
+          : technicianIds[0];
+
+      const commentToSend =
+        emergencyComment.trim() ||
+        `Emergencia creada desde orden ${currentOrder.orden_id}`;
 
       const emergencyOrder = await createEmergencyOrderRequest(
         currentOrder.orden_id,
         {
-          technicianIds: [selectedEmergencyTechId],
-          leaderTechnicianId: selectedEmergencyTechId,
+          technicianIds,
+          leaderTechnicianId: leaderId,
           equipmentIds,
-          comentarios: `Emergencia creada desde orden ${currentOrder.orden_id}`,
+          comentarios: commentToSend,
         },
       );
 
       await refreshData();
       setShowEmergencyModal(false);
-      navigate(`/orders?ordenId=${emergencyOrder.orden_id}`);
+
+      // Navegar a /orders sin query params, pasando el ID por state
+      navigate("/orders", {
+        state: { initialOrderId: emergencyOrder.orden_id },
+      });
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -305,6 +506,43 @@ export default function OrderDetail({
       }
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al actualizar orden");
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Guardar cambios desde el modal de edición (comentarios + equipos)
+  const handleSaveOrderDetails = async (changes: {
+    comentarios?: string;
+    equipmentIds: number[];
+  }) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const dataToSend: any = {};
+      if (changes.comentarios !== undefined) {
+        dataToSend.comentarios = changes.comentarios;
+      }
+      // Enviamos equipmentIds en camelCase y snake_case por compatibilidad
+      if (changes.equipmentIds !== undefined) {
+        dataToSend.equipmentIds = changes.equipmentIds;
+        dataToSend.equipment_ids = changes.equipmentIds;
+      }
+
+      await updateOrder.mutateAsync({
+        orderId: currentOrder.orden_id,
+        data: dataToSend,
+      });
+      await refreshData();
+      setShowEditModal(false);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error al editar la orden",
+      );
       playErrorSound();
     } finally {
       setLoading(false);
@@ -462,7 +700,6 @@ export default function OrderDetail({
       return;
     const initialRatings: Record<number, number> = {};
     currentOrder.technicians.forEach((t) => {
-      // Si en el futuro ya hubiera rating previo, se podría prellenar
       initialRatings[t.tecnicoId] = t.rating ?? 0;
     });
     setRatings(initialRatings);
@@ -658,7 +895,7 @@ export default function OrderDetail({
       await refreshData();
       setShowSignatureModal(false);
 
-      // Ahora sí, completar la orden
+      // Una vez firmado, completamos la orden
       await handleStatusUpdate(validStatuses.COMPLETADO);
     } catch (err: any) {
       setError(
@@ -690,12 +927,6 @@ export default function OrderDetail({
         ? styles.billingWarranty
         : styles.billingNotBilled;
 
-  const isEquipmentCategory = [
-    "Aires Acondicionados",
-    "Redes Eléctricas",
-    "Redes Contra Incendios",
-  ].includes(currentOrder.servicio.categoria_servicio || "");
-
   const isReadOnly = currentOrder.estado_facturacion === "Facturado";
 
   const canUploadInvoice =
@@ -704,11 +935,13 @@ export default function OrderDetail({
     currentOrder.estado_facturacion === "Por facturar" &&
     !isReadOnly;
 
+  // Asignar inventario se oculta cuando la orden está completada
   const canAssignInventory =
     (isAdminOrSecretaria || isTechnician) &&
     !isReadOnly &&
     currentOrder.estado !== validStatuses.CANCELADA &&
-    currentOrder.estado !== validStatuses.RECHAZADA;
+    currentOrder.estado !== validStatuses.RECHAZADA &&
+    currentOrder.estado !== validStatuses.COMPLETADO;
 
   const canBillingStatus =
     isAdminOrSecretaria &&
@@ -745,7 +978,7 @@ export default function OrderDetail({
     ((isTechnician && isTechnicianAssigned) || isAdminOrSecretaria);
 
   const canCreateEmergency =
-    isAdminOrSecretaria &&
+    !isClient &&
     !isReadOnly &&
     (currentOrder.estado === validStatuses.ASIGNADA ||
       currentOrder.estado === validStatuses.EN_PROCESO);
@@ -759,10 +992,17 @@ export default function OrderDetail({
     !isReadOnly &&
     (isAdminOrSecretaria || (isTechnician && !!isTechnicianAssigned));
 
+  const hasBeforeInspection =
+    currentOrder.acInspections?.some((i) => i.phase === "BEFORE") ?? false;
+
+  const handleBackClick = () => {
+    onBack();
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <button onClick={onBack} className={styles.backButton}>
+        <button className={styles.backButton} onClick={handleBackClick}>
           ← Volver
         </button>
         <h1>Orden de Servicio #{currentOrder.orden_id}</h1>
@@ -796,7 +1036,7 @@ export default function OrderDetail({
         </div>
       </div>
 
-      {/* Notificación tipo "push" en el centro cuando hay calificación pendiente */}
+      {/* Notificación calificación pendiente */}
       {needsRating && showRatingNotice && !showRatingModal && (
         <div className={styles.pushOverlay}>
           <div className={styles.pushCard}>
@@ -828,6 +1068,7 @@ export default function OrderDetail({
 
       {error && <div className={styles.error}>{error}</div>}
 
+      {/* DETALLES */}
       <div className={styles.detailsGrid}>
         <div className={styles.section}>
           <h3>Información Cliente</h3>
@@ -1081,38 +1322,64 @@ export default function OrderDetail({
         )}
       </div>
 
-      {isEquipmentCategory && (
-        <div className={styles.problemSection}>
-          <h3>Equipo y Hoja de Vida</h3>
-          <p>
-            {currentOrder.servicio.tipo_trabajo === "Instalación"
-              ? !currentOrder.equipos || currentOrder.equipos.length === 0
-                ? "Instalación sin hoja de vida asociada."
-                : `Instalación con ${currentOrder.equipos.length} equipo${
-                    currentOrder.equipos.length !== 1 ? "s" : ""
-                  } asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`
-              : !currentOrder.equipos || currentOrder.equipos.length === 0
-                ? "Mantenimiento sin hoja de vida asociada."
-                : `Mantenimiento con ${currentOrder.equipos.length} equipo${
-                    currentOrder.equipos.length !== 1 ? "s" : ""
-                  } asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`}
-          </p>
-        </div>
+      {isAirConditioningOrder && hasBeforeInspection && (
+        <AcTechnicalDataSection
+          acInspections={currentOrder.acInspections}
+          equipments={currentOrder.equipos}
+          onEquipmentChange={setActiveEquipmentId}
+          onEditEquipmentInspection={handleOpenAcInspectionForEquipment}
+          estadoOrden={currentOrder.estado}
+        />
       )}
 
-      <OrderEvidenceSection
-        orderId={currentOrder.orden_id}
-        canEdit={canEditEvidence}
-      />
-      {currentOrder.comentarios && (
-        <div className={styles.commentsSection}>
-          <h3>Comentarios</h3>
-          <p>{currentOrder.comentarios}</p>
-        </div>
+      {hasBeforeInspection && (
+        <OrderEvidenceSection
+          orderId={currentOrder.orden_id}
+          canEdit={canEditEvidence}
+          orderStatus={currentOrder.estado}
+          equipments={currentOrder.equipos}
+          activeEquipmentId={activeEquipmentId}
+        />
       )}
+
+      <div className={styles.commentsSection}>
+        <h3>Comentarios y Observaciones</h3>
+
+        <div className={styles.commentsContainer}>
+          {/* 1. Comentario General de la Solicitud */}
+          {currentOrder.comentarios && (
+            <div className={styles.commentBlock}>
+              <div className={styles.commentHeader}>
+                <strong>Nota General de la Orden</strong>
+              </div>
+              <div className={styles.commentContent}>
+                <p>{currentOrder.comentarios}</p>
+              </div>
+            </div>
+          )}
+
+          {!currentOrder.comentarios &&
+            (!currentOrder.acInspections ||
+              currentOrder.acInspections.length === 0) &&
+            !currentOrder.images?.some((i) => i.observation) && (
+              <p className={styles.unassigned}>
+                No hay comentarios ni observaciones registradas para esta orden.
+              </p>
+            )}
+        </div>
+      </div>
 
       {/* ACCIONES */}
       <div className={styles.actions}>
+        {canEditOrderDetails && (
+          <button
+            className={styles.secondaryButton}
+            onClick={handleOpenEditModal}
+          >
+            Editar Orden
+          </button>
+        )}
+
         {canAssignInventory && (
           <button
             className={styles.secondaryButton}
@@ -1175,7 +1442,7 @@ export default function OrderDetail({
         {canTechnicianStartOrder && (
           <button
             className={styles.startButton}
-            onClick={() => handleStatusUpdate(validStatuses.EN_PROCESO)}
+            onClick={handleStartOrderClick}
             disabled={loading}
           >
             Iniciar Orden
@@ -1208,15 +1475,7 @@ export default function OrderDetail({
         {canTechnicianCompleteOrder && (
           <button
             className={styles.completeButton}
-            onClick={() => {
-              // si ya hay firma registrada, permitimos completar directo
-              if (hasReceiptSignature) {
-                handleStatusUpdate(validStatuses.COMPLETADO);
-              } else {
-                // abrimos modal de firma
-                setShowSignatureModal(true);
-              }
-            }}
+            onClick={handleCompleteOrderClick}
             disabled={loading}
           >
             Completar Orden
@@ -1237,112 +1496,283 @@ export default function OrderDetail({
           )}
       </div>
 
-      {/* MODAL CALIFICACIÓN (BLOQUEANTE) */}
-      {showRatingModal && (
+      {/* MODAL ESTADO DE FACTURACIÓN */}
+      {showBillingModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <div className={styles.ratingModalHeader}>
-              <h3>Calificar técnicos de la orden</h3>
-              <p>
-                Asigna una calificación de 0 a 5 estrellas (con pasos de 0.5)
-                para cada técnico. Esta acción es obligatoria antes de facturar.
-              </p>
+            <div className={styles.modalHeaderRow}>
+              <h3>Asignar Estado de Facturación</h3>
+              <button
+                onClick={() => setShowBillingModal(false)}
+                className={styles.modalCloseButton}
+              >
+                ×
+              </button>
             </div>
 
-            {ratingError && <div className={styles.error}>{ratingError}</div>}
+            {billingError && <div className={styles.error}>{billingError}</div>}
 
-            <div className={styles.ratingList}>
-              {currentOrder.technicians?.map((tech) => {
-                const value = ratings[tech.tecnicoId] ?? 0;
-                const fullStars = Math.floor(value);
-                const hasHalf = value - fullStars >= 0.5;
-
-                return (
-                  <div key={tech.id} className={styles.ratingTechnicianRow}>
-                    <div className={styles.ratingAvatar}>
-                      {(tech.technician.nombre?.[0] || "").toUpperCase()}
-                      {(tech.technician.apellido?.[0] || "").toUpperCase()}
-                    </div>
-                    <div className={styles.ratingInfo}>
-                      <div className={styles.ratingTechnicianHeader}>
-                        {tech.technician.nombre} {tech.technician.apellido}
-                        {tech.isLeader && (
-                          <span className={styles.leaderChip}>Líder</span>
-                        )}
-                      </div>
-
-                      <div className={styles.ratingStars}>
-                        {Array.from({ length: 5 }).map((_, index) => {
-                          const starIndex = index + 1;
-                          let starClass = styles.starEmpty;
-                          if (starIndex <= fullStars) {
-                            starClass = styles.starFull;
-                          } else if (starIndex === fullStars + 1 && hasHalf) {
-                            starClass = styles.starHalf;
-                          }
-                          return (
-                            <span
-                              key={starIndex}
-                              className={`${styles.star} ${starClass}`}
-                            >
-                              ★
-                            </span>
-                          );
-                        })}
-                      </div>
-
-                      <div className={styles.ratingSliderWrapper}>
-                        <input
-                          type="range"
-                          min={0}
-                          max={5}
-                          step={0.5}
-                          value={value}
-                          onChange={(e) =>
-                            setRatings((prev) => ({
-                              ...prev,
-                              [tech.tecnicoId]: Number(e.target.value),
-                            }))
-                          }
-                        />
-                        <span className={styles.ratingValue}>
-                          {value.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className={styles.formRow}>
+              <label>Estado de Facturación</label>
+              <select
+                className={styles.technicianSelect}
+                value={selectedBillingStatus}
+                onChange={(e) =>
+                  setSelectedBillingStatus(e.target.value as BillingEstado)
+                }
+              >
+                <option value="">Seleccionar estado...</option>
+                <option value="Sin facturar">Sin factura</option>
+                <option value="Por facturar">Por facturar</option>
+                <option value="Garantía">Garantía</option>
+              </select>
             </div>
 
-            <div className={styles.modalActions}>
-              <button onClick={handleSubmitRatings} disabled={isSavingRatings}>
-                {isSavingRatings ? "Guardando..." : "Guardar calificaciones"}
+            <div className={styles.formActions}>
+              <button onClick={() => setShowBillingModal(false)}>
+                Cancelar
+              </button>
+              <button
+                onClick={handleAssignBillingStatus}
+                disabled={!selectedBillingStatus || loading}
+              >
+                Guardar
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODALS RESTO */}
-      {confirmModal.isOpen && (
+      {/* MODAL EDICIÓN ORDEN (comentarios + equipos) */}
+      <OrderEditModal
+        order={currentOrder}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleSaveOrderDetails}
+        loading={loading}
+        equipments={clientEquipments}
+      />
+
+      {/* MODAL SELECTOR DE EQUIPO */}
+      <EquipmentSelectionModal
+        isOpen={showEqSelector}
+        onClose={() => setShowEqSelector(false)}
+        equipments={currentOrder.equipos}
+        order={currentOrder}
+        phase={acPhase}
+        onSelect={handleEquipmentSelected}
+      />
+
+      {/* MODAL INSPECCIÓN AC (Pasa el equipo seleccionado) */}
+      {selectedEquipment && (
+        <AcInspectionModal
+          order={currentOrder}
+          equipment={selectedEquipment}
+          phase={acPhase}
+          isOpen={showAcInspectionModal}
+          onClose={() => setShowAcInspectionModal(false)}
+          onSuccess={handleAcInspectionSuccess}
+        />
+      )}
+
+      <OrderSignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onSubmit={handleSubmitSignature}
+        loading={signatureLoading}
+      />
+
+      {/* OTROS MODALES (RECHAZO, PAUSA, INVENTARIO, ETC) */}
+      {showRejectForm && (
         <div className={styles.modal}>
-          <div className={styles.confirmationModalContent}>
-            <span className={styles.confirmationIcon}>⚠️</span>
-            <h3>¿Confirmar?</h3>
-            <p>Se eliminará el elemento.</p>
-            <div className={styles.confirmationActions}>
+          <div className={styles.modalContent}>
+            <h3>Rechazar Orden</h3>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className={styles.rejectTextarea}
+              placeholder="Ingrese el motivo del rechazo..."
+            />
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowRejectForm(false)}>Cancelar</button>
               <button
-                className={styles.cancelDeleteButton}
-                onClick={closeConfirmModal}
+                onClick={handleRejectOrder}
+                className={styles.rejectButton}
+                disabled={!rejectReason.trim() || loading}
               >
+                {loading ? "Rechazando..." : "Rechazar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FACTURA */}
+      {showInvoiceModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <h3>Subir Factura</h3>
+            {invoiceError && <div className={styles.error}>{invoiceError}</div>}
+            <form onSubmit={handleUploadInvoice}>
+              <div className={styles.formRow}>
+                <label>Archivo PDF</label>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button
+                  type="button"
+                  onClick={() => setShowInvoiceModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" disabled={invoiceLoading || !invoiceFile}>
+                  Subir
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EMERGENCIA */}
+      {showEmergencyModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <h3>Crear Orden de Emergencia</h3>
+            <p className={styles.modalDescription}>
+              Esta acción creará una nueva orden de emergencia.
+            </p>
+
+            <div className={styles.formRow}>
+              <label className={styles.modalSectionTitle}>
+                Seleccione los técnicos para la emergencia:
+              </label>
+              {currentOrder.technicians &&
+              currentOrder.technicians.length > 0 ? (
+                <div className={styles.scrollBoxSmall}>
+                  {currentOrder.technicians.map((tech) => {
+                    const isSelected = selectedEmergencyTechnicians.includes(
+                      tech.tecnicoId,
+                    );
+                    return (
+                      <label
+                        key={tech.tecnicoId}
+                        className={`${styles.selectableRow} ${
+                          isSelected ? styles.selectableRowSelected : ""
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() =>
+                            toggleEmergencyTechnician(tech.tecnicoId)
+                          }
+                          className={styles.checkboxInline}
+                        />
+                        {tech.technician.nombre} {tech.technician.apellido}
+                        {tech.isLeader && (
+                          <span className={styles.leaderChipSmall}>
+                            (Líder actual)
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={styles.warning}>
+                  La orden original no tiene técnicos asignados.
+                </div>
+              )}
+            </div>
+
+            <div className={styles.formRow}>
+              <label>Técnico líder de la emergencia</label>
+              <select
+                className={styles.technicianSelect}
+                value={emergencyLeaderId || ""}
+                onChange={(e) => setEmergencyLeaderId(Number(e.target.value))}
+              >
+                {selectedEmergencyTechnicians.map((techId) => {
+                  const tech = currentOrder.technicians?.find(
+                    (t) => t.tecnicoId === techId,
+                  );
+                  return (
+                    <option key={techId} value={techId}>
+                      {tech?.technician.nombre} {tech?.technician.apellido}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className={styles.formRow}>
+              <label>Comentario para la orden de emergencia</label>
+              <textarea
+                className={styles.rejectTextarea}
+                value={emergencyComment}
+                onChange={(e) => setEmergencyComment(e.target.value)}
+                placeholder="Ej: Falla crítica en equipo, prioridad alta..."
+              />
+            </div>
+
+            <p className={styles.modalSectionTitle}>
+              Seleccione los equipos que atenderá en esta emergencia:
+            </p>
+
+            {loadingEquipments ? (
+              <div className={styles.loading}>Cargando equipos...</div>
+            ) : clientEquipments.length === 0 ? (
+              <div className={styles.warning}>
+                El cliente no tiene equipos registrados.
+              </div>
+            ) : (
+              <div className={styles.scrollBoxLarge}>
+                {clientEquipments.map((eq) => {
+                  const isSelected = selectedEmergencyEquipments.includes(
+                    eq.equipmentId,
+                  );
+                  return (
+                    <div
+                      key={eq.equipmentId}
+                      className={`${styles.selectableRow} ${
+                        isSelected ? styles.selectableRowSelected : ""
+                      }`}
+                      onClick={() => toggleEmergencyEquipment(eq.equipmentId)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() =>
+                          toggleEmergencyEquipment(eq.equipmentId)
+                        }
+                        className={styles.checkboxInline}
+                      />
+                      <div>
+                        <strong>
+                          {eq.code || `#${eq.equipmentId}`} - {eq.category}
+                        </strong>
+                        <div className={styles.rowMeta}>
+                          {eq.subArea?.nombreSubArea ||
+                            eq.area?.nombreArea ||
+                            "Sin ubicación"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowEmergencyModal(false)}>
                 Cancelar
               </button>
-              <button
-                className={styles.confirmDeleteButton}
-                onClick={handleConfirmDelete}
-                disabled={loading}
-              >
+              <button onClick={confirmEmergencyOrder} disabled={loading}>
                 Confirmar
               </button>
             </div>
@@ -1350,6 +1780,38 @@ export default function OrderDetail({
         </div>
       )}
 
+      {/* MODAL PAUSA */}
+      {showPauseModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <h3>Pausar Orden</h3>
+            <p className={styles.modalDescription}>
+              Ingrese el motivo de la pausa (quedará registrado en el
+              historial).
+            </p>
+            <textarea
+              className={styles.rejectTextarea}
+              value={pauseObservation}
+              onChange={(e) => setPauseObservation(e.target.value)}
+              placeholder="Ej: Esperando repuestos, cliente no disponible, etc."
+            />
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowPauseModal(false)}>Cancelar</button>
+              <button
+                onClick={() => {
+                  handleStatusUpdate(validStatuses.PAUSADA, pauseObservation);
+                  setShowPauseModal(false);
+                }}
+                disabled={loading}
+              >
+                Confirmar Pausa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL INVENTARIO */}
       {showInventoryModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
@@ -1444,6 +1906,7 @@ export default function OrderDetail({
         </div>
       )}
 
+      {/* MODAL ASIGNAR TÉCNICOS */}
       {showAssignForm && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
@@ -1489,9 +1952,6 @@ export default function OrderDetail({
                   );
                 })}
               </div>
-              <small className={styles.helperText}>
-                Seleccione uno o más técnicos para asignar a esta orden.
-              </small>
             </div>
             {selectedTechnicians.length > 1 && (
               <div className={styles.formRow}>
@@ -1514,9 +1974,6 @@ export default function OrderDetail({
                     );
                   })}
                 </select>
-                <small className={styles.helperText}>
-                  El líder será el responsable principal de la orden.
-                </small>
               </div>
             )}
             <div className={styles.formActions}>
@@ -1540,268 +1997,121 @@ export default function OrderDetail({
         </div>
       )}
 
-      {showRejectForm && (
+      {/* MODAL CALIFICACIÓN (BLOQUEANTE) */}
+      {showRatingModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Rechazar Orden</h3>
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              className={styles.rejectTextarea}
-              placeholder="Ingrese el motivo del rechazo..."
-            />
+            <button
+              className={styles.closeButtonRating}
+              onClick={() => setShowRatingModal(false)}
+            >
+              X
+            </button>
+            <div className={styles.ratingModalHeader}>
+              <h3>Calificar técnicos de la orden</h3>
+              <p>
+                Asigna una calificación de 0 a 5 estrellas (con pasos de 0.5)
+                para cada técnico.
+              </p>
+            </div>
+
+            {ratingError && <div className={styles.error}>{ratingError}</div>}
+
+            <div className={styles.ratingList}>
+              {currentOrder.technicians?.map((tech) => {
+                const value = ratings[tech.tecnicoId] ?? 0;
+                const fullStars = Math.floor(value);
+                const hasHalf = value - fullStars >= 0.5;
+
+                return (
+                  <div key={tech.id} className={styles.ratingTechnicianRow}>
+                    <div className={styles.ratingAvatar}>
+                      {(tech.technician.nombre?.[0] || "").toUpperCase()}
+                      {(tech.technician.apellido?.[0] || "").toUpperCase()}
+                    </div>
+                    <div className={styles.ratingInfo}>
+                      <div className={styles.ratingTechnicianHeader}>
+                        {tech.technician.nombre} {tech.technician.apellido}
+                      </div>
+
+                      <div className={styles.ratingStars}>
+                        {Array.from({ length: 5 }).map((_, index) => {
+                          const starIndex = index + 1;
+                          let starClass = styles.starEmpty;
+                          if (starIndex <= fullStars) {
+                            starClass = styles.starFull;
+                          } else if (starIndex === fullStars + 1 && hasHalf) {
+                            starClass = styles.starHalf;
+                          }
+                          return (
+                            <span
+                              key={starIndex}
+                              className={`${styles.star} ${starClass}`}
+                            >
+                              ★
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      <div className={styles.ratingSliderWrapper}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={5}
+                          step={0.5}
+                          value={value}
+                          onChange={(e) =>
+                            setRatings((prev) => ({
+                              ...prev,
+                              [tech.tecnicoId]: Number(e.target.value),
+                            }))
+                          }
+                        />
+                        <span className={styles.ratingValue}>
+                          {value.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             <div className={styles.modalActions}>
-              <button onClick={() => setShowRejectForm(false)}>Cancelar</button>
-              <button
-                onClick={handleRejectOrder}
-                className={styles.rejectButton}
-                disabled={!rejectReason.trim() || loading}
-              >
-                {loading ? "Rechazando..." : "Rechazar"}
+              <button onClick={handleSubmitRatings} disabled={isSavingRatings}>
+                {isSavingRatings ? "Guardando..." : "Guardar calificaciones"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {showInvoiceModal && (
+      {/* MODAL CONFIRMACIÓN BORRADO */}
+      {confirmModal.isOpen && (
         <div className={styles.modal}>
-          <div className={styles.modalContent}>
-            <h3>Subir Factura</h3>
-            {invoiceError && <div className={styles.error}>{invoiceError}</div>}
-            <form onSubmit={handleUploadInvoice}>
-              <div className={styles.formRow}>
-                <label>Archivo PDF</label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
-                />
-              </div>
-              <div className={styles.formActions}>
-                <button
-                  type="button"
-                  onClick={() => setShowInvoiceModal(false)}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" disabled={invoiceLoading || !invoiceFile}>
-                  Subir
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EMERGENCIA */}
-      {showEmergencyModal && (
-        <div className={styles.modal}>
-          <div className={styles.modalContent}>
-            <h3>Crear Orden de Emergencia</h3>
-            <p className={styles.modalDescription}>
-              Esta acción creará una nueva orden de emergencia.
-            </p>
-
-            {currentOrder.technicians && currentOrder.technicians.length > 1 ? (
-              <div className={styles.formRow}>
-                <label className={styles.modalSectionTitle}>
-                  Seleccione el técnico para la emergencia:
-                </label>
-                <div className={styles.scrollBoxSmall}>
-                  {currentOrder.technicians.map((tech) => {
-                    const isSelected =
-                      selectedEmergencyTechId === tech.tecnicoId;
-                    return (
-                      <label
-                        key={tech.tecnicoId}
-                        className={`${styles.selectableRow} ${
-                          isSelected ? styles.selectableRowSelected : ""
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="emergencyTech"
-                          value={tech.tecnicoId}
-                          checked={isSelected}
-                          onChange={() =>
-                            setSelectedEmergencyTechId(tech.tecnicoId)
-                          }
-                          className={styles.checkboxInline}
-                        />
-                        {tech.technician.nombre} {tech.technician.apellido}
-                        {tech.isLeader && (
-                          <span className={styles.leaderChipSmall}>
-                            (Líder)
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className={styles.warning}>
-                <p>
-                  El técnico actual{" "}
-                  <strong>
-                    {currentOrder.technicians?.[0]?.technician.nombre}
-                  </strong>{" "}
-                  será asignado a la emergencia.
-                </p>
-              </div>
-            )}
-
-            <p className={styles.modalSectionTitle}>
-              Seleccione los equipos que atenderá en esta emergencia:
-            </p>
-
-            {loadingEquipments ? (
-              <div className={styles.loading}>Cargando equipos...</div>
-            ) : clientEquipments.length === 0 ? (
-              <div className={styles.warning}>
-                El cliente no tiene equipos registrados.
-              </div>
-            ) : (
-              <div className={styles.scrollBoxLarge}>
-                {clientEquipments.map((eq) => {
-                  const isSelected = selectedEmergencyEquipments.includes(
-                    eq.equipmentId,
-                  );
-                  return (
-                    <div
-                      key={eq.equipmentId}
-                      className={`${styles.selectableRow} ${
-                        isSelected ? styles.selectableRowSelected : ""
-                      }`}
-                      onClick={() => toggleEmergencyEquipment(eq.equipmentId)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() =>
-                          toggleEmergencyEquipment(eq.equipmentId)
-                        }
-                        className={styles.checkboxInline}
-                      />
-                      <div>
-                        <strong>
-                          {eq.code || `#${eq.equipmentId}`} - {eq.category}
-                        </strong>
-                        <div className={styles.rowMeta}>
-                          {eq.subArea?.nombreSubArea ||
-                            eq.area?.nombreArea ||
-                            "Sin ubicación"}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className={styles.modalActions}>
-              <button onClick={() => setShowEmergencyModal(false)}>
+          <div className={styles.confirmationModalContent}>
+            <span className={styles.confirmationIcon}>⚠️</span>
+            <h3>¿Confirmar?</h3>
+            <p>Se eliminará el elemento.</p>
+            <div className={styles.confirmationActions}>
+              <button
+                className={styles.cancelDeleteButton}
+                onClick={closeConfirmModal}
+              >
                 Cancelar
               </button>
-              <button onClick={confirmEmergencyOrder} disabled={loading}>
+              <button
+                className={styles.confirmDeleteButton}
+                onClick={handleConfirmDelete}
+                disabled={loading}
+              >
                 Confirmar
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* MODAL PAUSA */}
-      {showPauseModal && (
-        <div className={styles.modal}>
-          <div className={styles.modalContent}>
-            <h3>Pausar Orden</h3>
-            <p className={styles.modalDescription}>
-              Ingrese el motivo de la pausa (quedará registrado en el
-              historial).
-            </p>
-            <textarea
-              className={styles.rejectTextarea}
-              value={pauseObservation}
-              onChange={(e) => setPauseObservation(e.target.value)}
-              placeholder="Ej: Esperando repuestos, cliente no disponible, etc."
-            />
-            <div className={styles.modalActions}>
-              <button onClick={() => setShowPauseModal(false)}>Cancelar</button>
-              <button
-                onClick={() => {
-                  handleStatusUpdate(validStatuses.PAUSADA, pauseObservation);
-                  setShowPauseModal(false);
-                }}
-                disabled={loading}
-              >
-                Confirmar Pausa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showBillingModal && (
-        <div className={styles.modal}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHeaderRow}>
-              <h3>Asignar Estado de Facturación</h3>
-              <button
-                onClick={() => setShowBillingModal(false)}
-                className={styles.modalCloseButton}
-              >
-                ×
-              </button>
-            </div>
-
-            {billingError && <div className={styles.error}>{billingError}</div>}
-
-            <div className={styles.formRow}>
-              <label>Estado de Facturación</label>
-              <select
-                className={styles.technicianSelect}
-                value={selectedBillingStatus}
-                onChange={(e) =>
-                  setSelectedBillingStatus(e.target.value as BillingEstado)
-                }
-              >
-                <option value="">Seleccionar estado...</option>
-                <option value="Sin facturar">Sin factura</option>
-                <option value="Por facturar">Por facturar</option>
-                <option value="Garantía">Garantía</option>
-              </select>
-            </div>
-
-            <div className={styles.formActions}>
-              <button onClick={() => setShowBillingModal(false)}>
-                Cancelar
-              </button>
-              <button
-                onClick={handleAssignBillingStatus}
-                disabled={!selectedBillingStatus || loading}
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <OrderSignatureModal
-        isOpen={showSignatureModal}
-        onClose={() => setShowSignatureModal(false)}
-        onSubmit={handleSubmitSignature}
-        loading={signatureLoading}
-      />
-      {/* MODAL EVIDENCIAS */}
-      <OrderEvidenceModal
-        orderId={currentOrder.orden_id}
-        isOpen={showEvidenceModal}
-        onClose={() => setShowEvidenceModal(false)}
-        canEdit={canEditEvidence}
-      />
     </div>
   );
 }

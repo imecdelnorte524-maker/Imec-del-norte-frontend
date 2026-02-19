@@ -13,8 +13,29 @@ import type {
   PauseInfo,
   TimerInfo,
   WorkOrderImage,
+  AcInspection,
+  WorkOrderEvidencePhase,
 } from "../interfaces/OrderInterfaces";
 
+export interface CreateAcInspectionPayload {
+  equipmentId: number;
+  evapTempSupply: number;
+  evapTempReturn: number;
+  evapTempAmbient: number;
+  evapTempOutdoor: number;
+  evapMotorRpm: number;
+  evapMicrofarads?: number;
+  condHighPressure: number;
+  condLowPressure: number;
+  condAmperage: number;
+  condVoltage: number;
+  condTempIn: number;
+  condTempDischarge: number;
+  condMotorRpm: number;
+  condMicrofarads?: number;
+  compressorOhmio?: number;
+  observation?: string;
+}
 // Helpers de mapeo de estados backend ↔ frontend
 const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
   if (!apiEstado) return "Pendiente";
@@ -179,6 +200,43 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
       user: mapUserInfo(pause.user),
     })) || [];
 
+  const acInspections: AcInspection[] = Array.isArray(apiOrder.acInspections)
+    ? apiOrder.acInspections.map((insp: any) => ({
+        id: insp.id,
+        equipmentId: insp.equipmentId ?? insp.equipment_id ?? null, // ✅ corregido
+        phase: insp.phase,
+        evapTempSupply: insp.evapTempSupply,
+        evapTempReturn: insp.evapTempReturn,
+        evapTempAmbient: insp.evapTempAmbient,
+        evapTempOutdoor: insp.evapTempOutdoor,
+        evapMotorRpm: insp.evapMotorRpm,
+        evapMicrofarads: insp.evapMicrofarads ?? null,
+        condHighPressure: insp.condHighPressure,
+        condLowPressure: insp.condLowPressure,
+        condAmperage: insp.condAmperage,
+        condVoltage: insp.condVoltage,
+        condTempIn: insp.condTempIn,
+        condTempDischarge: insp.condTempDischarge,
+        condMotorRpm: insp.condMotorRpm,
+        condMicrofarads: insp.condMicrofarads ?? null,
+        compressorOhmio: insp.compressorOhmio ?? null,
+        observation: insp.observation ?? null,
+        createdAt: insp.createdAt || insp.created_at,
+      }))
+    : [];
+
+  const images: WorkOrderImage[] = Array.isArray(apiOrder.images)
+    ? apiOrder.images.map((img: any) => ({
+        id: img.id,
+        url: img.url,
+        public_id: img.public_id || img.publicId,
+        folder: img.folder,
+        created_at: img.created_at || img.createdAt,
+        evidencePhase: img.evidencePhase ?? null,
+        observation: img.observation ?? null,
+      }))
+    : [];
+
   return {
     orden_id: apiOrder.ordenId || apiOrder.orden_id,
     servicio_id: apiOrder.servicioId || apiOrder.service?.servicioId || 0,
@@ -302,6 +360,8 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
       apiOrder.received_by_signature_data ||
       null,
     received_at: apiOrder.receivedAt || apiOrder.received_at || null,
+    acInspections,
+    images,
   };
 };
 
@@ -774,9 +834,17 @@ export const getWorkOrderImagesRequest = async (
 export const uploadWorkOrderImagesRequest = async (
   orderId: number,
   files: File[],
+  options?: { phase?: WorkOrderEvidencePhase; observation?: string },
 ): Promise<WorkOrderImage[]> => {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
+
+  if (options?.phase) {
+    formData.append("phase", options.phase);
+  }
+  if (options?.observation) {
+    formData.append("observation", options.observation);
+  }
 
   const response = await api.post(`/images/work-order/${orderId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -790,4 +858,38 @@ export const deleteWorkOrderImageRequest = async (
   imageId: number,
 ): Promise<void> => {
   await api.delete(`/images/${imageId}`);
+};
+
+export const getAllOrdersForTechniciansRequest = async (): Promise<Order[]> => {
+  try {
+    // Usamos el parámetro all=true para que el backend devuelva todas las órdenes
+    const response = await api.get("/work-orders?all=true");
+    const data = response.data?.data || [];
+    return data.map(mapApiOrderToOrder);
+  } catch (error) {
+    console.error("[API] Error fetching all orders for technicians:", error);
+    return [];
+  }
+};
+
+export const createAcInspectionBeforeRequest = async (
+  orderId: number,
+  payload: CreateAcInspectionPayload,
+) => {
+  const response = await api.post(
+    `/work-orders/${orderId}/ac-inspections/before`,
+    payload,
+  );
+  return response.data?.data;
+};
+
+export const createAcInspectionAfterRequest = async (
+  orderId: number,
+  payload: CreateAcInspectionPayload,
+) => {
+  const response = await api.post(
+    `/work-orders/${orderId}/ac-inspections/after`,
+    payload,
+  );
+  return response.data?.data;
 };

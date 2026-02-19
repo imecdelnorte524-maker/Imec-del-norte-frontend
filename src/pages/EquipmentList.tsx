@@ -1,3 +1,4 @@
+// src/pages/EquipmentListPage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -36,6 +37,11 @@ import {
 } from "../components/equipment/equipment-list";
 import type { AreaSimple } from "../interfaces/AreaInterfaces";
 
+const STORAGE_KEYS = {
+  SELECTED_CLIENT_ID: "equipmentList_selectedClientId",
+  SEARCH_TERM: "equipmentList_searchTerm",
+};
+
 export default function EquipmentListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -51,9 +57,14 @@ export default function EquipmentListPage() {
   const routeState = (location.state || {}) as RouteStateType;
 
   const [clients, setClients] = useState<ClientOption[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<number | 0>(
-    routeState.clientId ?? 0,
-  );
+
+  // 🔹 Inicializar selectedClientId desde sessionStorage o ruta
+  const [selectedClientId, setSelectedClientId] = useState<number | 0>(() => {
+    // Prioridad: 1. Ruta, 2. SessionStorage, 3. 0
+    if (routeState.clientId) return routeState.clientId;
+    const saved = sessionStorage.getItem(STORAGE_KEYS.SELECTED_CLIENT_ID);
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   const [selectedClient, setSelectedClient] = useState<ClientOption | null>(
     null,
@@ -61,7 +72,12 @@ export default function EquipmentListPage() {
 
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-  const [search, setSearch] = useState("");
+
+  // 🔹 Inicializar search desde sessionStorage
+  const [search, setSearch] = useState(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEYS.SEARCH_TERM);
+    return saved || "";
+  });
 
   const [loadingClients, setLoadingClients] = useState(true);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
@@ -129,6 +145,38 @@ export default function EquipmentListPage() {
     roleName === "Cliente";
 
   const hasFixedClientFromRoute = !!routeState.clientId;
+
+  // 🔹 Guardar filtros en sessionStorage cuando cambian
+  useEffect(() => {
+    if (!isClient && !hasFixedClientFromRoute) {
+      if (selectedClientId && selectedClientId !== 0) {
+        sessionStorage.setItem(
+          STORAGE_KEYS.SELECTED_CLIENT_ID,
+          String(selectedClientId),
+        );
+      } else {
+        sessionStorage.removeItem(STORAGE_KEYS.SELECTED_CLIENT_ID);
+      }
+    }
+  }, [selectedClientId, isClient, hasFixedClientFromRoute]);
+
+  useEffect(() => {
+    if (!isClient && !hasFixedClientFromRoute) {
+      if (search) {
+        sessionStorage.setItem(STORAGE_KEYS.SEARCH_TERM, search);
+      } else {
+        sessionStorage.removeItem(STORAGE_KEYS.SEARCH_TERM);
+      }
+    }
+  }, [search, isClient, hasFixedClientFromRoute]);
+
+  // 🔹 Limpiar storage cuando es cliente o ruta fija
+  useEffect(() => {
+    if (isClient || hasFixedClientFromRoute) {
+      sessionStorage.removeItem(STORAGE_KEYS.SELECTED_CLIENT_ID);
+      sessionStorage.removeItem(STORAGE_KEYS.SEARCH_TERM);
+    }
+  }, [isClient, hasFixedClientFromRoute]);
 
   useEffect(() => {
     if (selectedClientId && clients.length > 0) {
@@ -282,10 +330,8 @@ export default function EquipmentListPage() {
         let equipments: Equipment[] = [];
 
         if (isClient) {
-          // Cliente: el backend ya filtra por las empresas asignadas a ese usuario
           equipments = await getMyEquipmentRequest();
 
-          // 🔴 NUEVO: derivar las empresas desde los equipos, para mostrar el nombre correcto
           const clientMap = new Map<number, ClientOption>();
           equipments.forEach((eq) => {
             if (eq.client) {
@@ -304,7 +350,6 @@ export default function EquipmentListPage() {
             setSelectedClient(derivedClients[0]);
           }
         } else {
-          // Admin / Técnica / Secretaria: por empresa seleccionada
           if (!selectedClientId) {
             setAllEquipments([]);
             setEquipmentList([]);
@@ -329,7 +374,7 @@ export default function EquipmentListPage() {
     loadEquipment();
   }, [selectedClientId, canView, isClient]);
 
-  // Filtrar equipos por búsqueda
+  // 🔹 Filtrar equipos por búsqueda (100% local, sobre los datos ya cargados)
   useEffect(() => {
     const term = search.trim().toLowerCase();
 

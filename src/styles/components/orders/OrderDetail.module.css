@@ -440,7 +440,7 @@
 
 /* --- MODALES GENERALES --- */
 .modal {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -720,6 +720,30 @@ select {
 .ratingModalHeader p {
   font-size: 0.9rem;
   color: #4b5563;
+}
+
+.closeButtonRating {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #666;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.closeButtonRating:hover {
+  background-color: #f0f0f0;
+  color: #333;
 }
 
 .ratingList {
@@ -1052,4 +1076,64 @@ select {
 .evidenceDeleteButton:disabled {
   background: #e5e7eb;
   cursor: not-allowed;
+}
+
+.commentsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.commentBlock {
+  background-color: #f8fafc;
+  border-left: 4px solid var(--primary-500);
+  border-radius: 6px;
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--gray-200);
+  border-right: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--gray-200);
+  transition: transform 0.2s;
+}
+
+.commentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--gray-200);
+  padding-bottom: 6px;
+}
+
+.commentHeader strong {
+  font-size: var(--font-size-sm);
+  color: var(--gray-800);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.commentDate {
+  font-size: var(--font-size-xs);
+  color: var(--gray-400);
+  font-weight: 500;
+}
+
+.commentContent p {
+  margin: var(--spacing-xs) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--gray-600);
+  line-height: 1.5;
+  white-space: pre-wrap; 
+}
+
+@media (max-width: 768px) {
+  .commentHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .commentBlock {
+    padding: var(--spacing-sm);
+  }
 }

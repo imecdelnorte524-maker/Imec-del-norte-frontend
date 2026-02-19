@@ -1,0 +1,233 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Tamaños */
+.small {
+  max-width: 400px;
+}
+
+.medium {
+  max-width: 500px;
+}
+
+.large {
+  max-width: 650px;
+}
+
+/* Tipos de modal */
+.modal.info .header {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.modal.success .header {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.modal.warning .header {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.modal.error .header {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.modal.conflict .header {
+  background-color: #fff1f0;
+  color: #7f1d1d;
+}
+
+.header {
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.closeButton:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.content {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.message {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* Estilos para conflictos */
+.conflictList {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.conflictItem {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid #ef4444;
+}
+
+.conflictHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.conflictTitle {
+  font-weight: 600;
+  color: #111827;
+}
+
+.conflictDescription {
+  color: #4b5563;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.conflictDetails {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+
+.conflictLabel {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.conflictValue {
+  color: #1f2937;
+}
+
+.footer {
+  padding: 1rem 1.5rem;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.buttonPrimary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.buttonPrimary:hover {
+  background-color: #2563eb;
+}
+
+.buttonSecondary {
+  background-color: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.buttonSecondary:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.buttonDanger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.buttonDanger:hover {
+  background-color: #dc2626;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

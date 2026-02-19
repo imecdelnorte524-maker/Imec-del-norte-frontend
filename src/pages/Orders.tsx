@@ -1,7 +1,5 @@
-// src/pages/OrdersPage.tsx
-
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../hooks/useAuth";
 import styles from "../styles/pages/OrdersPage.module.css";
@@ -13,12 +11,28 @@ import AdminOrdersView from "../components/orders/AdminOrdersView";
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState<"list" | "create" | "detail">(
-    "list"
+    "list",
   );
-
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ordenIdParam = searchParams.get("ordenId");
-  const initialOrderId = ordenIdParam ? Number(ordenIdParam) : undefined;
+  const createParam = searchParams.get("create");
+
+  // Sincronizar vista con URL
+  useEffect(() => {
+    if (ordenIdParam) {
+      setActiveView("detail");
+    } else if (createParam === "true") {
+      setActiveView("create");
+    } else {
+      setActiveView("list");
+    }
+  }, [ordenIdParam, createParam]);
+
+  const handleBackToList = () => {
+    navigate("/orders", { replace: true });
+    setActiveView("list");
+  };
 
   if (authLoading) {
     return (
@@ -37,58 +51,29 @@ export default function OrdersPage() {
   const isAdmin = upperRole === "ADMINISTRADOR";
   const isSecretaria = upperRole === "SECRETARIA";
   const isTecnico = upperRole === "TÉCNICO" || upperRole === "TECNICO";
-  const isCliente = upperRole === "CLIENTE";
 
   const renderView = () => {
-    if (isAdmin) {
-      return (
-        <AdminOrdersView
-          activeView={activeView}
-          setActiveView={setActiveView}
-          userRole="admin"
-          initialOrderId={initialOrderId}
-        />
-      );
-    }
+    const commonProps = {
+      activeView,
+      setActiveView,
+      onBackToList: handleBackToList,
+      initialOrderId: ordenIdParam ? Number(ordenIdParam) : undefined, // 👈 Esto es clave
+    };
 
-    if (isSecretaria) {
+    if (isAdmin || isSecretaria) {
       return (
         <AdminOrdersView
-          activeView={activeView}
-          setActiveView={setActiveView}
-          userRole="secretaria"
-          initialOrderId={initialOrderId}
+          {...commonProps}
+          userRole={isAdmin ? "admin" : "secretaria"}
         />
       );
     }
 
     if (isTecnico) {
-      return (
-        <TechnicianOrdersView
-          activeView={activeView}
-          setActiveView={setActiveView}
-          initialOrderId={initialOrderId}
-        />
-      );
+      return <TechnicianOrdersView {...commonProps} />;
     }
 
-    if (isCliente) {
-      return (
-        <ClientOrdersView
-          activeView={activeView}
-          setActiveView={setActiveView}
-          initialOrderId={initialOrderId}
-        />
-      );
-    }
-
-    return (
-      <ClientOrdersView
-        activeView={activeView}
-        setActiveView={setActiveView}
-        initialOrderId={initialOrderId}
-      />
-    );
+    return <ClientOrdersView {...commonProps} />;
   };
 
   return (

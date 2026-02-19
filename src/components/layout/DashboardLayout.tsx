@@ -466,7 +466,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           return "/inventory";
         }
         default:
-          return null;
+          return null;  
       }
     },
     [],

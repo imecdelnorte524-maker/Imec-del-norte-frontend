@@ -1,9 +1,14 @@
+// src/hooks/useEquipmentDetail.ts (fragmento modificado)
 import { useState, useEffect, useCallback } from "react";
 import {
   getEquipmentByIdRequest,
   updateEquipmentRequest,
 } from "../api/equipment";
-import type { Equipment, UpdateEquipmentData } from "../interfaces/EquipmentInterfaces";
+import type {
+  Equipment,
+  UpdateEquipmentData,
+} from "../interfaces/EquipmentInterfaces";
+import { equipmentCache } from "../services/EquipmentCache"; // <-- NUEVO
 
 export function useEquipmentDetail(equipmentId: number | null) {
   const [equipment, setEquipment] = useState<Equipment | null>(null);
@@ -17,7 +22,7 @@ export function useEquipmentDetail(equipmentId: number | null) {
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       const data = await getEquipmentByIdRequest(equipmentId);
@@ -27,8 +32,8 @@ export function useEquipmentDetail(equipmentId: number | null) {
       console.error("Error cargando equipo:", err);
       setError(
         err.response?.data?.message ||
-        err.message ||
-        "Error al cargar el equipo"
+          err.message ||
+          "Error al cargar el equipo",
       );
       setEquipment(null);
     } finally {
@@ -41,23 +46,29 @@ export function useEquipmentDetail(equipmentId: number | null) {
   }, [loadEquipment]);
 
   const updateEquipment = async (
-    updateData: UpdateEquipmentData
+    updateData: UpdateEquipmentData,
   ): Promise<boolean> => {
     if (!equipmentId || !equipment) return false;
-    
+
     setSaving(true);
     setError(null);
-    
+
     try {
       const updated = await updateEquipmentRequest(equipmentId, updateData);
       setEquipment(updated);
+
+      // 🔥 INVALIDAR CACHE DEL CLIENTE
+      if (updated.client?.idCliente) {
+        equipmentCache.invalidate(updated.client.idCliente);
+      }
+
       return true;
     } catch (err: any) {
       console.error("Error actualizando equipo:", err);
       setError(
         err.response?.data?.message ||
-        err.message ||
-        "Error al actualizar el equipo"
+          err.message ||
+          "Error al actualizar el equipo",
       );
       return false;
     } finally {
@@ -83,7 +94,9 @@ export function useEquipmentDetail(equipmentId: number | null) {
     return updateEquipment(data);
   };
 
-  const updateACType = async (airConditionerTypeId: number | null): Promise<boolean> => {
+  const updateACType = async (
+    airConditionerTypeId: number | null,
+  ): Promise<boolean> => {
     return updateEquipment({ airConditionerTypeId });
   };
 
