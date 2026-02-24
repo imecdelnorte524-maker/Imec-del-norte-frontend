@@ -19,7 +19,7 @@ const CATEGORIES: PreopParamCategory[] = [
 const INITIAL_TEMPLATE: PreopChecklistTemplatePayload = {
   toolType: "",
   toolCategory: "HERRAMIENTA",
-  estimatedTime: 10,
+  estimatedTime: 5,
   additionalInstructions: "",
   requiresTools: [],
   parameters: [],
@@ -304,11 +304,11 @@ export default function PreoperationalTemplateForm() {
                 <input
                   type="number"
                   className={styles.input}
-                  value={template.estimatedTime ?? 10}
+                  value={template.estimatedTime ?? 5}
                   onChange={(e) =>
                     setTemplate((prev) => ({
                       ...prev,
-                      estimatedTime: Number(e.target.value) || 10,
+                      estimatedTime: Number(e.target.value) || 5,
                     }))
                   }
                 />

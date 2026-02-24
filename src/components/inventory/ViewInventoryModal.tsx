@@ -1,14 +1,14 @@
-// src/components/inventory/ViewInventoryModal.tsx (VERSIÓN MEJORADA)
+// src/components/inventory/ViewInventoryModal.tsx
 import { useEffect, useState } from "react";
 import styles from "../../styles/components/inventory/ViewInventoryModal.module.css";
-import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import { imagesApi } from "../../api/images";
 import ImageCarousel from "../common/ImageCarousel";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  item: Inventory | null;
+  item: InventoryItem | null;
 }
 
 export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
@@ -31,11 +31,15 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
 
         let fetchedImages: string[] = [];
 
-        if (item.herramientaId) {
-          const toolImages = await imagesApi.getToolImages(item.herramientaId);
+        if (item.tool?.herramientaId) {
+          const toolImages = await imagesApi.getToolImages(
+            item.tool.herramientaId,
+          );
           fetchedImages = toolImages.map((img) => img.url);
-        } else if (item.insumoId) {
-          const supplyImages = await imagesApi.getSupplyImages(item.insumoId);
+        } else if (item.supply?.insumoId) {
+          const supplyImages = await imagesApi.getSupplyImages(
+            item.supply.insumoId,
+          );
           fetchedImages = supplyImages.map((img) => img.url);
         }
 
@@ -57,31 +61,27 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
   const status = item.tool?.estado || item.supply?.estado || "Activo";
   const unit = item.supply?.unidadMedida;
   const value = item.supply?.valorUnitario || item.tool?.valorUnitario || 0;
-  const lastUpdate = new Date(item.fechaUltimaActualizacion).toLocaleDateString('es-ES', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const lastUpdate = new Date(item.fechaUltimaActualizacion).toLocaleDateString(
+    "es-ES",
+    {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
 
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <header className={styles.header}>
           <h2>
-            <span style={{ marginRight: '10px' }}>
-              {isHerramienta ? '🛠️' : '📦'}
+            <span style={{ marginRight: "10px" }}>
+              {isHerramienta ? "🛠️" : "📦"}
             </span>
             Detalles de {isHerramienta ? "Herramienta" : "Insumo"}
           </h2>
-          <button 
-            onClick={onClose} 
-            aria-label="Cerrar"
-            title="Cerrar"
-          >
-            ✕
-          </button>
         </header>
 
         <div className={styles.content}>
@@ -103,7 +103,8 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
                     interval={5000}
                   />
                   <div className={styles.imageCount}>
-                    {images.length} imagen{images.length !== 1 ? 'es' : ''}
+                    {images.length} imagen
+                    {images.length !== 1 ? "es" : ""}
                   </div>
                 </div>
               ) : (
@@ -132,14 +133,20 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
                 <div className={styles.infoRow}>
                   <span className={styles.infoLabel}>Nombre:</span>
                   <span className={styles.infoValue}>
-                    <span className={styles.nameHighlight}>{item.nombreItem}</span>
+                    <span className={styles.nameHighlight}>
+                      {item.nombreItem}
+                    </span>
                   </span>
                 </div>
 
                 <div className={styles.infoRow}>
                   <span className={styles.infoLabel}>Tipo:</span>
                   <span className={styles.infoValue}>
-                    <span className={`${styles.typeBadge} ${isHerramienta ? styles.toolBadge : styles.supplyBadge}`}>
+                    <span
+                      className={`${styles.typeBadge} ${
+                        isHerramienta ? styles.toolBadge : styles.supplyBadge
+                      }`}
+                    >
                       {isHerramienta ? "🛠️ Herramienta" : "📦 Insumo"}
                     </span>
                   </span>
@@ -149,9 +156,7 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
                   <span className={styles.infoLabel}>Cantidad:</span>
                   <span className={`${styles.infoValue} ${styles.quantity}`}>
                     {item.cantidadActual}
-                    {unit && (
-                      <span className={styles.unit}> {unit}</span>
-                    )}
+                    {unit && <span className={styles.unit}> {unit}</span>}
                   </span>
                 </div>
 
@@ -228,7 +233,9 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
                 </div>
 
                 <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Última Actualización:</span>
+                  <span className={styles.infoLabel}>
+                    Última Actualización:
+                  </span>
                   <span className={styles.infoValue}>
                     <span className={styles.lastUpdate}>{lastUpdate}</span>
                   </span>
@@ -241,9 +248,9 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
                       <span className={styles.warehouseName}>
                         {item.bodega.nombre}
                       </span>
-                      {item.bodega.cliente && (
+                      {item.bodega.clienteNombre && (
                         <span className={styles.clientName}>
-                          ({item.bodega.cliente.nombre})
+                          ({item.bodega.clienteNombre})
                         </span>
                       )}
                     </span>

@@ -1,210 +1,143 @@
 // src/api/inventory.ts
 import api from "./axios";
-import {
-  ToolStatus,
-  SupplyStatus,
-  SupplyCategory,
-  UnitOfMeasure,
-  InventoryItemType,
-} from "../shared/enums/inventory.enum";
+import type {
+  InventoryItem,
+  CreateInventoryPayload,
+  UpdateInventoryPayload,
+  InventoryApiResponse,
+  InventoryDeleteCompleteResponse,
+} from "../interfaces/InventoryInterfaces";
 
 export const inventory = {
   // ✅ Obtener todo el inventario
-  getAllInventory: async () => {
+  getAllInventory: async (): Promise<InventoryItem[]> => {
     try {
-      const response = await api.get("/inventory");
+      const response =
+        await api.get<InventoryApiResponse<InventoryItem[]>>("/inventory");
 
-      if (!response.data.data || !Array.isArray(response.data.data)) {
-        console.error("❌ ERROR: Datos no son un array");
+      const data = response.data.data;
+      if (!data || !Array.isArray(data)) {
+        console.error("❌ ERROR: Datos de inventario no son un array");
         return [];
       }
 
-      const transformedData = response.data.data.map((item: any) => {
-        // Determinar si hay tool/supply reales
-        const hasSupply = !!item.supply;
-        const hasTool = !!item.tool;
-
-        // Determinar tipo en base a las relaciones
-        let tipo: InventoryItemType;
-        if (hasSupply && !hasTool) {
-          tipo = "insumo";
-        } else if (hasTool && !hasSupply) {
-          tipo = "herramienta";
-        } else if (hasSupply) {
-          tipo = "insumo";
-        } else {
-          tipo = item.insumoId ? "insumo" : "herramienta";
-        }
-
-        // Nombre del item
-        let nombreItem = "";
-        if (item.supply) {
-          nombreItem = item.supply.nombre || "Sin nombre";
-        } else if (item.tool) {
-          nombreItem = item.tool.nombre || "Sin nombre";
-        } else {
-          nombreItem = item.nombreItem || "Sin nombre";
-        }
-
-        // IDs coherentes
-        const insumoId = item.insumoId ?? item.supply?.insumoId ?? undefined;
-        const herramientaId = item.herramientaId ?? item.tool?.herramientaId ?? undefined;
-        const bodegaId = item.bodegaId ?? item.bodega?.bodegaId ?? undefined;
-
-        const cantidadActual = item.cantidadActual
-          ? parseFloat(item.cantidadActual)
-          : 0;
-
-        const transformedItem: any = {
-          inventarioId: item.inventarioId,
-          insumoId,
-          herramientaId,
-          bodegaId, // NUEVO
-          cantidadActual,
-          ubicacion: item.ubicacion || "",
-          fechaUltimaActualizacion: item.fechaUltimaActualizacion,
-          tipo,
-          nombreItem,
-          bodega: item.bodega || null, // NUEVO: Información completa de la bodega y cliente
-        };
-
-        if (item.tool) {
-          transformedItem.tool = {
-            herramientaId: item.tool.herramientaId,
-            nombre: item.tool.nombre,
-            marca: item.tool.marca || "",
-            serial: item.tool.serial || "",
-            modelo: item.tool.modelo || "",
-            estado: (item.tool.estado as ToolStatus) || ToolStatus.DISPONIBLE,
-            valorUnitario: item.tool.valorUnitario
-              ? parseFloat(item.tool.valorUnitario)
-              : 0,
-            fotoUrl: item.tool.fotoUrl || null,
-          };
-        }
-
-        if (item.supply) {
-          transformedItem.supply = {
-            insumoId: item.supply.insumoId,
-            nombre: item.supply.nombre,
-            categoria:
-              (item.supply.categoria as SupplyCategory) ||
-              SupplyCategory.GENERAL,
-            unidadMedida:
-              (item.supply.unidadMedida?.nombre as UnitOfMeasure) || // Editado para manejar objeto unidadMedida
-              (item.supply.unidadMedida as UnitOfMeasure) ||
-              UnitOfMeasure.UNIDAD,
-            estado:
-              (item.supply.estado as SupplyStatus) || SupplyStatus.DISPONIBLE,
-            stockMin: item.supply.stockMin
-              ? parseFloat(item.supply.stockMin)
-              : 0,
-            valorUnitario: item.supply.valorUnitario
-              ? parseFloat(item.supply.valorUnitario)
-              : 0,
-            fotoUrl: item.supply.fotoUrl || null,
-          };
-        }
-
-        return transformedItem;
-      });
-
-      return transformedData;
+      return data;
     } catch (error: any) {
       console.error("❌ Error obteniendo inventario:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener inventario"
+        error.response?.data?.message || "Error al obtener inventario",
       );
     }
   },
 
   // ✅ Crear registro de inventario
-  createInventory: async (data: {
-    insumoId?: number;
-    herramientaId?: number;
-    bodegaId?: number;
-    cantidadActual?: number;
-    ubicacion?: string;
-  }) => {
+  createInventory: async (
+    data: CreateInventoryPayload,
+  ): Promise<InventoryItem> => {
     try {
-      const response = await api.post("/inventory", data);
-      return response.data;
+      const response = await api.post<InventoryApiResponse<InventoryItem>>(
+        "/inventory",
+        data,
+      );
+      return response.data.data;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Error al crear registro de inventario"
+        error.response?.data?.message ||
+          "Error al crear registro de inventario",
       );
     }
   },
 
   // ✅ Actualizar inventario
-  updateInventory: async (id: number, data: any) => {
+  updateInventory: async (
+    id: number,
+    data: UpdateInventoryPayload,
+  ): Promise<InventoryItem> => {
     try {
-      const response = await api.patch(`/inventory/${id}`, data);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(
-        error.response?.data?.message || "Error al actualizar inventario"
+      const response = await api.patch<InventoryApiResponse<InventoryItem>>(
+        `/inventory/${id}`,
+        data,
       );
-    }
-  },
-
-  // ✅ Eliminar inventario solo
-  deleteInventory: async (id: number) => {
-    try {
-      const response = await api.delete(`/inventory/${id}`);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(
-        error.response?.data?.message || "Error al eliminar inventario"
-      );
-    }
-  },
-
-  // ✅ Eliminar inventario + item asociado
-  deleteInventoryAndItem: async (inventarioId: number): Promise<any> => {
-    try {
-      const response = await api.delete(`/inventory/complete/${inventarioId}`);
-      return response.data;
-    } catch (error: any) {
-      throw new Error(
-        error.response?.data?.message || "Error al eliminar completamente"
-      );
-    }
-  },
-
-  searchInventory: async (keyword: string) => {
-    try {
-      const response = await api.get("/inventory", {
-        params: { search: keyword },
-      });
       return response.data.data;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Error al buscar inventario"
+        error.response?.data?.message || "Error al actualizar inventario",
       );
     }
   },
 
-  getLowStock: async () => {
+  // ✅ Eliminar inventario solo (soft delete)
+  deleteInventory: async (id: number): Promise<void> => {
     try {
-      const response = await api.get("/inventory", {
-        params: { lowStock: true },
-      });
-      return response.data.data;
+      await api.delete(`/inventory/${id}`);
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Error al obtener stock bajo"
+        error.response?.data?.message || "Error al eliminar inventario",
       );
     }
   },
 
-  updateStock: async (id: number, cantidad: number) => {
+  // ✅ Eliminar inventario + item asociado (hard delete)
+  deleteInventoryAndItem: async (
+    inventarioId: number,
+  ): Promise<InventoryDeleteCompleteResponse> => {
     try {
-      const response = await api.patch(`/inventory/${id}/stock`, { cantidad });
+      const response = await api.delete<InventoryDeleteCompleteResponse>(
+        `/inventory/complete/${inventarioId}`,
+      );
       return response.data;
     } catch (error: any) {
       throw new Error(
-        error.response?.data?.message || "Error al actualizar stock"
+        error.response?.data?.message || "Error al eliminar completamente",
+      );
+    }
+  },
+
+  // ✅ Buscar en inventario
+  searchInventory: async (keyword: string): Promise<InventoryItem[]> => {
+    try {
+      const response = await api.get<InventoryApiResponse<InventoryItem[]>>(
+        "/inventory",
+        {
+          params: { search: keyword },
+        },
+      );
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al buscar inventario",
+      );
+    }
+  },
+
+  // ✅ Obtener items con stock bajo
+  getLowStock: async (): Promise<InventoryItem[]> => {
+    try {
+      const response = await api.get<InventoryApiResponse<InventoryItem[]>>(
+        "/inventory",
+        {
+          params: { "low-stock": true }, // ⚠️ nombre correcto del query param
+        },
+      );
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al obtener stock bajo",
+      );
+    }
+  },
+
+  // ✅ Actualizar stock de un registro de inventario
+  updateStock: async (id: number, cantidad: number): Promise<InventoryItem> => {
+    try {
+      const response = await api.patch<InventoryApiResponse<InventoryItem>>(
+        `/inventory/${id}/stock`,
+        { cantidad },
+      );
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message || "Error al actualizar stock",
       );
     }
   },

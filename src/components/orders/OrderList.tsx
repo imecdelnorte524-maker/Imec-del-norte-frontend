@@ -10,7 +10,13 @@ import Pagination from "../Pagination";
 interface Props {
   userRole: "cliente" | "tecnico" | "admin" | "secretaria";
   onViewOrder: (order: Order) => void;
-  filter?: "all" | "pending" | "assigned" | "completed" | "cancelled";
+  initialFilter?:
+    | "all"
+    | "pending"
+    | "assigned"
+    | "in_progress"
+    | "completed"
+    | "cancelled";
   initialOrderId?: number;
   filters?: {
     estado?: string;
@@ -32,8 +38,8 @@ const normalizeText = (text: string): string => {
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Quita tildes
-    .replace(/[^\w\s]/g, ""); // Quita caracteres especiales
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/g, "");
 };
 
 // Función mejorada de búsqueda flexible
@@ -43,29 +49,29 @@ const matchesSearch = (text: string, searchTerm: string): boolean => {
   const normalizedText = normalizeText(text);
   const normalizedSearch = normalizeText(searchTerm);
 
-  // División del término de búsqueda en palabras
   const searchWords = normalizedSearch
     .split(/\s+/)
     .filter((word) => word.length > 0);
 
-  // Si el término de búsqueda tiene múltiples palabras, verificar que todas coincidan
   if (searchWords.length > 1) {
     return searchWords.every((word) => normalizedText.includes(word));
   }
 
-  // Búsqueda simple
   return normalizedText.includes(normalizedSearch);
 };
 
 export default function OrderList({
   userRole,
   onViewOrder,
-  filter = "all",
+  initialFilter = "all",
   initialOrderId,
   filters = {},
 }: Props) {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "assigned"| "in_progress" | "completed" | "cancelled"
+  >(initialFilter);
 
   // Controla si ya se hizo el auto‑select para el ID actual
   const hasAutoSelectedRef = useRef(false);
@@ -80,7 +86,11 @@ export default function OrderList({
   const [companySearchTerm, setCompanySearchTerm] = useState("");
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const companyDropdownRef = useRef<HTMLDivElement>(null);
-
+  const isTechnician =
+    user?.role.nombreRol
+      ?.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase() === "tecnico";
   // Filtros de fecha
   const [dateFilters, setDateFilters] = useState<DateFilters>({
     startDate: "",
@@ -188,7 +198,6 @@ export default function OrderList({
       const id = typeof companyId === "string" ? companyId : String(companyId);
       originalHandleCompanyChange(id);
 
-      // Actualizar el input de búsqueda si estamos en modo buscador
       if (!useSelect) {
         const company = companies.find((c) => c.idCliente === Number(id));
         if (company) {
@@ -310,21 +319,16 @@ export default function OrderList({
 
   // Auto-seleccionar orden por ID si viene en URL
   useEffect(() => {
-    if (!initialOrderId) return;                 // no hay ID -> no hacer nada
-    if (!orders || orders.length === 0) return;  // aún no hay órdenes
-    if (hasAutoSelectedRef.current) return;      // ya se usó este ID
+    if (!initialOrderId) return;
+    if (!orders || orders.length === 0) return;
+    if (hasAutoSelectedRef.current) return;
 
     const found = orders.find((o) => o.orden_id === initialOrderId);
     if (found) {
       hasAutoSelectedRef.current = true;
-
-      // Abrir detalle
       onViewOrder(found);
 
-      // Calcular página donde está esa orden (en el set completo de orders)
-      const orderIndex = orders.findIndex(
-        (o) => o.orden_id === initialOrderId,
-      );
+      const orderIndex = orders.findIndex((o) => o.orden_id === initialOrderId);
       if (orderIndex !== -1) {
         setCurrentPage(Math.floor(orderIndex / limit) + 1);
       }
@@ -342,6 +346,7 @@ export default function OrderList({
     setCompanySearchTerm("");
     setShowCompanyDropdown(false);
     setShowOnlyMine(false);
+    setFilter("all");
   };
 
   const hasActiveFilters = (): boolean => {
@@ -351,8 +356,21 @@ export default function OrderList({
       selectedCompany !== null ||
       selectedArea !== null ||
       subAreaHierarchy.length > 0 ||
-      showOnlyMine
+      showOnlyMine ||
+      filter !== "all"
     );
+  };
+
+  const getActiveFiltersCount = (): number => {
+    let count = 0;
+    if (dateFilters.startDate) count++;
+    if (dateFilters.endDate) count++;
+    if (selectedCompany) count++;
+    if (selectedArea) count++;
+    if (subAreaHierarchy.length > 0) count++;
+    if (showOnlyMine) count++;
+    if (filter !== "all") count++;
+    return count;
   };
 
   const getCardStatusClass = (order: Order): string => {
@@ -416,13 +434,18 @@ export default function OrderList({
             {showFilters ? "▼" : "▶"}
           </span>
           {showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+          {!showFilters && getActiveFiltersCount() > 0 && (
+            <span className={styles.filterBadge}>
+              {getActiveFiltersCount()}
+            </span>
+          )}
         </button>
 
         {showFilters && (
           <div className={styles.filtersContainer}>
             <div className={styles.filterGrid}>
               {/* Checkbox para técnicos - filtrar solo mis órdenes */}
-              {userRole === "tecnico" && (
+              {isTechnician && (
                 <div className={styles.filterGroup}>
                   <label className={styles.checkboxLabel}>
                     <input
@@ -458,6 +481,26 @@ export default function OrderList({
                   onChange={handleDateChange}
                   className={styles.filterInput}
                 />
+              </div>
+
+              {/* Select de estados */}
+              <div className={styles.filterGroup}>
+                <label htmlFor="statusFilter">Estado de orden</label>
+                <select
+                  id="statusFilter"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value as any)}
+                  className={`${styles.filterSelect} ${
+                    filter !== "all" ? styles.activeFilter : ""
+                  }`}
+                >
+                  <option value="all">Todas las órdenes</option>
+                  <option value="pending">Pendientes de asignación</option>
+                  <option value="assigned">Asignadas</option>
+                  <option value="in_progress">En Proceso</option>
+                  <option value="completed">Completadas</option>
+                  <option value="cancelled">Canceladas</option>
+                </select>
               </div>
 
               {/* Filtros de empresa - para todos excepto clientes */}

@@ -13,11 +13,6 @@
   color-scheme: light;
 }
 
-:root[data-theme='dark'],
-[data-theme='dark'] {
-  color-scheme: dark;
-}
-
 body {
   font-family: var(--font-family-sans);
   line-height: var(--line-height-base);

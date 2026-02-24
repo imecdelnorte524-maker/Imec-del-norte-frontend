@@ -59,6 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         activo: true,
         fechaCreacion: new Date().toISOString(),
         role: { rolId: 0, nombreRol: "Usuario", descripcion: "", fechaCreacion: new Date().toISOString() },
+        position: "",
       } as Usuario;
     }
 
@@ -71,6 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: userData.email ?? "",
       username: userData.username ?? "",
       telefono: userData.telefono ?? "",
+      position: userData.position ?? "",
       activo: userData.activo !== undefined ? userData.activo : true,
       fechaCreacion: userData.fechaCreacion ?? new Date().toISOString(),
       fechaNacimiento: userData.fechaNacimiento ?? userData.birthdate ?? undefined,

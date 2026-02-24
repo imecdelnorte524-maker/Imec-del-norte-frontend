@@ -1,7 +1,7 @@
 /* src/components/equipment-detail/PhotoViewModal.module.css */
 
 .modalOverlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);

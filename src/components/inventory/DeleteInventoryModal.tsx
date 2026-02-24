@@ -1,9 +1,7 @@
 // src/components/inventory/DeleteInventoryModal.tsx
 import { useState } from "react";
 import { inventory } from "../../api/inventory";
-import { toolsApi } from "../../api/tools";
-import { suppliesApi } from "../../api/supplies";
-import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import styles from "../../styles/components/inventory/DeleteInventoryModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
 
@@ -11,7 +9,7 @@ interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  item: Inventory | null;
+  item: InventoryItem | null;
 }
 
 export default function DeleteConfirmationModal({
@@ -34,36 +32,16 @@ export default function DeleteConfirmationModal({
       setLoading(true);
       setError(null);
 
-      if (item.herramientaId && item.tool) {
-        try {
-          await toolsApi.deleteHerramienta(item.herramientaId);
-        } catch (toolError: any) {
-          console.warn(
-            "⚠️ Error al eliminar herramienta, continuando con eliminación de inventario:",
-            toolError
-          );
-        }
-      }
-
-      if (item.insumoId && item.supply) {
-        try {
-          await suppliesApi.deleteInsumo(item.insumoId);
-        } catch (supplyError: any) {
-          console.warn(
-            "⚠️ Error al eliminar insumo, continuando con eliminación de inventario:",
-            supplyError
-          );
-        }
-      }
-
+      // Ahora el backend elimina inventario + herramienta/insumo asociado
       await inventory.deleteInventoryAndItem(item.inventarioId);
-      
+
       onSuccess();
       onClose();
     } catch (err: any) {
       console.error("❌ Error al eliminar:", err);
       setError(
-        err.message || "Error al eliminar el item. Por favor, intente de nuevo."
+        err.message ||
+          "Error al eliminar el item. Por favor, intente de nuevo.",
       );
       playErrorSound();
     } finally {
@@ -73,8 +51,11 @@ export default function DeleteConfirmationModal({
 
   if (!isOpen || !item) return null;
 
-  const willDeleteTool = item.herramientaId && item.tool;
-  const willDeleteSupply = item.insumoId && item.supply;
+  const willDeleteTool = !!item.tool;
+  const willDeleteSupply = !!item.supply;
+
+  const herramientaId = item.tool?.herramientaId;
+  const insumoId = item.supply?.insumoId;
 
   return (
     <div className={styles.modalOverlay}>
@@ -119,7 +100,7 @@ export default function DeleteConfirmationModal({
             {willDeleteTool && item.tool && (
               <>
                 <p>
-                  <strong>Herramienta ID:</strong> {item.herramientaId}
+                  <strong>Herramienta ID:</strong> {herramientaId}
                 </p>
                 <p>
                   <strong>Estado:</strong> {item.tool.estado}
@@ -140,7 +121,7 @@ export default function DeleteConfirmationModal({
             {willDeleteSupply && item.supply && (
               <>
                 <p>
-                  <strong>Insumo ID:</strong> {item.insumoId}
+                  <strong>Insumo ID:</strong> {insumoId}
                 </p>
                 <p>
                   <strong>Categoría:</strong> {item.supply.categoria}
@@ -168,13 +149,11 @@ export default function DeleteConfirmationModal({
               }}
             >
               <li>El registro de inventario (ID: {item.inventarioId})</li>
-              {willDeleteTool && (
-                <li>
-                  La herramienta y todos sus datos (ID: {item.herramientaId})
-                </li>
+              {willDeleteTool && herramientaId && (
+                <li>La herramienta y todos sus datos (ID: {herramientaId})</li>
               )}
-              {willDeleteSupply && (
-                <li>El insumo y todos sus datos (ID: {item.insumoId})</li>
+              {willDeleteSupply && insumoId && (
+                <li>El insumo y todos sus datos (ID: {insumoId})</li>
               )}
               <li>Todos los datos relacionados permanentemente</li>
             </ul>

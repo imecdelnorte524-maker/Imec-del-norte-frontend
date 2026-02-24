@@ -403,20 +403,6 @@
   }
 }
 
-/* Modo oscuro */
-@media (prefers-color-scheme: dark) {
-  .header {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%);
-  }
-  
-  .input,
-  .textarea,
-  .select {
-    background: var(--surface);
-    border-color: var(--border-default);
-  }
-}
-
 /* Reducción de movimiento */
 @media (prefers-reduced-motion: reduce) {
   .input,

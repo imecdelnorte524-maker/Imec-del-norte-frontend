@@ -1,23 +1,13 @@
 // src/hooks/useNotifications.ts
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSocket } from "../context/SocketContext"; 
+import { useSocketEvent } from "./useSocketEvent"; 
 import axios from "axios";
-import { useSocket } from "../context/SocketContext"; // <-- NUEVO
-import { useSocketEvent } from "./useSocketEvent"; // <-- NUEVO
-
-export interface Notification {
-  notificacionId: number;
-  usuarioId: number;
-  tipo: string;
-  titulo: string;
-  mensaje: string;
-  data: any;
-  leida: boolean;
-  fechaCreacion: string;
-}
+import type { Notification } from "../interfaces/NotificationInterfaces";
 
 interface UseNotificationsOptions {
   token: string | null;
-  httpBaseUrl: string; // ej: https://.../api
+  httpBaseUrl: string; 
 }
 
 export function useNotifications({

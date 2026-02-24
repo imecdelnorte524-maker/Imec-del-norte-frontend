@@ -21,11 +21,12 @@ import type {
   Order,
   UpdateOrderData,
   AssociatedEquipment,
+  CostEstado,
 } from "../../interfaces/OrderInterfaces";
 import type { Usuario } from "../../interfaces/UserInterfaces";
 import type { Equipment } from "../../interfaces/EquipmentInterfaces";
 import styles from "../../styles/components/orders/OrderDetail.module.css";
-import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../../utils/sounds";
 import { useAuth } from "../../hooks/useAuth";
 import OrderSignatureModal from "./OrderSignatureModal";
@@ -66,7 +67,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Usaremos siempre la orden recibida por props
   const currentOrder = order;
 
   const {
@@ -87,7 +87,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     (user as any)?.role?.nombreRol || (user as any)?.role || userRole,
   );
 
-  // Quién puede calificar técnicos
   const canRateTechnicians =
     normalizedAuthRole === "admin" || normalizedAuthRole === "supervisor";
 
@@ -101,7 +100,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     RECHAZADA: "Rechazada" as const,
   };
 
-  // ¿Es una orden de Aires Acondicionados?
   const isAirConditioningOrder =
     (currentOrder.servicio.categoria_servicio || "").toLowerCase().trim() ===
     "aires acondicionados";
@@ -125,7 +123,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   const [showInventoryModal, setShowInventoryModal] = useState(false);
-  const [inventoryItems, setInventoryItems] = useState<Inventory[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | "">(
@@ -135,6 +133,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedBillingStatus, setSelectedBillingStatus] =
     useState<BillingEstado>("");
+  const [selectedCostStatus, setSelectedCostStatus] = useState<CostEstado>("");
   const [billingError, setBillingError] = useState<string | null>(null);
 
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
@@ -143,35 +142,27 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     id: null,
   });
 
-  // --- Modal Emergencia ---
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [clientEquipments, setClientEquipments] = useState<Equipment[]>([]);
   const [selectedEmergencyEquipments, setSelectedEmergencyEquipments] =
     useState<number[]>([]);
   const [loadingEquipments, setLoadingEquipments] = useState(false);
 
-  // Técnicos para la emergencia (uno o varios)
   const [selectedEmergencyTechnicians, setSelectedEmergencyTechnicians] =
     useState<number[]>([]);
   const [emergencyLeaderId, setEmergencyLeaderId] = useState<number | null>(
     null,
   );
-
-  // Comentario para la orden de emergencia
   const [emergencyComment, setEmergencyComment] = useState("");
 
-  // dentro del componente
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureLoading, setSignatureLoading] = useState(false);
 
-  // --- Modal Pausa ---
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [pauseObservation, setPauseObservation] = useState("");
 
-  // --- Modal Edición Orden ---
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // --- Modal Inspección AC & Selección Equipo ---
   const [showAcInspectionModal, setShowAcInspectionModal] = useState(false);
   const [showEqSelector, setShowEqSelector] = useState(false);
   const [selectedEquipment, setSelectedEquipment] =
@@ -185,11 +176,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     currentOrder.equipos?.[0]?.equipmentId ?? null,
   );
 
+  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
+
   useEffect(() => {
     setActiveEquipmentId(currentOrder.equipos?.[0]?.equipmentId ?? null);
   }, [currentOrder.orden_id, currentOrder.equipos?.length]);
 
-  // --- Rating ---
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratings, setRatings] = useState<Record<number, number>>({});
   const [ratingError, setRatingError] = useState<string | null>(null);
@@ -220,7 +212,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     } else if (hasBefore && !hasAfter) {
       nextPhase = "AFTER";
     } else {
-      // Ya hay BEFORE y AFTER → abrimos BEFORE para edición
       nextPhase = "BEFORE";
     }
 
@@ -252,7 +243,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   }, [selectedTechnicians, leaderTechnicianId]);
 
-  // Mantener coherencia del líder de emergencia
   useEffect(() => {
     if (
       selectedEmergencyTechnicians.length > 0 &&
@@ -275,28 +265,29 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const hasBillingStatus = currentOrder.estado_facturacion !== "";
 
-  // Solo admin/secretaria puede editar, y solo si la orden no está completada
   const canEditOrderDetails =
     isAdminOrSecretaria &&
     currentOrder.estado !== validStatuses.COMPLETADO &&
     !hasBillingStatus;
 
-  // --- Lógica Inspección AC (por equipo) ---
   const handleStartOrderClick = () => {
     if (isAirConditioningOrder) {
       setAcPhase("BEFORE");
       if (currentOrder.equipos.length === 1) {
-        // Solo un equipo → ir directo al modal de inspección
         setSelectedEquipment(currentOrder.equipos[0]);
         setShowAcInspectionModal(true);
       } else {
-        // Varios equipos → mostrar selector
         setShowEqSelector(true);
       }
     } else {
       handleStatusUpdate(validStatuses.EN_PROCESO);
     }
   };
+
+  const hasReceiptSignature =
+    !!currentOrder.received_by_name &&
+    !!currentOrder.received_by_position &&
+    !!currentOrder.received_by_signature_data;
 
   const handleCompleteOrderClick = () => {
     if (isAirConditioningOrder) {
@@ -309,11 +300,9 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         setAcPhase("AFTER");
 
         if (currentOrder.equipos.length === 1) {
-          // Solo un equipo → ir directo al modal de inspección final
           setSelectedEquipment(currentOrder.equipos[0]);
           setShowAcInspectionModal(true);
         } else {
-          // Varios equipos → abrir selector
           setShowEqSelector(true);
         }
       } else if (!hasReceiptSignature) {
@@ -322,7 +311,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         handleStatusUpdate(validStatuses.COMPLETADO);
       }
     } else {
-      // Flujo normal (no AC)
       if (hasReceiptSignature) {
         handleStatusUpdate(validStatuses.COMPLETADO);
       } else {
@@ -341,7 +329,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     setShowAcInspectionModal(false);
     await refreshData();
 
-    // Si es la primera inspección inicial y la orden no ha iniciado, iniciarla
     if (
       acPhase === "BEFORE" &&
       (currentOrder.estado === "Pendiente" ||
@@ -351,7 +338,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
-  // --- Emergencia ---
   const handleOpenEmergencyModal = async () => {
     setShowEmergencyModal(true);
     setLoadingEquipments(true);
@@ -381,7 +367,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
-  // Cargar equipos del cliente para edición (si no están ya cargados)
   const handleOpenEditModal = async () => {
     setError(null);
     if (
@@ -457,7 +442,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       await refreshData();
       setShowEmergencyModal(false);
 
-      // Navegar a /orders sin query params, pasando el ID por state
       navigate("/orders", {
         state: { initialOrderId: emergencyOrder.orden_id },
       });
@@ -473,7 +457,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
-  // --- Estados y actualizaciones ---
   const handleStatusUpdate = async (
     newStatus: Order["estado"],
     pauseObs?: string,
@@ -512,7 +495,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
-  // Guardar cambios desde el modal de edición (comentarios + equipos)
   const handleSaveOrderDetails = async (changes: {
     comentarios?: string;
     equipmentIds: number[];
@@ -525,7 +507,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       if (changes.comentarios !== undefined) {
         dataToSend.comentarios = changes.comentarios;
       }
-      // Enviamos equipmentIds en camelCase y snake_case por compatibilidad
       if (changes.equipmentIds !== undefined) {
         dataToSend.equipmentIds = changes.equipmentIds;
         dataToSend.equipment_ids = changes.equipmentIds;
@@ -637,12 +618,27 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       setInvoiceError("Seleccione un archivo");
       return;
     }
+    if (!selectedCostStatus) {
+      setInvoiceError("Seleccione el estado de pago");
+      return;
+    }
+
     setInvoiceLoading(true);
     setInvoiceError(null);
     try {
-      await uploadInvoiceRequest(currentOrder.orden_id, invoiceFile);
+      const formData = new FormData();
+      formData.append("file", invoiceFile);
+
+      await uploadInvoiceRequest(
+        currentOrder.orden_id,
+        formData,
+        selectedCostStatus,
+      );
+
       await refreshData();
       setShowInvoiceModal(false);
+      setSelectedCostStatus("");
+      setInvoiceFile(null);
     } catch (err: any) {
       setInvoiceError(err.response?.data?.message || "Error subiendo factura");
     } finally {
@@ -658,10 +654,11 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     try {
       setInventoryLoading(true);
       const data = await inventory.getAllInventory();
-      const availableItems = data.filter((item: Inventory) => {
+      const availableItems = data.filter((item: InventoryItem) => {
         const estadoNormalizado =
           item.tool?.estado?.toLowerCase().trim() ||
-          item.supply?.estado?.toLowerCase().trim();
+          item.supply?.estado?.toLowerCase().trim() ||
+          "";
         return estadoNormalizado === "disponible";
       });
       setInventoryItems(availableItems);
@@ -672,7 +669,34 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
   };
 
-  // ---- Lógica de rating: detección de necesidad de calificar ----
+  const handleMarkAsPaid = async () => {
+    setShowPaymentConfirmModal(true);
+  };
+
+  const confirmMarkAsPaid = async () => {
+    setShowPaymentConfirmModal(false);
+    setLoading(true);
+    setError(null);
+
+    const payload: UpdateOrderData = {
+      estado_pago: "Pagado" as CostEstado,
+    };
+
+    try {
+      await updateOrder.mutateAsync({
+        orderId: currentOrder.orden_id,
+        data: payload,
+      });
+      await refreshData();
+    } catch (err: any) {
+      console.error("Error completo:", err);
+      setError(err.response?.data?.message || "Error al marcar como pagado");
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hasTechnicians =
     currentOrder.technicians && currentOrder.technicians.length > 0;
 
@@ -694,6 +718,10 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       setShowRatingNotice(false);
     }
   }, [needsRating]);
+
+  useEffect(() => {
+    setSelectedCostStatus(currentOrder.estado_pago || "");
+  }, [currentOrder.orden_id, currentOrder.estado_pago]);
 
   const openRatingModal = (action: PendingPostRatingAction) => {
     if (!currentOrder.technicians || currentOrder.technicians.length === 0)
@@ -895,7 +923,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       await refreshData();
       setShowSignatureModal(false);
 
-      // Una vez firmado, completamos la orden
       await handleStatusUpdate(validStatuses.COMPLETADO);
     } catch (err: any) {
       setError(
@@ -906,6 +933,33 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       playErrorSound();
     } finally {
       setSignatureLoading(false);
+    }
+  };
+
+  const handleViewInvoice = async (url: string, orderId: number) => {
+    if (!url) return;
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `factura-${orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Error descargando factura:", error);
+      window.open(url, "_blank");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -932,10 +986,9 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const canUploadInvoice =
     isAdminOrSecretaria &&
     currentOrder.estado === validStatuses.COMPLETADO &&
-    currentOrder.estado_facturacion === "Por facturar" &&
-    !isReadOnly;
+    !currentOrder.factura_pdf_url &&
+    !currentOrder.estado_pago;
 
-  // Asignar inventario se oculta cuando la orden está completada
   const canAssignInventory =
     (isAdminOrSecretaria || isTechnician) &&
     !isReadOnly &&
@@ -948,8 +1001,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     !isReadOnly &&
     currentOrder.estado === validStatuses.COMPLETADO &&
     currentOrder.estado_facturacion === "";
-
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const isTechnicianAssigned =
     user &&
@@ -983,11 +1034,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     (currentOrder.estado === validStatuses.ASIGNADA ||
       currentOrder.estado === validStatuses.EN_PROCESO);
 
-  const hasReceiptSignature =
-    !!currentOrder.received_by_name &&
-    !!currentOrder.received_by_position &&
-    !!currentOrder.received_by_signature_data;
-
   const canEditEvidence =
     !isReadOnly &&
     (isAdminOrSecretaria || (isTechnician && !!isTechnicianAssigned));
@@ -1014,6 +1060,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           >
             {currentOrder.estado}
           </span>
+
+          {/* Badge de estado de facturación */}
           {currentOrder.estado_facturacion !== "" && (
             <span
               className={`${styles.billingBadge} ${getBillingColor(
@@ -1023,15 +1071,41 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
               {currentOrder.estado_facturacion}
             </span>
           )}
+
+          {/* Badge de estado de pago - Por pagar */}
+          {currentOrder.estado_pago === "Por pagar" && (
+            <span className={`${styles.paymentBadge} ${styles.paymentPending}`}>
+              <span className={styles.paymentIcon}>⏳</span>
+              {currentOrder.estado_pago}
+            </span>
+          )}
+
+          {/* Badge de estado de pago - Pagado */}
+          {currentOrder.estado_pago === "Pagado" && (
+            <span className={`${styles.paymentBadge} ${styles.paymentPaid}`}>
+              <span className={styles.paymentIcon}>✓</span>
+              Pagado
+            </span>
+          )}
+
+          {/* Botón de ver factura mejorado */}
           {currentOrder.factura_pdf_url && (
-            <a
-              href={`${apiUrl}${currentOrder.factura_pdf_url}`}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.invoiceLinkButton}
-            >
-              Ver Factura
-            </a>
+            <div className={styles.invoiceActions}>
+              <button
+                onClick={() => {
+                  if (currentOrder.factura_pdf_url) {
+                    handleViewInvoice(
+                      currentOrder.factura_pdf_url,
+                      currentOrder.orden_id,
+                    );
+                  }
+                }}
+                className={styles.invoiceLinkButton}
+              >
+                <span className={styles.invoiceIcon}>📄</span>
+                Ver Factura
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1239,7 +1313,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           </div>
         )}
 
-        {(toolDetails.length > 0 || supplyDetails.length > 0) && (
+        {(toolDetails.length > 0 || supplyDetails.length > 0) && !isClient && (
           <div className={styles.section}>
             <h3>Inventario Asignado</h3>
             {toolDetails.length > 0 && (
@@ -1389,14 +1463,16 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           </button>
         )}
 
-        {canBillingStatus && (
-          <button
-            className={styles.secondaryButton}
-            onClick={handleOpenBillingModal}
-          >
-            Asignar Estado de Facturación
-          </button>
-        )}
+        {canBillingStatus &&
+          !currentOrder.estado_pago &&
+          currentOrder.estado_facturacion !== "" && (
+            <button
+              className={styles.secondaryButton}
+              onClick={handleOpenBillingModal}
+            >
+              Asignar Estado de Facturación
+            </button>
+          )}
 
         {canCreateEmergency && (
           <button
@@ -1408,14 +1484,30 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           </button>
         )}
 
-        {canUploadInvoice && (
-          <button
-            className={styles.invoiceButton}
-            onClick={handleOpenInvoiceModal}
-          >
-            Facturar
-          </button>
-        )}
+        {canUploadInvoice &&
+          currentOrder.estado_facturacion === "Por facturar" && (
+            <button
+              className={styles.invoiceButton}
+              onClick={handleOpenInvoiceModal}
+            >
+              <span className={styles.buttonIcon}>📎</span>
+              Facturar
+            </button>
+          )}
+
+        {/* Botón para marcar como pagado */}
+        {currentOrder.estado_pago === "Por pagar" &&
+          currentOrder.factura_pdf_url &&
+          isAdminOrSecretaria && (
+            <button
+              className={styles.payButton}
+              onClick={handleMarkAsPaid}
+              disabled={loading}
+            >
+              <span className={styles.payButtonIcon}>✓</span>
+              Marcar como Pagado
+            </button>
+          )}
 
         {isAdminOrSecretaria &&
           !isReadOnly &&
@@ -1529,7 +1621,10 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             </div>
 
             <div className={styles.formActions}>
-              <button onClick={() => setShowBillingModal(false)}>
+              <button
+                className={styles.cancelButton}
+                onClick={() => setShowBillingModal(false)}
+              >
                 Cancelar
               </button>
               <button
@@ -1611,17 +1706,79 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       {showInvoiceModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Subir Factura</h3>
+            <div className={styles.modalHeaderRow}>
+              <h3>Subir Factura</h3>
+              <button
+                onClick={() => setShowInvoiceModal(false)}
+                className={styles.modalCloseButton}
+              >
+                ×
+              </button>
+            </div>
+
             {invoiceError && <div className={styles.error}>{invoiceError}</div>}
+
             <form onSubmit={handleUploadInvoice}>
+              {/* SOLO EL SELECT DE ESTADO DE PAGO (NO el de facturación) */}
               <div className={styles.formRow}>
-                <label>Archivo PDF</label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
-                />
+                <label className={styles.formLabel}>Estado de Pago</label>
+                <select
+                  className={styles.paymentStatusSelect}
+                  value={selectedCostStatus}
+                  onChange={(e) =>
+                    setSelectedCostStatus(e.target.value as CostEstado)
+                  }
+                  required
+                >
+                  <option value="">Seleccionar estado...</option>
+                  <option value="Pagado">Pagado</option>
+                  <option value="Por pagar">Por pagar</option>
+                </select>
               </div>
+
+              {/* UPLOAD DE ARCHIVO */}
+              <div className={styles.formRow}>
+                <label className={styles.formLabel}>Archivo PDF</label>
+                <div className={styles.fileUploadContainer}>
+                  <input
+                    type="file"
+                    id="invoice-file"
+                    accept="application/pdf"
+                    onChange={(e) =>
+                      setInvoiceFile(e.target.files?.[0] || null)
+                    }
+                    className={styles.fileInput}
+                  />
+                  <label
+                    htmlFor="invoice-file"
+                    className={styles.fileInputLabel}
+                  >
+                    <span className={styles.fileIcon}>📄</span>
+                    <span className={styles.fileText}>
+                      {invoiceFile
+                        ? invoiceFile.name
+                        : "Seleccionar archivo PDF"}
+                    </span>
+                    <span className={styles.fileButton}>Examinar</span>
+                  </label>
+                </div>
+                {invoiceFile && (
+                  <div className={styles.filePreview}>
+                    <span className={styles.filePreviewIcon}>✓</span>
+                    <span className={styles.filePreviewName}>
+                      {invoiceFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceFile(null)}
+                      className={styles.fileRemoveButton}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className={styles.formActions}>
                 <button
                   type="button"
@@ -1629,8 +1786,14 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                 >
                   Cancelar
                 </button>
-                <button type="submit" disabled={invoiceLoading || !invoiceFile}>
-                  Subir
+                <button
+                  type="submit"
+                  disabled={
+                    invoiceLoading || !invoiceFile || !selectedCostStatus
+                  }
+                  className={styles.submitButton}
+                >
+                  {invoiceLoading ? "Subiendo..." : "Subir Factura"}
                 </button>
               </div>
             </form>
@@ -1855,7 +2018,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                         }}
                       >
                         <option value="">Seleccionar ítem disponible...</option>
-                        {inventoryItems.map((i: Inventory) => (
+                        {inventoryItems.map((i: InventoryItem) => (
                           <option key={i.inventarioId} value={i.inventarioId}>
                             {i.nombreItem} ({i.tipo}) - Stock:{" "}
                             {i.tipo === "insumo"
@@ -1866,7 +2029,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                       </select>
                     </div>
                     {inventoryItems.find(
-                      (i: Inventory) => i.inventarioId === selectedInventoryId,
+                      (i: InventoryItem) =>
+                        i.inventarioId === selectedInventoryId,
                     )?.tipo === "insumo" && (
                       <div className={styles.formRow}>
                         <label>Cantidad a usar</label>
@@ -1881,7 +2045,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                         <small className={styles.helperText}>
                           Máximo disponible:{" "}
                           {inventoryItems.find(
-                            (i: Inventory) =>
+                            (i: InventoryItem) =>
                               i.inventarioId === selectedInventoryId,
                           )?.cantidadActual || 0}
                         </small>
@@ -2081,6 +2245,43 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             <div className={styles.modalActions}>
               <button onClick={handleSubmitRatings} disabled={isSavingRatings}>
                 {isSavingRatings ? "Guardando..." : "Guardar calificaciones"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMACIÓN DE PAGO */}
+      {showPaymentConfirmModal && (
+        <div className={styles.modal}>
+          <div className={styles.confirmationModalContent}>
+            <div className={styles.confirmationIconWrapper}>
+              <span className={styles.confirmationIcon}>💰</span>
+            </div>
+            <h3 className={styles.confirmationTitle}>Confirmar Pago</h3>
+            <p className={styles.confirmationText}>
+              ¿Está seguro de marcar esta orden como pagada?
+            </p>
+            <div className={styles.confirmationActions}>
+              <button
+                className={styles.cancelDeleteButton}
+                onClick={() => setShowPaymentConfirmModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.confirmPayButton}
+                onClick={confirmMarkAsPaid}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className={styles.loadingSpinner}></span>
+                    Procesando...
+                  </>
+                ) : (
+                  "Sí, marcar como pagado"
+                )}
               </button>
             </div>
           </div>

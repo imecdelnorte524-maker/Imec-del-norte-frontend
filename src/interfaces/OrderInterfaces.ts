@@ -14,6 +14,8 @@ export type BillingEstado =
   | "Facturado"
   | "Garantía";
 
+export type CostEstado = "" | "Por pagar" | "Pagado";
+
 export type WorkOrderEvidencePhase = "BEFORE" | "DURING" | "AFTER";
 
 export type AcInspectionPhase = "BEFORE" | "AFTER";
@@ -117,6 +119,7 @@ export interface Order {
   tipo_servicio?: string | null;
   maintenance_type?: MaintenanceType | null;
   estado_facturacion: BillingEstado;
+  estado_pago: CostEstado;
   factura_pdf_url?: string | null;
   isEmergency?: boolean;
   plan_mantenimiento_id?: number | null;
@@ -197,6 +200,7 @@ export interface UpdateOrderData {
   }[];
   equipmentIds?: number[];
   estado_facturacion?: BillingEstado;
+  estado_pago?: CostEstado;
   tipo_servicio?: string;
   maintenance_type_id?: number;
   pause_observation?: string;

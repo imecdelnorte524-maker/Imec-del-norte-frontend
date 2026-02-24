@@ -1,6 +1,6 @@
 /* src/styles/components/roles/RoleModal.module.css */
 .modalOverlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -363,66 +363,6 @@
   .closeButton {
     min-width: 44px;
     min-height: 44px;
-  }
-}
-
-/* Soporte para modo oscuro */
-@media (prefers-color-scheme: dark) {
-  .modal {
-    background: #1f2937;
-    color: #f9fafb;
-  }
-  
-  .modalHeader {
-    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-    border-bottom-color: #4b5563;
-  }
-  
-  .modalHeader h2 {
-    color: #f9fafb;
-    background: none;
-    -webkit-text-fill-color: #f9fafb;
-  }
-  
-  .formGroup label {
-    color: #e5e7eb;
-  }
-  
-  .formGroup input,
-  .formGroup textarea {
-    background: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
-  
-  .formGroup input:focus,
-  .formGroup textarea:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  }
-  
-  .formGroup input:disabled,
-  .formGroup textarea:disabled {
-    background: #4b5563;
-    color: #9ca3af;
-  }
-  
-  .formGroup input::placeholder,
-  .formGroup textarea::placeholder {
-    color: #6b7280;
-  }
-  
-  .modalActions {
-    border-top-color: #374151;
-  }
-  
-  .closeButton {
-    color: #9ca3af;
-  }
-  
-  .closeButton:hover {
-    background: #7f1d1d;
-    color: #fca5a5;
   }
 }
 

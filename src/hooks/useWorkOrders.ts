@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getSocket, connectSocket } from "../lib/socket";
 import { useSocketEvent } from "./useSocketEvent";
-import api from "../lib/axios";
+import api from "../api/axios";
 import type { Order } from "../interfaces/OrderInterfaces";
 
 export function useWorkOrders() {

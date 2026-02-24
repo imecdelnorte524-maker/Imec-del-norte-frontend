@@ -5,16 +5,21 @@ import { toolsApi } from "../api/tools";
 import { suppliesApi } from "../api/supplies";
 import { warehouses as warehousesApi } from "../api/warehouses";
 import { unitMeasureApi } from "../api/unit-measure";
-import type {
-  Inventory,
-  Herramienta,
-  Insumo,
-  Warehouse,
-  UnitMeasure,
-} from "../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../utils/sounds";
 import { useSocketEvent } from "./useSocketEvent";
 import { useSocket } from "../context/SocketContext";
+
+// Tipos de dominio
+import type {
+  InventoryItem,
+  Warehouse,
+  UnitMeasure,
+} from "../interfaces/InventoryInterfaces";
+import type { Tool as Herramienta } from "../interfaces/ToolsInterfaces";
+import type { Supply as Insumo } from "../interfaces/SuppliesInterfaces";
+
+// Alias para mantener compatibilidad con nombres usados en el código
+type Inventory = InventoryItem;
 
 // Hook para obtener todo el inventario
 export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
@@ -46,6 +51,7 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
     loadInventory();
   };
 
+  // 🔴 Tiempo real desde inventario
   useSocketEvent(socket, "inventory.created", reloadOnChange);
   useSocketEvent(socket, "inventory.updated", reloadOnChange);
   useSocketEvent(socket, "inventory.deleted", reloadOnChange);
@@ -53,13 +59,14 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
   useSocketEvent(socket, "inventory.stockUpdated", reloadOnChange);
   useSocketEvent(socket, "inventory.restored", reloadOnChange);
 
-  // También nos interesan cambios directos de insumos/herramientas
+  // 🔴 Tiempo real desde insumos
   useSocketEvent(socket, "supplies.created", reloadOnChange);
   useSocketEvent(socket, "supplies.updated", reloadOnChange);
   useSocketEvent(socket, "supplies.deleted", reloadOnChange);
   useSocketEvent(socket, "supplies.stockUpdated", reloadOnChange);
   useSocketEvent(socket, "supplies.restored", reloadOnChange);
 
+  // 🔴 Tiempo real desde herramientas
   useSocketEvent(socket, "tools.created", reloadOnChange);
   useSocketEvent(socket, "tools.updated", reloadOnChange);
   useSocketEvent(socket, "tools.deleted", reloadOnChange);
@@ -74,11 +81,14 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
     }
 
     let filtered = inventory;
+
+    // ⚠️ Ahora filtramos por `tipo` que viene del backend ('insumo' | 'herramienta')
     if (filter === "herramientas") {
-      filtered = inventory.filter((item) => !!item.herramientaId);
+      filtered = inventory.filter((item) => item.tipo === "herramienta");
     } else if (filter === "insumos") {
-      filtered = inventory.filter((item) => !!item.insumoId);
+      filtered = inventory.filter((item) => item.tipo === "insumo");
     }
+
     setFilteredInventory(filtered);
   }, [inventory, filter]);
 
@@ -265,7 +275,7 @@ export const useWarehouses = (includeInactive = false) => {
 export const useUnitMeasures = () => {
   const [units, setUnits] = useState<UnitMeasure[]>([]);
   const [loading, setLoading] = useState(true);
-  const socket = useSocket(); // <-- NUEVO
+  const socket = useSocket();
 
   const loadUnits = () => {
     unitMeasureApi

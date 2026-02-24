@@ -133,6 +133,16 @@ export default function MotorEditForm({
             placeholder="Ej: 60 Hz"
           />
         </div>
+        <div className={styles.formField}>
+          <label>Número de Parte</label>
+          <input
+            name=">Número de Parte"
+            value={motor.numero_parte || ""}
+            onChange={onChange}
+            disabled={saving}
+            placeholder="Ej: 60 Hz"
+          />
+        </div>
       </div>
     </div>
   );

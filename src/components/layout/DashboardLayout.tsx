@@ -10,10 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useNavigate, useLocation } from "react-router-dom";
 import styles from "../../styles/components/layouts/DashboardLayout.module.css";
 import useClickOutside from "../../hooks/useClickOutside";
-import {
-  useNotifications,
-  type Notification,
-} from "../../hooks/useNotifications";
+import { useNotifications } from "../../hooks/useNotifications";
 import { useModules } from "../../hooks/useModules";
 import type { Module as ModuleInterface } from "../../interfaces/ModulesInterfaces";
 import type { Rol } from "../../interfaces/RolesInterfaces";
@@ -45,6 +42,7 @@ import {
   ShoppingBagIcon,
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/outline";
+import { NotificationsDropdown } from "../notifications/NotificationsDropdown";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -450,44 +448,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setShowProfileReminder(false);
   }, [navigate]);
 
-  const getNotificationTargetPath = useCallback(
-    (notif: Notification): string | null => {
-      switch (notif.tipo) {
-        case "WORK_ORDER_CREATED":
-        case "WORK_ORDER_ASSIGNED": {
-          const id =
-            notif.data?.workOrderId ?? notif.data?.ordenId ?? notif.data?.id;
-          if (id) {
-            return `/orders?ordenId=${id}`;
-          }
-          return "/orders";
-        }
-        case "STOCK_BELOW_MIN": {
-          return "/inventory";
-        }
-        default:
-          return null;  
-      }
-    },
-    [],
-  );
-
-  const handleNotificationClick = useCallback(
-    (notif: Notification) => {
-      if (!notif.leida) {
-        markAsRead(notif.notificacionId);
-      }
-
-      const target = getNotificationTargetPath(notif);
-      if (target) {
-        navigate(target);
-      }
-
-      setShowNotifications(false);
-    },
-    [markAsRead, getNotificationTargetPath, navigate],
-  );
-
   const getUserInitials = useCallback(() => {
     if (!user) return "U";
     return `${user.nombre?.charAt(0) || ""}${
@@ -733,50 +693,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               </button>
 
               {showNotifications && (
-                <div className={styles.notificationsDropdown}>
-                  <div className={styles.notificationsHeader}>
-                    <span>Notificaciones</span>
-                    {notifications.length > 0 && (
-                      <button
-                        type="button"
-                        className={styles.markAllReadButton}
-                        onClick={markAllAsRead}
-                      >
-                        Marcar todas como leídas
-                      </button>
-                    )}
-                  </div>
-
-                  {notifications.length === 0 ? (
-                    <div className={styles.noNotifications}>
-                      No hay notificaciones
-                    </div>
-                  ) : (
-                    <ul className={styles.notificationsList}>
-                      {notifications.map((n) => (
-                        <li
-                          key={n.notificacionId}
-                          className={
-                            n.leida
-                              ? styles.notificationItemRead
-                              : styles.notificationItemUnread
-                          }
-                          onClick={() => handleNotificationClick(n)}
-                        >
-                          <div className={styles.notificationTitle}>
-                            {n.titulo}
-                          </div>
-                          <div className={styles.notificationMessage}>
-                            {n.mensaje}
-                          </div>
-                          <div className={styles.notificationDate}>
-                            {new Date(n.fechaCreacion).toLocaleString()}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                <NotificationsDropdown
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  onMarkAsRead={markAsRead}
+                  onMarkAllAsRead={markAllAsRead}
+                  onClose={() => setShowNotifications(false)}
+                />
               )}
             </div>
 

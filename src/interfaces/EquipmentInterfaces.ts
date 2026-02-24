@@ -33,6 +33,7 @@ export interface MotorData {
   diametroPolea?: string;
   capacidadHp?: string;
   frecuencia?: string;
+  numero_parte?: string;
 }
 
 export interface CompressorData {

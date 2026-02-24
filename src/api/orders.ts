@@ -15,6 +15,7 @@ import type {
   WorkOrderImage,
   AcInspection,
   WorkOrderEvidencePhase,
+  CostEstado,
 } from "../interfaces/OrderInterfaces";
 
 export interface CreateAcInspectionPayload {
@@ -41,7 +42,6 @@ const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
   if (!apiEstado) return "Pendiente";
 
   switch (apiEstado) {
-    // Estados que vienen de /work-orders (enum textual)
     case "Solicitada sin asignar":
       return "Pendiente";
     case "Solicitada asignada":
@@ -49,7 +49,7 @@ const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
     case "En proceso":
       return "En Proceso";
     case "En pausa":
-      return "Pausada"; // 👈 lo mostramos como "Pausada" en la UI
+      return "Pausada";
     case "Finalizada":
       return "Completado";
     case "Cancelada":
@@ -58,6 +58,7 @@ const mapStatusFromApi = (apiEstado: string | undefined): Order["estado"] => {
     case "Pendiente":
     case "Asignada":
     case "En Proceso":
+    case "Pausada":
     case "Rechazada":
       return apiEstado as Order["estado"];
 
@@ -93,6 +94,12 @@ const mapBillingFromApi = (
   if (apiEstado === "Facturado") return "Facturado";
   if (apiEstado === "Garantía") return "Garantía";
   if (apiEstado === "Sin facturar") return "Sin facturar";
+  return "";
+};
+
+const mapCostFromApi = (apiEstado: string | null | undefined): CostEstado => {
+  if (apiEstado === "Por pagar") return "Por pagar";
+  if (apiEstado === "Pagado") return "Pagado";
   return "";
 };
 
@@ -265,6 +272,9 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
       : null,
     estado_facturacion: mapBillingFromApi(
       apiOrder.estadoFacturacion ?? apiOrder.estado_facturacion,
+    ),
+    estado_pago: mapCostFromApi(
+      apiOrder.estadoPago ?? apiOrder.estado_facturacion,
     ),
     factura_pdf_url: apiOrder.facturaPdfUrl || apiOrder.factura_pdf_url || null,
     isEmergency: apiOrder.isEmergency || false,
@@ -606,7 +616,10 @@ export const updateOrderRequest = async (
   if (updateData.maintenance_type_id !== undefined)
     payload.maintenanceTypeId = updateData.maintenance_type_id;
   if (updateData.pause_observation !== undefined)
-    payload.pauseObservation = updateData.pause_observation; // 👈 este nombre coincide con DTO backend
+    payload.pauseObservation = updateData.pause_observation;
+  if (updateData.estado_pago !== undefined) {
+    payload.estadoPago = updateData.estado_pago;
+  }
 
   const response = await api.patch(`/work-orders/${orderId}`, payload);
   const apiOrder = response.data?.data;
@@ -688,10 +701,12 @@ export const rejectOrderRequest = async (
 
 export const uploadInvoiceRequest = async (
   orderId: number,
-  file: File,
+  formData: FormData,
+  estadoPago?: string,
 ): Promise<Order> => {
-  const formData = new FormData();
-  formData.append("file", file);
+  if (estadoPago) {
+    formData.append("estadoPago", estadoPago);
+  }
   const response = await api.post(`/work-orders/${orderId}/invoice`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });

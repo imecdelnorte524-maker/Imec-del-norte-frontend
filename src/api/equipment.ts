@@ -43,6 +43,7 @@ const mapMotor = (motor: any): MotorData => ({
   amperaje: motor.amperaje,
   voltaje: motor.voltaje,
   numeroFases: motor.numeroFases,
+  numero_parte: motor.numero_parte,
   diametroEje: motor.diametroEje,
   tipoEje: motor.tipoEje,
   rpm: motor.rpm,
@@ -387,6 +388,8 @@ export const updateEquipmentRequest = async (
   data: UpdateEquipmentData,
 ): Promise<Equipment> => {
   const payload = prepareEquipmentForBackend(data);
+
+  console.log("Payload enviado:", JSON.stringify(payload, null, 2));
   const response = await api.patch<EquipmentResponse>(
     `/equipment/${equipmentId}`,
     payload,

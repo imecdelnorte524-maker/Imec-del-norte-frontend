@@ -21,9 +21,7 @@ export default function AdminOrdersView({
   initialOrderId,
 }: Props) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [filter, setFilter] = useState<
-    "all" | "pending" | "assigned" | "completed" | "cancelled"
-  >("all");
+
 
   const isAdmin = userRole === "admin";
 
@@ -61,18 +59,6 @@ export default function AdminOrdersView({
       <div className={styles.header}>
         <h1>Gestión de Órdenes de Servicio</h1>
         <div className={styles.actions}>
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as any)}
-            className={styles.filterSelect}
-          >
-            <option value="all">Todas las órdenes</option>
-            <option value="pending">Pendientes de asignación</option>
-            <option value="assigned">Asignadas</option>
-            <option value="completed">Completadas</option>
-            <option value="cancelled">Canceladas</option>
-          </select>
-
           {isAdmin && (
             <button className={styles.createButton} onClick={handleCreateOrder}>
               + Crear Orden
@@ -84,7 +70,6 @@ export default function AdminOrdersView({
       <OrderList
         userRole="admin"
         onViewOrder={handleViewOrder}
-        filter={filter}
         initialOrderId={initialOrderId}
       />
     </div>

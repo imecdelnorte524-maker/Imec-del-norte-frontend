@@ -1,16 +1,20 @@
+/* src/styles/components/orders/OrderList.module.css */
+
+/* CONTENEDOR PRINCIPAL */
 .container {
   padding: var(--spacing-lg);
   box-sizing: border-box;
 }
 
+/* GRID DE ÓRDENES */
 .ordersGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: var(--spacing-lg);
   margin-top: var(--spacing-lg);
 }
 
-/* Tarjeta de orden */
+/* TARJETA DE ORDEN */
 .orderCard {
   background: var(--white);
   border: 1px solid var(--gray-200);
@@ -32,7 +36,7 @@
   border-color: var(--primary-300);
 }
 
-/* Bordes laterales de tarjeta por estado */
+/* Borde lateral por estado */
 .orderCardPending {
   border-left: 4px solid #efd11b;
 }
@@ -55,6 +59,7 @@
   border-left: 4px solid #06d99d;
 }
 
+/* HEADER DE TARJETA */
 .cardHeader {
   display: flex;
   justify-content: space-between;
@@ -83,6 +88,7 @@
   max-width: 100%;
 }
 
+/* INFORMACIÓN SERVICIO */
 .serviceInfo {
   margin-bottom: var(--spacing-md);
   display: flex;
@@ -96,7 +102,7 @@
   font-size: var(--font-size-sm);
 }
 
-/* FILA DE TAGS (Tipo Servicio + H/I) */
+/* TAGS DE SERVICIO / INVENTARIO / TÉCNICOS */
 .tagsRow {
   display: flex;
   flex-wrap: wrap;
@@ -116,6 +122,12 @@
   font-weight: 500;
 }
 
+.maintenanceTypeTag {
+  background-color: var(--primary-50);
+  border-color: var(--primary-200);
+  color: var(--primary-700);
+}
+
 .inventoryIndicator {
   display: inline-flex;
   align-items: center;
@@ -133,6 +145,19 @@
   margin-left: 4px;
 }
 
+.technicianCountTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+/* INFORMACIÓN CLIENTE / TÉCNICO / UBICACIÓN */
 .clientInfo {
   display: flex;
   flex-direction: column;
@@ -150,6 +175,12 @@
   gap: 6px;
 }
 
+.clientIcon {
+  margin-right: 2px;
+  font-size: 1rem;
+}
+
+/* FECHAS */
 .dates {
   display: flex;
   gap: var(--spacing-md);
@@ -165,6 +196,7 @@
   border-radius: 4px;
 }
 
+/* FOOTER TARJETA */
 .cardFooter {
   display: flex;
   justify-content: space-between;
@@ -181,6 +213,7 @@
   flex-wrap: wrap;
 }
 
+/* BADGES DE ESTADO */
 .status,
 .billingBadge {
   padding: 4px 10px;
@@ -194,7 +227,7 @@
 .statusPending {
   background: #fffbeb;
   color: #d97706;
-  border: 1px solid #fbff1c;
+  border: 1px solid #fde68a;
 }
 .statusInProgress {
   background: #dbeafe;
@@ -232,7 +265,13 @@
   color: #3f6212;
   border: 1px solid #d9f99d;
 }
+.billingWarranty {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+}
 
+/* BOTÓN VER DETALLES */
 .viewButton {
   background: var(--white);
   color: var(--primary-600);
@@ -250,6 +289,7 @@
   border-color: var(--primary-400);
 }
 
+/* ESTADOS GENERALES */
 .loading,
 .error,
 .emptyState {
@@ -257,36 +297,50 @@
   padding: var(--spacing-3xl);
   color: var(--gray-500);
 }
+
 .error {
   color: #dc2626;
   background: #fef2f2;
   border-radius: 8px;
 }
+
 .emptyState {
   background: var(--gray-50);
   border-radius: 8px;
   border: 2px dashed var(--gray-300);
 }
 
+/* RESPONSIVE TARJETAS */
+@media (max-width: 900px) {
+  .ordersGrid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .ordersGrid {
     grid-template-columns: 1fr;
   }
+
   .cardFooter {
     flex-direction: column;
     align-items: stretch;
   }
+
   .viewButton {
     width: 100%;
     text-align: center;
     margin-top: 8px;
   }
+
   .statusRow {
     justify-content: space-between;
     width: 100%;
   }
 }
-/* Filtros - Adaptados a tu sistema de diseño */
+
+/* BARRA DE FILTROS */
+
 .filtersBar {
   margin-bottom: var(--spacing-lg);
 }
@@ -298,7 +352,6 @@
   border-radius: var(--border-radius);
   cursor: pointer;
   font-weight: 500;
-  margin-bottom: var(--spacing-sm);
   width: 100%;
   text-align: left;
   display: flex;
@@ -306,6 +359,7 @@
   gap: var(--spacing-sm);
   color: var(--gray-700);
   transition: all 0.2s;
+  position: relative;
 }
 
 .toggleFiltersButton:hover {
@@ -313,15 +367,26 @@
   border-color: var(--gray-400);
 }
 
-.toggleFiltersButton:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-}
-
 .toggleFiltersIcon {
   font-size: 0.8rem;
-  transition: transform 0.2s;
 }
+
+.filterBadge {
+  background-color: var(--primary-600);
+  color: white;
+  border-radius: var(--border-radius-full);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+/* CONTENEDOR DE FILTROS */
 
 .filtersContainer {
   background-color: var(--gray-50);
@@ -329,11 +394,14 @@
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
+  animation: fadeIn 0.25s ease-out;
 }
+
+/* GRID DE FILTROS */
 
 .filterGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
 }
@@ -379,6 +447,14 @@
   opacity: 0.7;
 }
 
+.activeFilter {
+  border-color: var(--primary-500) !important;
+  background-color: var(--primary-50) !important;
+  font-weight: 500;
+}
+
+/* ACCIONES DE FILTROS */
+
 .filterActions {
   display: flex;
   justify-content: space-between;
@@ -390,7 +466,7 @@
 }
 
 .clearFilters {
-  background-color:var(--primary-500);
+  background-color: var(--primary-500);
   color: white;
   border: none;
   padding: var(--spacing-sm) var(--spacing-lg);
@@ -402,12 +478,7 @@
 }
 
 .clearFilters:hover {
-  background-color: var(--primary-500);
-}
-
-.clearFilters:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--primary-100);
+  background-color: var(--primary-600);
 }
 
 .resultsCount {
@@ -419,96 +490,28 @@
   border-radius: var(--border-radius-full);
 }
 
-/* Nuevos estilos agregados */
-.maintenanceTypeTag {
-  background-color: var(--primary-50) !important;
-  border-color: var(--primary-200) !important;
-  color: var(--primary-700) !important;
-}
+/* FILTROS: CHECKBOX (SOLO MÍAS) */
 
-.technicianCountTag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  background-color: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
-  border-radius: 4px;
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-}
-
-.billingWarranty {
-  background: #f3e8ff;
-  color: #6b21a8;
-  border: 1px solid #d8b4fe;
-}
-
-.clientIcon {
-  margin-right: 4px;
-  font-size: 1rem;
-}
-
-.paginationContainer {
-  margin-top: var(--spacing-xl);
+.checkboxLabel {
   display: flex;
-  justify-content: center;
-}
-
-.clearFiltersEmpty {
-  background-color: var(--gray-500);
-  color: white;
-  border: none;
-  padding: var(--spacing-sm) var(--spacing-xl);
-  border-radius: var(--border-radius);
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
   font-size: var(--font-size-sm);
-  font-weight: 500;
-  transition: all 0.2s;
-  margin-top: var(--spacing-md);
+  color: var(--gray-700);
+  padding: 6px 0;
 }
 
-.clearFiltersEmpty:hover {
-  background-color: var(--gray-600);
+.checkboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-600);
+  margin: 0;
 }
 
-/* Animaciones */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* JERARQUÍA ÁREAS / SUBÁREAS */
 
-.filtersContainer {
-  animation: fadeIn 0.3s ease;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .filterGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .filterActions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .clearFilters {
-    width: 100%;
-  }
-
-  .resultsCount {
-    text-align: center;
-  }
-}
-
-/* Estilos para jerarquía */
 .hierarchyDisplay {
   background-color: var(--gray-50);
   border: 1px solid var(--gray-200);
@@ -538,24 +541,8 @@
   transition: all 0.2s;
 }
 
-.clearSubAreaButton:hover {
-  background-color: var(--gray-200);
-  border-color: var(--gray-400);
-}
+/* BUSCADOR DE EMPRESAS */
 
-/* Responsive */
-@media (max-width: 768px) {
-  .hierarchyDisplay {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .hierarchyItem:first-of-type {
-    margin-left: 0;
-  }
-}
-
-/* Estilos para el buscador de empresas */
 .companySearchWrapper {
   position: relative;
   width: 100%;
@@ -587,7 +574,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  max-height: 300px;
+  max-height: 260px;
   overflow-y: auto;
   background-color: var(--white);
   border: 1px solid var(--gray-300);
@@ -659,9 +646,118 @@
   text-align: right;
 }
 
-/* Responsive */
+/* ESTADO VACÍO: BOTÓN LIMPIAR FILTROS */
+
+.clearFiltersEmpty {
+  background-color: var(--gray-500);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-xl);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s;
+  margin-top: var(--spacing-md);
+}
+
+.clearFiltersEmpty:hover {
+  background-color: var(--gray-600);
+}
+
+/* PAGINACIÓN */
+
+.paginationContainer {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  justify-content: center;
+}
+
+/* ANIMACIONES */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* RESPONSIVE FILTROS */
+
+@media (max-width: 1624px) {
+  .filterGrid {
+    display: block;
+    grid-template-columns: 1fr;
+  }
+  .filterGroup {
+    width: 95%;
+  }
+}
 @media (max-width: 768px) {
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filterActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .clearFilters {
+    width: 100%;
+  }
+
+  .resultsCount {
+    text-align: center;
+  }
+
+  .hierarchyDisplay {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .companySearchResults {
     max-height: 200px;
+  }
+}
+
+/* PEQUEÑO (MÓVIL) */
+
+@media (max-width: 480px) {
+  .filterInput,
+  .filterSelect,
+  .companySearchInput {
+    padding: 10px;
+    font-size: 16px;
+  }
+
+  .checkboxLabel {
+    font-size: var(--font-size-xs);
+  }
+
+  .checkboxLabel input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* LANDSCAPE MÓVIL */
+
+@media (max-width: 896px) and (orientation: landscape) {
+  .filtersContainer {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}
+
+/* PANTALLAS GRANDES */
+
+@media (min-width: 1400px) {
+  .filterGrid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   }
 }

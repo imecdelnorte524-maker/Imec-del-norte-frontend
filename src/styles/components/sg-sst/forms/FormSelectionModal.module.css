@@ -1,6 +1,6 @@
 /* src/styles/components/sg-sst/FormSelectionModal.module.css */
 .overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -353,7 +353,7 @@
 /* Asegurar que no haya scroll horizontal */
 body.modal-open {
   overflow: hidden;
-  position: fixed;
+  position: absolute;
   width: 100%;
   height: 100%;
 }

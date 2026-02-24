@@ -1,0 +1,347 @@
+/* src/styles/components/notifications/NotificationsDropdown.module.css */
+
+.dropdown {
+  position: absolute;;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 400px;
+  max-width: 90vw;
+  background: white;
+  border-radius: 12px;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e5e7eb;
+  z-index: 1000;
+  overflow: hidden;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header */
+.header {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.markAllReadButton {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.markAllReadButton:hover {
+  background: #eff6ff;
+}
+
+/* Filtros */
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+
+.filters::-webkit-scrollbar {
+  height: 4px;
+}
+
+.filters::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.filters::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  background: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+}
+
+.filterButton:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.filterButtonActive {
+  background: #2563eb !important;
+  color: white !important;
+  border-color: #2563eb !important;
+}
+
+.filterIcon {
+  font-size: 0.875rem;
+}
+
+.filterBadge {
+  margin-left: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  background: #ef4444;
+  color: white;
+  border-radius: 12px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Lista de notificaciones */
+.notificationsList {
+  max-height: 500px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.notificationsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notificationsList::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.notificationsList::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.emptyState {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.emptyIcon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Grupo por módulo */
+.moduleGroup {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.moduleGroup:last-child {
+  border-bottom: none;
+}
+
+.moduleHeader {
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  border-bottom: 1px solid transparent;
+}
+
+.moduleHeader:hover {
+  filter: brightness(0.98);
+}
+
+.moduleHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.moduleIcon {
+  font-size: 1rem;
+}
+
+.moduleName {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.moduleBadge {
+  padding: 0.125rem 0.375rem;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.625rem;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.moduleCount {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Item de notificación */
+.notificationItem {
+  padding: 0.75rem 1rem 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  background: white;
+}
+
+.notificationItem:hover {
+  background: #f9fafb;
+}
+
+.notificationItemUnread {
+  background: #f8fafc;
+}
+
+.notificationContent {
+  width: 100%;
+}
+
+.notificationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.25rem;
+}
+
+.notificationTitle {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #111827;
+  flex: 1;
+}
+
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.notificationMessage {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin: 0.25rem 0;
+  line-height: 1.4;
+}
+
+.notificationFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.375rem;
+}
+
+.notificationTime {
+  font-size: 0.625rem;
+  color: #9ca3af;
+}
+
+.markReadButton {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.625rem;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.markReadButton:hover {
+  background: #eff6ff;
+}
+
+/* Botón "Ver más" */
+.viewMoreButton {
+  width: 100%;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  color: #2563eb;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewMoreButton:hover {
+  background: #f3f4f6;
+}
+
+/* Footer */
+.footer {
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  text-align: right;
+}
+
+.footerText {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .dropdown {
+    position: absolute;
+    top: 70px;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 90px);
+  }
+
+  .filterButton {
+    padding: 0.375rem 0.625rem;
+  }
+
+  .filterIcon {
+    margin-right: 0;
+  }
+}
