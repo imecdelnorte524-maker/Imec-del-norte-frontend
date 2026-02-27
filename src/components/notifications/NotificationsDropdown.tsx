@@ -69,12 +69,6 @@ export function NotificationsDropdown({
   }, [groupedNotifications, selectedFilter]);
 
   const handleNotificationClick = (notif: Notification) => {
-    console.log("🔔 Click en notificación:", {
-      id: notif.notificacionId,
-      tipo: notif.tipo,
-      data: notif.data,
-    });
-
     if (!notif.leida) {
       onMarkAsRead(notif.notificacionId);
     }
@@ -83,7 +77,6 @@ export function NotificationsDropdown({
     if (notif.tipo.startsWith("WORK_ORDER")) {
       const id = notif.data?.workOrderId ?? notif.data?.ordenId;
       if (id) {
-        console.log("📦 Navegando a orden:", id);
         navigate(`/orders/?ordenId=${id}`); // 👏 IGUAL QUE EN TU EJEMPLO
       } else {
         navigate("/orders");

@@ -1,7 +1,5 @@
-/* src/styles/components/notifications/NotificationsDropdown.module.css */
-
 .dropdown {
-  position: absolute;;
+  position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
   width: 400px;
@@ -58,10 +56,15 @@
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .markAllReadButton:hover {
   background: #eff6ff;
+}
+
+.markAllReadButton:active {
+  transform: scale(0.95);
 }
 
 /* Filtros */
@@ -71,6 +74,7 @@
   overflow-x: auto;
   padding-bottom: 0.25rem;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling en iOS */
 }
 
 .filters::-webkit-scrollbar {
@@ -101,11 +105,17 @@
   transition: all 0.2s;
   white-space: nowrap;
   position: relative;
+  user-select: none; /* Evita selección accidental en móviles */
+  -webkit-tap-highlight-color: transparent; /* Quita el highlight en móviles */
 }
 
 .filterButton:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
+}
+
+.filterButton:active {
+  transform: scale(0.95);
 }
 
 .filterButtonActive {
@@ -116,6 +126,7 @@
 
 .filterIcon {
   font-size: 0.875rem;
+  line-height: 1;
 }
 
 .filterBadge {
@@ -128,6 +139,7 @@
   font-weight: 600;
   min-width: 18px;
   text-align: center;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
 /* Lista de notificaciones */
@@ -135,6 +147,7 @@
   max-height: 500px;
   overflow-y: auto;
   scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .notificationsList::-webkit-scrollbar {
@@ -181,10 +194,16 @@
   transition: all 0.2s;
   background: white;
   border-bottom: 1px solid transparent;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .moduleHeader:hover {
-  filter: brightness(0.98);
+  background: #f9fafb;
+}
+
+.moduleHeader:active {
+  background: #f3f4f6;
 }
 
 .moduleHeaderLeft {
@@ -195,6 +214,7 @@
 
 .moduleIcon {
   font-size: 1rem;
+  line-height: 1;
 }
 
 .moduleName {
@@ -211,6 +231,7 @@
   font-weight: 600;
   min-width: 18px;
   text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .moduleCount {
@@ -225,14 +246,21 @@
   transition: all 0.2s;
   border-left: 3px solid transparent;
   background: white;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .notificationItem:hover {
   background: #f9fafb;
 }
 
+.notificationItem:active {
+  background: #f3f4f6;
+}
+
 .notificationItemUnread {
   background: #f8fafc;
+  border-left-color: #2563eb;
 }
 
 .notificationContent {
@@ -244,6 +272,7 @@
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 0.25rem;
+  gap: 0.5rem;
 }
 
 .notificationTitle {
@@ -251,14 +280,17 @@
   font-size: 0.8125rem;
   color: #111827;
   flex: 1;
+  word-break: break-word;
 }
 
 .unreadDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: #2563eb;
   flex-shrink: 0;
   margin-left: 0.5rem;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 .notificationMessage {
@@ -266,6 +298,7 @@
   color: #4b5563;
   margin: 0.25rem 0;
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .notificationFooter {
@@ -278,6 +311,15 @@
 .notificationTime {
   font-size: 0.625rem;
   color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.notificationTime::before {
+  content: "🕒";
+  font-size: 0.5rem;
+  opacity: 0.7;
 }
 
 .markReadButton {
@@ -286,30 +328,44 @@
   color: #2563eb;
   font-size: 0.625rem;
   cursor: pointer;
-  padding: 0.125rem 0.25rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 4px;
   transition: all 0.2s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .markReadButton:hover {
   background: #eff6ff;
 }
 
+.markReadButton:active {
+  background: #dbeafe;
+  transform: scale(0.95);
+}
+
 /* Botón "Ver más" */
 .viewMoreButton {
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.75rem;
   background: #f9fafb;
   border: none;
   border-top: 1px solid #e5e7eb;
   color: #2563eb;
   font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .viewMoreButton:hover {
   background: #f3f4f6;
+}
+
+.viewMoreButton:active {
+  background: #e5e7eb;
 }
 
 /* Footer */
@@ -325,23 +381,333 @@
   color: #6b7280;
 }
 
-/* Responsive */
-@media (max-width: 640px) {
+/* =========================================
+   RESPONSIVE - TABLET (768px - 1024px)
+   ========================================= */
+@media (min-width: 769px) and (max-width: 1024px) {
   .dropdown {
-    position: absolute;
+    width: 380px;
+    max-width: 90vw;
+  }
+
+  .header {
+    padding: 0.875rem;
+  }
+
+  .title {
+    font-size: 0.9375rem;
+  }
+
+  .filterButton {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.7rem;
+  }
+
+  .notificationsList {
+    max-height: 450px;
+  }
+
+  .notificationItem {
+    padding: 0.625rem 0.875rem 0.625rem 1.25rem;
+  }
+
+  .notificationTitle {
+    font-size: 0.75rem;
+  }
+
+  .notificationMessage {
+    font-size: 0.7rem;
+  }
+}
+
+/* =========================================
+   RESPONSIVE - MÓVIL GRANDE (481px - 768px)
+   ========================================= */
+@media (min-width: 481px) and (max-width: 768px) {
+  .dropdown {
+    position: fixed;
     top: 70px;
     left: 1rem;
     right: 1rem;
     width: auto;
     max-width: none;
-    max-height: calc(100vh - 90px);
+    max-height: calc(100vh - 100px);
+    margin: 0 auto;
+  }
+
+  .header {
+    padding: 0.875rem;
+  }
+
+  .headerTop {
+    margin-bottom: 0.875rem;
+  }
+
+  .title {
+    font-size: 0.9375rem;
+  }
+
+  .filters {
+    gap: 0.375rem;
   }
 
   .filterButton {
     padding: 0.375rem 0.625rem;
+    font-size: 0.7rem;
   }
 
   .filterIcon {
-    margin-right: 0;
+    font-size: 0.8rem;
   }
+
+  .notificationsList {
+    max-height: calc(100vh - 250px);
+  }
+
+  .moduleHeader {
+    padding: 0.625rem 0.875rem;
+  }
+
+  .moduleName {
+    font-size: 0.8125rem;
+  }
+
+  .notificationItem {
+    padding: 0.625rem 0.875rem 0.625rem 1.25rem;
+  }
+
+  .notificationTitle {
+    font-size: 0.75rem;
+  }
+
+  .notificationMessage {
+    font-size: 0.6875rem;
+    line-height: 1.3;
+  }
+
+  .notificationTime {
+    font-size: 0.5625rem;
+  }
+
+  .viewMoreButton {
+    padding: 0.625rem;
+  }
+}
+
+/* =========================================
+   RESPONSIVE - MÓVIL PEQUEÑO (≤480px)
+   ========================================= */
+@media (max-width: 480px) {
+  .dropdown {
+    position: fixed;
+    top: 60px;
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-width: none;
+    max-height: calc(100vh - 80px);
+    border-radius: 8px;
+  }
+
+  .header {
+    padding: 0.75rem;
+  }
+
+  .headerTop {
+    margin-bottom: 0.75rem;
+  }
+
+  .title {
+    font-size: 0.875rem;
+  }
+
+  .markAllReadButton {
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.375rem;
+  }
+
+  .filters {
+    gap: 0.25rem;
+  }
+
+  .filterButton {
+    padding: 0.3125rem 0.5rem;
+    font-size: 0.625rem;
+    gap: 0.25rem;
+  }
+
+  .filterIcon {
+    font-size: 0.75rem;
+  }
+
+  .filterBadge {
+    padding: 0.0625rem 0.25rem;
+    font-size: 0.5rem;
+    min-width: 16px;
+  }
+
+  .notificationsList {
+    max-height: calc(100vh - 200px);
+  }
+
+  .emptyState {
+    padding: 2rem 0.75rem;
+  }
+
+  .emptyIcon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .emptyState p {
+    font-size: 0.8125rem;
+  }
+
+  .moduleHeader {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .moduleHeaderLeft {
+    gap: 0.375rem;
+  }
+
+  .moduleIcon {
+    font-size: 0.875rem;
+  }
+
+  .moduleName {
+    font-size: 0.75rem;
+  }
+
+  .moduleBadge {
+    padding: 0.0625rem 0.25rem;
+    font-size: 0.5rem;
+    min-width: 16px;
+  }
+
+  .moduleCount {
+    font-size: 0.625rem;
+  }
+
+  .notificationItem {
+    padding: 0.5rem 0.75rem 0.5rem 1rem;
+  }
+
+  .notificationHeader {
+    gap: 0.375rem;
+  }
+
+  .notificationTitle {
+    font-size: 0.6875rem;
+  }
+
+  .unreadDot {
+    width: 6px;
+    height: 6px;
+    margin-left: 0.375rem;
+  }
+
+  .notificationMessage {
+    font-size: 0.625rem;
+    margin: 0.125rem 0;
+    line-height: 1.2;
+  }
+
+  .notificationFooter {
+    margin-top: 0.25rem;
+  }
+
+  .notificationTime {
+    font-size: 0.5rem;
+  }
+
+  .markReadButton {
+    font-size: 0.5625rem;
+    padding: 0.125rem 0.375rem;
+  }
+
+  .viewMoreButton {
+    padding: 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  .footer {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .footerText {
+    font-size: 0.625rem;
+  }
+}
+
+/* =========================================
+   AJUSTES DE ACCESIBILIDAD Y TOUCH
+   ========================================= */
+
+/* Mejorar área táctil en móviles */
+@media (max-width: 768px) {
+  .filterButton,
+  .moduleHeader,
+  .notificationItem,
+  .viewMoreButton,
+  .markReadButton {
+    min-height: 44px; /* Altura mínima para touch */
+  }
+
+  .filterButton {
+    min-height: 38px;
+  }
+
+  .markReadButton {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Aumentar espaciado para mejor usabilidad táctil */
+  .moduleHeader {
+    padding: 0.75rem;
+  }
+
+  .notificationItem {
+    padding: 0.75rem 1rem 0.75rem 1.25rem;
+  }
+
+  /* Prevenir scroll del body cuando el dropdown está abierto */
+  body:has(.dropdown) {
+    overflow: hidden;
+  }
+}
+
+/* =========================================
+   ANIMACIONES MEJORADAS
+   ========================================= */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.unreadDot {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Transiciones suaves para cambios de filtro */
+.filterButton {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notificationItem {
+  transition:
+    background 0.15s ease,
+    border-left-color 0.15s ease;
+}
+
+/* Scroll suave */
+.notificationsList {
+  scroll-behavior: smooth;
 }

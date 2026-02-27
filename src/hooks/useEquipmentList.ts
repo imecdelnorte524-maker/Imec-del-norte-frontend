@@ -21,8 +21,6 @@ export function useEquipmentList(clientId?: number) {
     `equipment-list-${Math.random().toString(36).substr(2, 9)}`,
   ).current;
 
-  console.log(`🆕 [${instanceId}] HOOK CREADO con clientId:`, clientId);
-
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +47,6 @@ export function useEquipmentList(clientId?: number) {
 
     const unsubscribe = equipmentCache.subscribe((invalidatedClientId) => {
       if (invalidatedClientId === clientId && mountedRef.current) {
-        console.log(
-          `♻️ [${instanceId}] Cache invalidado para cliente ${clientId}, recargando...`,
-        );
         loadEquipments(currentSearch);
       }
     });
@@ -69,16 +64,12 @@ export function useEquipmentList(clientId?: number) {
       }
 
       if (loadingRef.current) {
-        console.log(`⏳ [${instanceId}] Ya hay una carga en progreso...`);
         return;
       }
 
       // Verificar cache solo si no hay búsqueda
       const cached = equipmentCache.get(clientId);
       if (cached && !search) {
-        console.log(
-          `📦 [${instanceId}] USANDO CACHE para cliente ${clientId} (${cached.length} equipos)`,
-        );
         setEquipments(cached);
         setError(null);
         setLastFilters(undefined);
@@ -88,10 +79,6 @@ export function useEquipmentList(clientId?: number) {
       try {
         loadingRef.current = true;
         setLoading(true);
-
-        console.log(
-          `🌐 [${instanceId}] Cargando equipos para cliente ${clientId} desde API${search ? ` con búsqueda: ${search}` : ""}`,
-        );
         const data = await getEquipmentByClientRequest(clientId, search);
 
         if (mountedRef.current) {
@@ -130,8 +117,6 @@ export function useEquipmentList(clientId?: number) {
     try {
       loadingRef.current = true;
       setLoading(true);
-
-      console.log(`👤 [${instanceId}] Cargando mis equipos (cliente)`);
       const data = await getEquipmentRequest();
 
       if (mountedRef.current) {
@@ -162,11 +147,6 @@ export function useEquipmentList(clientId?: number) {
       try {
         loadingRef.current = true;
         setLoading(true);
-
-        console.log(
-          `🔍 [${instanceId}] Cargando equipos con filtros:`,
-          filters,
-        );
         const data = await getEquipmentRequest(filters);
 
         if (mountedRef.current) {

@@ -35,7 +35,6 @@ api.interceptors.request.use((config) => {
   const socketId = getSocketId();
   if (socketId) {
     config.headers["x-socket-id"] = socketId;
-    console.log("📤 Enviando socket ID:", socketId);
   }
 
   const token = localStorage.getItem("authToken");

@@ -1,4 +1,3 @@
-// src/context/AuthContext.tsx
 import { createContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type { LoginData } from "../interfaces/AuthInterfaces";
@@ -20,33 +19,38 @@ interface AuthContextType {
   login: (data: LoginData) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  isAuthenticatedAndReady: boolean;
   isAdmin: boolean;
   requestPasswordReset: (email: string) => Promise<string>;
   resetPassword: (token: string, password: string) => Promise<string>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<string>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<string>;
   refetchUser: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+export const AuthContext = createContext<AuthContextType>(
+  {} as AuthContextType,
+);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<Usuario | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticatedAndReady, setIsAuthenticatedAndReady] = useState(false);
 
   const isAdmin =
     user?.role?.nombreRol === "Administrador" ||
     user?.role?.nombreRol === "ADMINISTRADOR" ||
     user?.role?.nombreRol === "SG-SST" ||
-    user?.role?.nombreRol === "SECRETARIA" || 
+    user?.role?.nombreRol === "SECRETARIA" ||
     user?.role.nombreRol === "Sg-sst" ||
     user?.role.nombreRol === "Secretaria";
 
   const normalizeUser = (userData: any): Usuario => {
-    // Si ya es un Usuario mapeado (viene de usersApi.getMe), úsalo directamente
     if (!userData) {
-      // returns a minimal object to satisfy typing (caller should avoid calling with falsy)
       return {
         usuarioId: 0,
         nombre: "",
@@ -58,7 +62,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         telefono: "",
         activo: true,
         fechaCreacion: new Date().toISOString(),
-        role: { rolId: 0, nombreRol: "Usuario", descripcion: "", fechaCreacion: new Date().toISOString() },
+        role: {
+          rolId: 0,
+          nombreRol: "Usuario",
+          descripcion: "",
+          fechaCreacion: new Date().toISOString(),
+        },
         position: "",
       } as Usuario;
     }
@@ -75,24 +84,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       position: userData.position ?? "",
       activo: userData.activo !== undefined ? userData.activo : true,
       fechaCreacion: userData.fechaCreacion ?? new Date().toISOString(),
-      fechaNacimiento: userData.fechaNacimiento ?? userData.birthdate ?? undefined,
+      fechaNacimiento:
+        userData.fechaNacimiento ?? userData.birthdate ?? undefined,
       genero: userData.genero ?? undefined,
       resetToken: userData.resetToken ?? undefined,
       resetTokenExpiry: userData.resetTokenExpiry ?? undefined,
-      mustChangePassword: typeof userData.mustChangePassword === "boolean" ? userData.mustChangePassword : false,
+      mustChangePassword:
+        typeof userData.mustChangePassword === "boolean"
+          ? userData.mustChangePassword
+          : false,
       role: userData.role ?? {
         rolId: userData.rolId ?? 0,
         nombreRol: userData.role?.nombreRol ?? userData.role ?? "Usuario",
         descripcion: userData.role?.descripcion ?? "",
         fechaCreacion: userData.role?.fechaCreacion ?? new Date().toISOString(),
       },
-      ubicacionResidencia: (userData as any).ubicacionResidencia ?? (userData as any).ubicacion ?? null,
+      ubicacionResidencia:
+        (userData as any).ubicacionResidencia ??
+        (userData as any).ubicacion ??
+        null,
       arl: (userData as any).arl ?? null,
       eps: (userData as any).eps ?? null,
       afp: (userData as any).afp ?? null,
-      contactoEmergenciaNombre: (userData as any).contactoEmergenciaNombre ?? (userData as any).contactoEmergencia?.nombre ?? null,
-      contactoEmergenciaTelefono: (userData as any).contactoEmergenciaTelefono ?? (userData as any).contactoEmergencia?.telefono ?? null,
-      contactoEmergenciaParentesco: (userData as any).contactoEmergenciaParentesco ?? (userData as any).contactoEmergencia?.parentesco ?? null,
+      contactoEmergenciaNombre:
+        (userData as any).contactoEmergenciaNombre ??
+        (userData as any).contactoEmergencia?.nombre ??
+        null,
+      contactoEmergenciaTelefono:
+        (userData as any).contactoEmergenciaTelefono ??
+        (userData as any).contactoEmergencia?.telefono ??
+        null,
+      contactoEmergenciaParentesco:
+        (userData as any).contactoEmergenciaParentesco ??
+        (userData as any).contactoEmergencia?.parentesco ??
+        null,
     } as Usuario;
   };
 
@@ -104,24 +129,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (savedToken) {
         try {
           setToken(savedToken);
+          setIsAuthenticatedAndReady(false);
 
           try {
-            // Preferimos usersApi.getMe (mapea y garantiza estructura)
             const me = await usersApi.getMe();
             const normalizedUser = normalizeUser(me);
             setUser(normalizedUser);
             localStorage.setItem("user", JSON.stringify(normalizedUser));
+            setIsAuthenticatedAndReady(true);
           } catch (profileError) {
-            console.error("Error obteniendo perfil con usersApi.getMe:", profileError);
-            // fallback: usar el user guardado en localStorage si existe
+            console.error(
+              "Error obteniendo perfil con usersApi.getMe:",
+              profileError,
+            );
             if (savedUser) {
               const savedUserData = JSON.parse(savedUser);
               const normalizedUser = normalizeUser(savedUserData);
               setUser(normalizedUser);
+              setIsAuthenticatedAndReady(true);
             } else {
-              // si no hay user guardado, limpiar token (no autenticado)
               setToken(null);
               localStorage.removeItem("authToken");
+              setIsAuthenticatedAndReady(false);
             }
           }
         } catch (error) {
@@ -129,11 +158,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logout();
         }
       } else if (savedUser) {
-        // no hay token pero hay usuario guardado (raro), usa el usuario local
         try {
           const parsed = JSON.parse(savedUser);
           const normalizedUser = normalizeUser(parsed);
           setUser(normalizedUser);
+          setIsAuthenticatedAndReady(true);
         } catch {
           // noop
         }
@@ -150,10 +179,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       setError(null);
+      setIsAuthenticatedAndReady(false);
 
       const res = await loginRequest(data);
-
-      const actualToken = (res as any).access_token || (res as any).token || (res as any).accessToken;
+      const actualToken =
+        (res as any).access_token ||
+        (res as any).token ||
+        (res as any).accessToken;
 
       if (!actualToken) {
         throw new Error("No se recibió token en la respuesta");
@@ -162,19 +194,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("authToken", actualToken);
       setToken(actualToken);
 
-      // Obtener perfil usando usersApi.getMe (más consistente)
       let userData;
       try {
         userData = await usersApi.getMe();
       } catch (profileError) {
-        console.warn("⚠️ No se pudo obtener el perfil tras el login:", profileError);
-        // fallback: intentar leer user desde respuesta del login
+        console.warn(
+          "⚠️ No se pudo obtener el perfil tras el login:",
+          profileError,
+        );
         userData = (res as any).user ?? null;
       }
 
       const normalizedUser = normalizeUser(userData);
       localStorage.setItem("user", JSON.stringify(normalizedUser));
       setUser(normalizedUser);
+
+      setIsAuthenticatedAndReady(true);
     } catch (err: any) {
       console.error("❌ [AUTH-ERROR] Error en AuthContext login:", err);
       setError(err.message || "Error de autenticación");
@@ -184,6 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem("user");
       setUser(null);
       setToken(null);
+      setIsAuthenticatedAndReady(false);
 
       throw err;
     } finally {
@@ -196,6 +232,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("user");
     setUser(null);
     setToken(null);
+    setIsAuthenticatedAndReady(false);
+    window.dispatchEvent(new Event("auth:logout"));
   };
 
   const requestPasswordReset = async (email: string): Promise<string> => {
@@ -210,9 +248,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       );
     } catch (err: any) {
       console.error("❌ [AUTH-ERROR] Error en requestPasswordReset:", err);
-      setError(
-        err.message || "Error solicitando recuperación de contraseña"
-      );
+      setError(err.message || "Error solicitando recuperación de contraseña");
       playErrorSound();
       throw err;
     } finally {
@@ -222,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const resetPassword = async (
     tokenValue: string,
-    password: string
+    password: string,
   ): Promise<string> => {
     try {
       setLoading(true);
@@ -242,7 +278,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const changePassword = async (
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<string> => {
     try {
       setLoading(true);
@@ -250,7 +286,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const res = await changePasswordRequest(currentPassword, newPassword);
 
-      // Actualizar estado local: ya no debe cambiar la contraseña obligatoriamente
       setUser((prev) => (prev ? { ...prev, mustChangePassword: false } : prev));
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
@@ -293,6 +328,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     logout,
     isAuthenticated: !!token,
+    isAuthenticatedAndReady,
     isAdmin,
     requestPasswordReset,
     resetPassword,
@@ -300,9 +336,5 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refetchUser,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

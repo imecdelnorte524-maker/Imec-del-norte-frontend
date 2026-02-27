@@ -1,4 +1,3 @@
-// src/components/inventory/AddInventoyModal.tsx
 import { useState, useEffect } from "react";
 import { useCatalogActions } from "../../hooks/useInventory";
 import { imagesApi } from "../../api/images";
@@ -399,7 +398,7 @@ export default function AddInventoryModal({
                   </small>
                 </div>
 
-                {/* NUEVO: Características Técnicas */}
+                {/* Características Técnicas */}
                 <div className={styles.formGroup}>
                   <label htmlFor="caracteristicasTecnicas">
                     Características Técnicas
@@ -419,7 +418,7 @@ export default function AddInventoryModal({
                   />
                 </div>
 
-                {/* NUEVO: Observación */}
+                {/* Observación */}
                 <div className={styles.formGroup}>
                   <label htmlFor="observacionHerramienta">Observación</label>
                   <textarea
@@ -491,11 +490,18 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="valorHerramienta"
-                      value={nuevaHerramienta.valorUnitario}
+                      value={
+                        nuevaHerramienta.valorUnitario === 0
+                          ? ""
+                          : nuevaHerramienta.valorUnitario
+                      }
                       onChange={(e) =>
                         setNuevaHerramienta({
                           ...nuevaHerramienta,
-                          valorUnitario: parseFloat(e.target.value) || 0,
+                          valorUnitario:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="0"
@@ -654,11 +660,18 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="cantidadInicial"
-                      value={nuevoInsumo.cantidadInicial}
+                      value={
+                        nuevoInsumo.cantidadInicial === 0
+                          ? ""
+                          : nuevoInsumo.cantidadInicial
+                      }
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          cantidadInicial: parseFloat(e.target.value) || 0,
+                          cantidadInicial:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="Ej: 10, 5.5..."
@@ -676,11 +689,16 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="stockMin"
-                      value={nuevoInsumo.stockMin}
+                      value={
+                        nuevoInsumo.stockMin === 0 ? "" : nuevoInsumo.stockMin
+                      }
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          stockMin: parseFloat(e.target.value) || 0,
+                          stockMin:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="0"
@@ -700,11 +718,18 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="valorInsumo"
-                      value={nuevoInsumo.valorUnitario}
+                      value={
+                        nuevoInsumo.valorUnitario === 0
+                          ? ""
+                          : nuevoInsumo.valorUnitario
+                      }
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          valorUnitario: parseFloat(e.target.value) || 0,
+                          valorUnitario:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="0"

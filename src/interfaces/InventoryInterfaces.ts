@@ -24,6 +24,7 @@ export interface InventoryToolInfo {
   codigo?: string;
   caracteristicasTecnicas?: string;
   observacion?: string;
+  tipo?: string;
 }
 
 export interface InventoryBodegaInfo {
@@ -46,13 +47,12 @@ export interface InventoryItem {
   nombreItem: string;
   unidadMedida: string;
   valorUnitario: number;
-
   descripcion?: string;
   codigo?: string;
-
   bodega?: InventoryBodegaInfo;
   supply?: InventorySupplyInfo;
   tool?: InventoryToolInfo;
+  subtipo?: string;
 }
 
 export interface CreateInventoryPayload {
@@ -69,7 +69,6 @@ export interface UpdateInventoryPayload {
   ubicacion?: string;
 }
 
-// Actualizar stock de un inventario específico
 export interface UpdateInventoryStockPayload {
   cantidad: number;
 }
@@ -148,5 +147,5 @@ export interface Warehouse {
     nombre: string;
     nit: string;
   };
-  cantidadItems?: number; // Para estadísticas
+  cantidadItems?: number;
 }

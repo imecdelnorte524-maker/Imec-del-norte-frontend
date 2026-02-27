@@ -126,10 +126,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
-  const [selectedInventoryId, setSelectedInventoryId] = useState<number | "">(
-    "",
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<number[]>(
+    [],
   );
-  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const [selectedQuantities, setSelectedQuantities] = useState<
+    Record<number, number>
+  >({});
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedBillingStatus, setSelectedBillingStatus] =
     useState<BillingEstado>("");
@@ -648,12 +650,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const handleOpenInventoryModal = async () => {
     setInventoryError(null);
-    setSelectedInventoryId("");
-    setSelectedQuantity(1);
+    setSelectedInventoryIds([]);
+    setSelectedQuantities({});
     setShowInventoryModal(true);
     try {
       setInventoryLoading(true);
-      const data = await inventory.getAllInventory();
+      const data = await inventory.getAll();
       const availableItems = data.filter((item: InventoryItem) => {
         const estadoNormalizado =
           item.tool?.estado?.toLowerCase().trim() ||
@@ -667,6 +669,31 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     } finally {
       setInventoryLoading(false);
     }
+  };
+
+  const toggleInventorySelection = (inventarioId: number) => {
+    setSelectedInventoryIds((prev) => {
+      if (prev.includes(inventarioId)) {
+        // quitar
+        const next = prev.filter((id) => id !== inventarioId);
+        // limpiar cantidad asociada
+        setSelectedQuantities((q) => {
+          const { [inventarioId]: _, ...rest } = q;
+          return rest;
+        });
+        return next;
+      } else {
+        // agregar
+        return [...prev, inventarioId];
+      }
+    });
+  };
+
+  const handleQuantityChange = (inventarioId: number, value: number) => {
+    setSelectedQuantities((prev) => ({
+      ...prev,
+      [inventarioId]: value,
+    }));
   };
 
   const handleMarkAsPaid = async () => {
@@ -760,44 +787,69 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   };
 
   const handleAssignInventoryItem = async () => {
-    if (!selectedInventoryId) return;
-    const selected = inventoryItems.find(
-      (i) => i.inventarioId === selectedInventoryId,
-    );
-    if (!selected) return;
+    if (selectedInventoryIds.length === 0) {
+      setInventoryError("Seleccione al menos un ítem");
+      return;
+    }
 
     setInventoryError(null);
     setLoading(true);
+
     try {
-      if (selected.tipo === "insumo") {
-        if (!selected.supply) return;
-        if (!selectedQuantity || selectedQuantity <= 0) {
-          setInventoryError("Cantidad inválida");
-          setLoading(false);
-          return;
+      // 1. Validar cantidades de todos los insumos seleccionados
+      for (const invId of selectedInventoryIds) {
+        const item = inventoryItems.find((i) => i.inventarioId === invId);
+        if (!item) continue;
+
+        if (item.tipo === "insumo") {
+          const qty = selectedQuantities[invId] ?? 1;
+
+          if (!qty || qty <= 0) {
+            setInventoryError(
+              "Cantidad inválida para alguno de los insumos seleccionados",
+            );
+            setLoading(false);
+            return;
+          }
+
+          if (qty > item.cantidadActual) {
+            setInventoryError(
+              `Stock insuficiente para ${item.nombreItem}. Disponible: ${item.cantidadActual}`,
+            );
+            setLoading(false);
+            return;
+          }
         }
-        if (selectedQuantity > selected.cantidadActual) {
-          setInventoryError(`Stock insuficiente: ${selected.cantidadActual}`);
-          setLoading(false);
-          return;
+      }
+
+      // 2. Si todo está OK, hacer las llamadas a la API una por una
+      for (const invId of selectedInventoryIds) {
+        const item = inventoryItems.find((i) => i.inventarioId === invId);
+        if (!item) continue;
+
+        if (item.tipo === "insumo") {
+          if (!item.supply) continue;
+          const qty = selectedQuantities[invId] ?? 1;
+
+          await addSupplyDetailRequest(currentOrder.orden_id, {
+            insumoId: item.supply.insumoId,
+            cantidadUsada: qty,
+          });
+        } else {
+          // herramienta
+          if (!item.tool) continue;
+          await addToolDetailRequest(currentOrder.orden_id, {
+            herramientaId: item.tool.herramientaId,
+          });
         }
-        await addSupplyDetailRequest(currentOrder.orden_id, {
-          insumoId: selected.supply.insumoId,
-          cantidadUsada: selectedQuantity,
-        });
-      } else {
-        if (!selected.tool) return;
-        await addToolDetailRequest(currentOrder.orden_id, {
-          herramientaId: selected.tool.herramientaId,
-        });
       }
 
       await refreshData();
       setShowInventoryModal(false);
-      setSelectedInventoryId("");
-      setSelectedQuantity(1);
+      setSelectedInventoryIds([]);
+      setSelectedQuantities({});
     } catch (err: any) {
-      setInventoryError(err.response?.data?.message || "Error asignando ítem");
+      setInventoryError(err.response?.data?.message || "Error asignando ítems");
     } finally {
       setLoading(false);
     }
@@ -1465,7 +1517,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
         {canBillingStatus &&
           !currentOrder.estado_pago &&
-          currentOrder.estado_facturacion !== "" && (
+          currentOrder.estado_facturacion === "" && (
             <button
               className={styles.secondaryButton}
               onClick={handleOpenBillingModal}
@@ -2003,61 +2055,79 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                   </div>
                 ) : (
                   <>
-                    <div className={styles.formRow}>
-                      <label>Ítem Disponible</label>
-                      <select
-                        className={styles.technicianSelect}
-                        value={selectedInventoryId}
-                        onChange={(e) => {
-                          setSelectedInventoryId(
-                            Number(e.target.value)
-                              ? Number(e.target.value)
-                              : "",
-                          );
-                          setSelectedQuantity(1);
-                        }}
-                      >
-                        <option value="">Seleccionar ítem disponible...</option>
-                        {inventoryItems.map((i: InventoryItem) => (
-                          <option key={i.inventarioId} value={i.inventarioId}>
-                            {i.nombreItem} ({i.tipo}) - Stock:{" "}
-                            {i.tipo === "insumo"
-                              ? i.cantidadActual
-                              : "Disponible"}
-                          </option>
-                        ))}
-                      </select>
+                    <p className={styles.modalDescription}>
+                      Seleccione uno o varios ítems de inventario y, en el caso
+                      de insumos, indique la cantidad a usar.
+                    </p>
+
+                    <div className={styles.scrollBoxLarge}>
+                      {inventoryItems.map((i: InventoryItem) => {
+                        const isSelected = selectedInventoryIds.includes(
+                          i.inventarioId,
+                        );
+                        const qty = selectedQuantities[i.inventarioId] ?? 1;
+
+                        return (
+                          <div
+                            key={i.inventarioId}
+                            className={`${styles.selectableRow} ${
+                              isSelected ? styles.selectableRowSelected : ""
+                            }`}
+                            onClick={() =>
+                              toggleInventorySelection(i.inventarioId)
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className={styles.checkboxInline}
+                            />
+                            <div className={styles.flexGrow}>
+                              <strong>
+                                {i.nombreItem} ({i.tipo})
+                              </strong>
+                              <div className={styles.rowMeta}>
+                                Stock:{" "}
+                                {i.tipo === "insumo"
+                                  ? i.cantidadActual
+                                  : "Disponible"}
+                              </div>
+
+                              {/* Si es insumo y está seleccionado, mostramos campo de cantidad */}
+                              {i.tipo === "insumo" && isSelected && (
+                                <div className={styles.formRow}>
+                                  <label>Cantidad a usar</label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={i.cantidadActual}
+                                    value={qty}
+                                    onChange={(e) =>
+                                      handleQuantityChange(
+                                        i.inventarioId,
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                  />
+                                  <small className={styles.helperText}>
+                                    Máximo disponible: {i.cantidadActual}
+                                  </small>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    {inventoryItems.find(
-                      (i: InventoryItem) =>
-                        i.inventarioId === selectedInventoryId,
-                    )?.tipo === "insumo" && (
-                      <div className={styles.formRow}>
-                        <label>Cantidad a usar</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={selectedQuantity}
-                          onChange={(e) =>
-                            setSelectedQuantity(Number(e.target.value))
-                          }
-                        />
-                        <small className={styles.helperText}>
-                          Máximo disponible:{" "}
-                          {inventoryItems.find(
-                            (i: InventoryItem) =>
-                              i.inventarioId === selectedInventoryId,
-                          )?.cantidadActual || 0}
-                        </small>
-                      </div>
-                    )}
+
                     <div className={styles.formActions}>
                       <button onClick={() => setShowInventoryModal(false)}>
                         Cancelar
                       </button>
                       <button
                         onClick={handleAssignInventoryItem}
-                        disabled={!selectedInventoryId || loading}
+                        disabled={selectedInventoryIds.length === 0 || loading}
                       >
                         Guardar
                       </button>

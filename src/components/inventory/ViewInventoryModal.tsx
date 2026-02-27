@@ -1,4 +1,3 @@
-// src/components/inventory/ViewInventoryModal.tsx
 import { useEffect, useState } from "react";
 import styles from "../../styles/components/inventory/ViewInventoryModal.module.css";
 import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
@@ -144,10 +143,18 @@ export default function ViewInventoryModal({ isOpen, onClose, item }: Props) {
                   <span className={styles.infoValue}>
                     <span
                       className={`${styles.typeBadge} ${
-                        isHerramienta ? styles.toolBadge : styles.supplyBadge
+                        isHerramienta
+                          ? item.tool?.tipo === "Equipo"
+                            ? styles.equipoBadge
+                            : styles.toolBadge
+                          : styles.supplyBadge
                       }`}
                     >
-                      {isHerramienta ? "🛠️ Herramienta" : "📦 Insumo"}
+                      {isHerramienta
+                        ? item.tool?.tipo === "Equipo"
+                          ? "🔧 Equipo"
+                          : "🛠️ Herramienta"
+                        : "📦 Insumo"}
                     </span>
                   </span>
                 </div>

@@ -1,4 +1,3 @@
-// src/pages/EquipmentListPage.tsx
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
@@ -10,6 +9,7 @@ import {
   addEquipmentPhotoRequest,
   exportMaintenancePlanExcelRequest,
   getMyEquipmentRequest,
+  exportEquipmentInventoryExcelRequest, // 👈 NUEVO IMPORT
 } from "../api/equipment";
 import {
   addEquipmentToOrderRequest,
@@ -117,6 +117,7 @@ export default function EquipmentListPage() {
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [exportingPlan, setExportingPlan] = useState(false);
+  const [exportingInventory, setExportingInventory] = useState(false); // 👈 NUEVO ESTADO
 
   const [createForm, setCreateForm] = useState({
     clientId: selectedClientId,
@@ -515,15 +516,27 @@ export default function EquipmentListPage() {
     setCondensers(condensers.filter((_, i) => i !== index));
   };
 
+  // 🔥 ACTUALIZADO: Ahora acepta tanto input como select
   const handleEvaporatorChange = (
     index: number,
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
+    const { name, value } = e.target;
     const newEvaporators = [...evaporators];
-    newEvaporators[index] = {
-      ...newEvaporators[index],
-      [e.target.name]: e.target.value,
-    };
+
+    // Si es el campo de tipo, convertir a número
+    if (name === "airConditionerTypeEvapId") {
+      newEvaporators[index] = {
+        ...newEvaporators[index],
+        [name]: value ? parseInt(value) : undefined,
+      };
+    } else {
+      newEvaporators[index] = {
+        ...newEvaporators[index],
+        [name]: value,
+      };
+    }
+
     setEvaporators(newEvaporators);
   };
 
@@ -799,6 +812,32 @@ export default function EquipmentListPage() {
     }
   };
 
+  // 👇 NUEVO MANEJADOR PARA EXPORTAR INVENTARIO DE EQUIPOS
+  const handleExportEquipmentInventory = async () => {
+    if (!selectedClientId || selectedClientId === 0) {
+      setEquipmentError(
+        "Debe seleccionar una empresa para exportar el inventario de equipos.",
+      );
+      return;
+    }
+
+    try {
+      setEquipmentError(null);
+      setExportingInventory(true);
+
+      await exportEquipmentInventoryExcelRequest(selectedClientId);
+    } catch (err: any) {
+      console.error("Error exportando inventario de equipos:", err);
+      setEquipmentError(
+        err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          "Error al exportar el inventario de equipos.",
+      );
+    } finally {
+      setExportingInventory(false);
+    }
+  };
+
   const selectedAcType = airConditionerTypes.find(
     (type) => type.id === Number.parseInt(createForm.airConditionerTypeId),
   );
@@ -883,24 +922,35 @@ export default function EquipmentListPage() {
     <DashboardLayout>
       <div className={listStyles.container}>
         <div className={styles.header}>
-          <button className={styles.backButton} onClick={() => navigate(-1)}>
-            ← Volver
-          </button>
           <h1>{isClient ? "Mis Equipos" : "Equipos por Empresa"}</h1>
 
           {selectedClientId && selectedClientId !== 0 && (
             <div className={listStyles.headerActions}>
               {canExport && (
-                <button
-                  type="button"
-                  className={listStyles.exportButton}
-                  onClick={handleExportMaintenancePlan}
-                  disabled={!selectedClientId || exportingPlan}
-                >
-                  {exportingPlan
-                    ? "Exportando..."
-                    : "Exportar plan mantenimiento"}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className={listStyles.exportButton}
+                    onClick={handleExportMaintenancePlan}
+                    disabled={!selectedClientId || exportingPlan}
+                  >
+                    {exportingPlan
+                      ? "Exportando..."
+                      : "Exportar plan mantenimiento"}
+                  </button>
+
+                  {/* 👇 NUEVO BOTÓN PARA EXPORTAR INVENTARIO DE EQUIPOS */}
+                  <button
+                    type="button"
+                    className={listStyles.exportInventoryButton}
+                    onClick={handleExportEquipmentInventory}
+                    disabled={!selectedClientId || exportingInventory}
+                  >
+                    {exportingInventory
+                      ? "Exportando..."
+                      : "Exportar inventario equipos"}
+                  </button>
+                </>
               )}
 
               {canCreate && (

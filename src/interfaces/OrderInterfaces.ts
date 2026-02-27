@@ -223,3 +223,8 @@ export interface WorkOrderImage {
   evidencePhase?: WorkOrderEvidencePhase | null;
   observation?: string | null;
 }
+
+export interface DownloadedFile {
+  blob: Blob;
+  fileName: string;
+}

@@ -6,6 +6,7 @@ import {
   addEquipmentPhotoRequest,
   deleteEquipmentPhotoRequest,
   getEquipmentWorkOrdersRequest,
+  downloadEquipmentHistoryPdfRequest,
 } from "../api/equipment";
 import {
   getOrdersByClientAndCategoryRequest,
@@ -26,7 +27,6 @@ import { useAuth } from "../hooks/useAuth";
 import api from "../api/axios";
 import { playErrorSound } from "../utils/sounds";
 import {
-  DetailHeader,
   PhotoCarousel,
   EquipmentInfoSection,
   EquipmentEditForm,
@@ -71,6 +71,7 @@ export default function EquipmentDetailPage() {
     useEquipmentDetail(idNum);
 
   const [editing, setEditing] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Estados locales para el formulario de edición
   const [editForm, setEditForm] = useState({
@@ -139,6 +140,21 @@ export default function EquipmentDetailPage() {
 
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
+
+  // Manejador para descargar PDF del historial
+  const handleDownloadHistoryPdf = async () => {
+    if (!equipment) return;
+
+    try {
+      setDownloadingPdf(true);
+      await downloadEquipmentHistoryPdfRequest(equipment.equipmentId);
+    } catch (err: any) {
+      console.error("Error descargando PDF del historial:", err);
+      alert("Error al descargar el PDF del historial");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // Cargar áreas jerárquicas (árbol completo)
   const loadHierarchicalAreas = async (eq: Equipment) => {
@@ -248,7 +264,7 @@ export default function EquipmentDetailPage() {
       setEvaporators(equipment.evaporators || []);
       setCondensers(equipment.condensers || []);
 
-      // 🔹 Tipo de aire: usar id plano o, si no viene, el id del objeto anidado
+      // Tipo de aire: usar id plano o, si no viene, el id del objeto anidado
       const acTypeIdFromEquipment =
         equipment.airConditionerTypeId ??
         equipment.airConditionerType?.id ??
@@ -259,7 +275,7 @@ export default function EquipmentDetailPage() {
       setSelectedAreaId(equipment.area?.idArea || null);
       setSelectedSubAreaId(equipment.subArea?.idSubArea || null);
 
-      // 🔹 Plan de mantenimiento: copiar lo que venga del backend
+      // Plan de mantenimiento: copiar lo que venga del backend
       setPlanMantenimiento(
         equipment.planMantenimiento ? { ...equipment.planMantenimiento } : null,
       );
@@ -446,7 +462,6 @@ export default function EquipmentDetailPage() {
       airConditionerTypeId: selectedAcTypeId,
       evaporators: evaporators,
       condensers: condensers,
-      // Plan de mantenimiento completo (o null si no hay)
       planMantenimiento: planMantenimiento ?? null,
     };
 
@@ -590,16 +605,62 @@ export default function EquipmentDetailPage() {
   return (
     <DashboardLayout>
       <div className={styles.container}>
-        <DetailHeader
-          canEdit={canEdit && !!equipment}
-          editing={editing}
-          onBack={() => navigate(-1)}
-          onHistory={() =>
-            navigate(`/equipment/${equipment?.equipmentId}/history`)
-          }
-          onAddPhotos={() => setShowAddPhotoModal(true)}
-          onToggleEdit={() => setEditing((prev) => !prev)}
-        />
+        <div className={styles.header}>
+          <button className={styles.backButton} onClick={() => navigate(-1)}>
+            ← Volver
+          </button>
+          <h1>Detalle del Equipo</h1>
+
+          {/* 👇 BOTÓN DE PDF EN EL HEADER */}
+          {equipment && !loading && (
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.pdfHeaderButton}
+                onClick={handleDownloadHistoryPdf}
+                disabled={downloadingPdf}
+                title="Descargar historial en PDF"
+              >
+                {downloadingPdf ? (
+                  <span className={styles.spinner}></span>
+                ) : (
+                  <>
+                    <img src={pdfIcon} alt="PDF" className={styles.pdfIcon} />
+                    <span>PDF Historial</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() =>
+                  navigate(`/equipment/${equipment?.equipmentId}/history`)
+                }
+              >
+                Historial
+              </button>
+
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => setShowAddPhotoModal(true)}
+              >
+                + Agregar imagen
+              </button>
+
+              {canEdit && (
+                <button
+                  type="button"
+                  className={styles.editButton}
+                  onClick={() => setEditing(true)}
+                >
+                  Editar
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {loading && <p className={styles.loading}>Cargando equipo...</p>}
         {error && !loading && <div className={styles.error}>{error}</div>}
@@ -772,6 +833,21 @@ export default function EquipmentDetailPage() {
         )}
       </div>
 
+      {/* Botón flotante solo para documentos PDF (ELIMINADO EL BOTÓN DE HISTORIAL) */}
+      {equipment && !loading && (
+        <>
+          <button
+            type="button"
+            className={styles.floatingDocsButton}
+            onClick={() => setShowDocsModal(true)}
+            aria-label="Abrir documentos PDF"
+            title="Documentos PDF"
+          >
+            <img src={pdfIcon} alt="" className={styles.pdfIcon} />
+          </button>
+        </>
+      )}
+
       {/* Modal simple para crear nuevo tipo de aire acondicionado */}
       {showAcTypeModal && (
         <div
@@ -873,16 +949,6 @@ export default function EquipmentDetailPage() {
       )}
       {equipment && (
         <>
-          <button
-            type="button"
-            className={styles.floatingPdfButton}
-            onClick={() => setShowDocsModal(true)}
-            aria-label="Abrir documentos PDF"
-            title="Documentos PDF"
-          >
-            <img src={pdfIcon} alt="" />
-          </button>
-
           {showDocsModal && (
             <EquipmentDocumentsModal
               isOpen={showDocsModal}

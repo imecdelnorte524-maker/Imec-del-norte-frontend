@@ -24,21 +24,23 @@ export default function ComponentsReadOnly({
       {hasEvaporators && (
         <div className={styles.componentGroup}>
           <h4>
-            {evapCount === 1
-              ? "Evaporador"
-              : `Evaporadores (${evapCount})`}
+            {evapCount === 1 ? "Evaporador" : `Evaporadores (${evapCount})`}
           </h4>
 
           {equipment.evaporators!.map((evaporator, index) => (
             <div key={index} className={styles.componentSection}>
               <h5>
-                {evapCount === 1
-                  ? "Evaporador"
-                  : `Evaporador ${index + 1}`}
+                {evapCount === 1 ? "Evaporador" : `Evaporador ${index + 1}`}
               </h5>
 
               {/* Datos principales del evaporador */}
               <div className={styles.detailGrid}>
+                {evaporator.airConditionerTypeEvap && (
+                  <div className={styles.detailItem}>
+                    <strong>Tipo de Evaporador:</strong>
+                    <span>{evaporator.airConditionerTypeEvap.name}</span>
+                  </div>
+                )}
                 {evaporator.marca && (
                   <div className={styles.detailItem}>
                     <strong>Marca:</strong>
@@ -80,10 +82,7 @@ export default function ComponentsReadOnly({
                       : `Motores del Evaporador (${evaporator.motors.length})`}
                   </h5>
                   {evaporator.motors.map((motor, mIndex) => (
-                    <div
-                      key={mIndex}
-                      className={styles.subComponentSection}
-                    >
+                    <div key={mIndex} className={styles.subComponentSection}>
                       <h6>
                         {evaporator.motors!.length === 1
                           ? "Motor"
@@ -164,17 +163,13 @@ export default function ComponentsReadOnly({
       {hasCondensers && (
         <div className={styles.componentGroup}>
           <h4>
-            {condCount === 1
-              ? "Condensadora"
-              : `Condensadoras (${condCount})`}
+            {condCount === 1 ? "Condensadora" : `Condensadoras (${condCount})`}
           </h4>
 
           {equipment.condensers!.map((condenser, index) => (
             <div key={index} className={styles.componentSection}>
               <h5>
-                {condCount === 1
-                  ? "Condensadora"
-                  : `Condensadora ${index + 1}`}
+                {condCount === 1 ? "Condensadora" : `Condensadora ${index + 1}`}
               </h5>
 
               {/* Datos principales de la condensadora */}
@@ -256,10 +251,7 @@ export default function ComponentsReadOnly({
                       : `Motores de la Condensadora (${condenser.motors.length})`}
                   </h5>
                   {condenser.motors.map((motor, mIndex) => (
-                    <div
-                      key={mIndex}
-                      className={styles.subComponentSection}
-                    >
+                    <div key={mIndex} className={styles.subComponentSection}>
                       <h6>
                         {condenser.motors!.length === 1
                           ? "Motor"
@@ -333,126 +325,122 @@ export default function ComponentsReadOnly({
               )}
 
               {/* Compresores de la condensadora */}
-              {condenser.compressors &&
-                condenser.compressors.length > 0 && (
-                  <div className={styles.subComponentGroup}>
-                    <h5>
-                      {condenser.compressors.length === 1
-                        ? "Compresor"
-                        : `Compresores (${condenser.compressors.length})`}
-                    </h5>
-                    {condenser.compressors.map((comp, cIndex) => (
-                      <div
-                        key={cIndex}
-                        className={styles.subComponentSection}
-                      >
-                        <h6>
-                          {condenser.compressors!.length === 1
-                            ? "Compresor"
-                            : `Compresor ${cIndex + 1}`}
-                        </h6>
-                        <div className={styles.detailGrid}>
-                          {comp.marca && (
-                            <div className={styles.detailItem}>
-                              <strong>Marca:</strong>
-                              <span>{comp.marca}</span>
-                            </div>
-                          )}
-                          {comp.modelo && (
-                            <div className={styles.detailItem}>
-                              <strong>Modelo:</strong>
-                              <span>{comp.modelo}</span>
-                            </div>
-                          )}
-                          {comp.serial && (
-                            <div className={styles.detailItem}>
-                              <strong>Serial:</strong>
-                              <span>{comp.serial}</span>
-                            </div>
-                          )}
-                          {comp.capacidad && (
-                            <div className={styles.detailItem}>
-                              <strong>Capacidad:</strong>
-                              <span>{comp.capacidad}</span>
-                            </div>
-                          )}
-                          {comp.voltaje && (
-                            <div className={styles.detailItem}>
-                              <strong>Voltaje:</strong>
-                              <span>{comp.voltaje}</span>
-                            </div>
-                          )}
-                          {comp.frecuencia && (
-                            <div className={styles.detailItem}>
-                              <strong>Frecuencia:</strong>
-                              <span>{comp.frecuencia}</span>
-                            </div>
-                          )}
-                          {comp.tipoRefrigerante && (
-                            <div className={styles.detailItem}>
-                              <strong>Tipo Refrigerante:</strong>
-                              <span>{comp.tipoRefrigerante}</span>
-                            </div>
-                          )}
-                          {comp.tipoAceite && (
-                            <div className={styles.detailItem}>
-                              <strong>Tipo Aceite:</strong>
-                              <span>{comp.tipoAceite}</span>
-                            </div>
-                          )}
-                          {comp.cantidadAceite && (
-                            <div className={styles.detailItem}>
-                              <strong>Cant. Aceite:</strong>
-                              <span>{comp.cantidadAceite}</span>
-                            </div>
-                          )}
-                          {comp.capacitor && (
-                            <div className={styles.detailItem}>
-                              <strong>Capacitor:</strong>
-                              <span>{comp.capacitor}</span>
-                            </div>
-                          )}
-                          {comp.lra && (
-                            <div className={styles.detailItem}>
-                              <strong>LRA:</strong>
-                              <span>{comp.lra}</span>
-                            </div>
-                          )}
-                          {comp.fla && (
-                            <div className={styles.detailItem}>
-                              <strong>FLA:</strong>
-                              <span>{comp.fla}</span>
-                            </div>
-                          )}
-                          {comp.cantidadPolos && (
-                            <div className={styles.detailItem}>
-                              <strong>Cant. Polos:</strong>
-                              <span>{comp.cantidadPolos}</span>
-                            </div>
-                          )}
-                          {comp.amperaje && (
-                            <div className={styles.detailItem}>
-                              <strong>Amperaje:</strong>
-                              <span>{comp.amperaje}</span>
-                            </div>
-                          )}
-                          {comp.voltajeBobina && (
-                            <div className={styles.detailItem}>
-                              <strong>Voltaje Bobina:</strong>
-                              <span>{comp.voltajeBobina}</span>
-                            </div>
-                          )}
-                          {comp.vac && (
-                            <div className={styles.detailItem}>
-                              <strong>VAC:</strong>
-                              <span>{comp.vac}</span>
-                            </div>
-                          )}
-                        </div>
+              {condenser.compressors && condenser.compressors.length > 0 && (
+                <div className={styles.subComponentGroup}>
+                  <h5>
+                    {condenser.compressors.length === 1
+                      ? "Compresor"
+                      : `Compresores (${condenser.compressors.length})`}
+                  </h5>
+                  {condenser.compressors.map((comp, cIndex) => (
+                    <div key={cIndex} className={styles.subComponentSection}>
+                      <h6>
+                        {condenser.compressors!.length === 1
+                          ? "Compresor"
+                          : `Compresor ${cIndex + 1}`}
+                      </h6>
+                      <div className={styles.detailGrid}>
+                        {comp.marca && (
+                          <div className={styles.detailItem}>
+                            <strong>Marca:</strong>
+                            <span>{comp.marca}</span>
+                          </div>
+                        )}
+                        {comp.modelo && (
+                          <div className={styles.detailItem}>
+                            <strong>Modelo:</strong>
+                            <span>{comp.modelo}</span>
+                          </div>
+                        )}
+                        {comp.serial && (
+                          <div className={styles.detailItem}>
+                            <strong>Serial:</strong>
+                            <span>{comp.serial}</span>
+                          </div>
+                        )}
+                        {comp.capacidad && (
+                          <div className={styles.detailItem}>
+                            <strong>Capacidad:</strong>
+                            <span>{comp.capacidad}</span>
+                          </div>
+                        )}
+                        {comp.voltaje && (
+                          <div className={styles.detailItem}>
+                            <strong>Voltaje:</strong>
+                            <span>{comp.voltaje}</span>
+                          </div>
+                        )}
+                        {comp.frecuencia && (
+                          <div className={styles.detailItem}>
+                            <strong>Frecuencia:</strong>
+                            <span>{comp.frecuencia}</span>
+                          </div>
+                        )}
+                        {comp.tipoRefrigerante && (
+                          <div className={styles.detailItem}>
+                            <strong>Tipo Refrigerante:</strong>
+                            <span>{comp.tipoRefrigerante}</span>
+                          </div>
+                        )}
+                        {comp.tipoAceite && (
+                          <div className={styles.detailItem}>
+                            <strong>Tipo Aceite:</strong>
+                            <span>{comp.tipoAceite}</span>
+                          </div>
+                        )}
+                        {comp.cantidadAceite && (
+                          <div className={styles.detailItem}>
+                            <strong>Cant. Aceite:</strong>
+                            <span>{comp.cantidadAceite}</span>
+                          </div>
+                        )}
+                        {comp.capacitor && (
+                          <div className={styles.detailItem}>
+                            <strong>Capacitor:</strong>
+                            <span>{comp.capacitor}</span>
+                          </div>
+                        )}
+                        {comp.lra && (
+                          <div className={styles.detailItem}>
+                            <strong>LRA:</strong>
+                            <span>{comp.lra}</span>
+                          </div>
+                        )}
+                        {comp.fla && (
+                          <div className={styles.detailItem}>
+                            <strong>FLA:</strong>
+                            <span>{comp.fla}</span>
+                          </div>
+                        )}
+                        {comp.cantidadPolos && (
+                          <div className={styles.detailItem}>
+                            <strong>Cant. Polos:</strong>
+                            <span>{comp.cantidadPolos}</span>
+                          </div>
+                        )}
+                        {comp.amperaje && (
+                          <div className={styles.detailItem}>
+                            <strong>Amperaje:</strong>
+                            <span>{comp.amperaje}</span>
+                          </div>
+                        )}
+                        {comp.voltajeBobina && (
+                          <div className={styles.detailItem}>
+                            <strong>Voltaje Bobina:</strong>
+                            <span>{comp.voltajeBobina}</span>
+                          </div>
+                        )}
+                        {comp.vac && (
+                          <div className={styles.detailItem}>
+                            <strong>VAC:</strong>
+                            <span>{comp.vac}</span>
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

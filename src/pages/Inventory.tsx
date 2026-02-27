@@ -1,8 +1,7 @@
-// src/pages/Inventory.tsx
 import { useState, useEffect } from "react";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { inventory as inventoryAPI } from "../api/inventory";
-import AddInventoryModal from "../components/inventory/AddInventoyModal";
+import AddInventoryModal from "../components/inventory/AddInventoryModal";
 import EditInventoryModal from "../components/inventory/EditInventoryModal";
 import DeleteConfirmationModal from "../components/inventory/DeleteInventoryModal";
 import ToolSoftDeleteModal from "../components/tools/ToolSoftDeleteModal";
@@ -25,6 +24,7 @@ export default function Inventory() {
   const [filtro, setFiltro] = useState<TipoFiltro>("todos");
   const [busqueda, setBusqueda] = useState("");
   const [showDeleted] = useState(false);
+  const [exporting, setExporting] = useState(false); // 👈 NUEVO ESTADO
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -46,7 +46,7 @@ export default function Inventory() {
   const cargarInventario = async () => {
     try {
       setLoading(true);
-      const data = await inventoryAPI.getAllInventory();
+      const data = await inventoryAPI.getAll();
       setInventario(data as InventoryRow[]);
       setError(null);
     } catch (err: any) {
@@ -55,6 +55,21 @@ export default function Inventory() {
       playErrorSound();
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 👇 NUEVO MANEJADOR PARA EXPORTAR EXCEL
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      setError(null);
+      await inventoryAPI.exportToExcel();
+    } catch (err: any) {
+      console.error("❌ Error exportando inventario:", err);
+      setError("Error al exportar inventario: " + (err.message || ""));
+      playErrorSound();
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -87,7 +102,6 @@ export default function Inventory() {
   };
 
   const itemsFiltrados = inventario.filter((item) => {
-    // Filtrar por tipo
     const coincideTipo =
       filtro === "todos" ||
       (filtro === "herramientas" && item.tipo === "herramienta") ||
@@ -95,7 +109,6 @@ export default function Inventory() {
 
     const busq = busqueda.toLowerCase();
 
-    // Filtrar por búsqueda
     const coincideBusqueda =
       busqueda === "" ||
       item.nombreItem.toLowerCase().includes(busq) ||
@@ -104,7 +117,6 @@ export default function Inventory() {
       (item.tool?.serial?.toLowerCase().includes(busq) ?? false) ||
       (item.supply?.categoria?.toLowerCase().includes(busq) ?? false);
 
-    // Filtrar por estado eliminado
     const coincideEstado = showDeleted ? true : !item.fechaEliminacion;
 
     return coincideTipo && coincideBusqueda && coincideEstado;
@@ -145,27 +157,36 @@ export default function Inventory() {
               onChange={(e) => setBusqueda(e.target.value)}
               className={styles.searchInput}
             />
-
-            {/* 
-            // Si en el futuro quieres mostrar eliminados desde backend:
-            // usar /inventory?deleted=true y setShowDeleted(true) desde este checkbox
-            <label className={styles.showDeletedCheckbox}>
-              <input
-                type="checkbox"
-                checked={showDeleted}
-                onChange={(e) => setShowDeleted(e.target.checked)}
-              />
-              <span>Mostrar eliminados</span>
-            </label> 
-            */}
           </div>
 
-          <button
-            className={styles.btnPrimary}
-            onClick={() => setShowAddModal(true)}
-          >
-            + Agregar Item
-          </button>
+          <div className={styles.actionButtons}>
+            {/* 👇 NUEVO BOTÓN DE EXPORTAR EXCEL */}
+            <button
+              onClick={handleExportExcel}
+              disabled={exporting || inventario.length === 0}
+              className={styles.btnExport}
+              title="Exportar inventario a Excel"
+            >
+              {exporting ? (
+                <>
+                  <span className={styles.spinner}></span>
+                  Exportando...
+                </>
+              ) : (
+                <>
+                  <span className={styles.btnIcon}>📊</span>
+                  Exportar Excel
+                </>
+              )}
+            </button>
+
+            <button
+              className={styles.btnPrimary}
+              onClick={() => setShowAddModal(true)}
+            >
+              + Agregar Item
+            </button>
+          </div>
         </div>
 
         {error ? (
@@ -203,12 +224,16 @@ export default function Inventory() {
                           <span
                             className={`${styles.itemType} ${
                               item.tipo === "herramienta"
-                                ? styles.herramienta
+                                ? item.tool?.tipo === "Equipo"
+                                  ? styles.equipo
+                                  : styles.herramienta
                                 : styles.insumo
                             }`}
                           >
                             {item.tipo === "herramienta"
-                              ? "🛠️ Herramienta"
+                              ? item.tool?.tipo === "Equipo"
+                                ? "🔧 Equipo"
+                                : "🛠️ Herramienta"
                               : "📦 Insumo"}
                             {item.fechaEliminacion && " (Eliminado)"}
                           </span>
@@ -257,7 +282,7 @@ export default function Inventory() {
                           </span>
                         </td>
                         <td>
-                          <div className={styles.actionButtons}>
+                          <div className={styles.rowActions}>
                             <button
                               className={styles.btnAction}
                               onClick={() => handleView(item)}
@@ -315,11 +340,17 @@ export default function Inventory() {
                     <span
                       className={`${styles.itemType} ${
                         item.tipo === "herramienta"
-                          ? styles.herramienta
+                          ? item.tool?.tipo === "Equipo"
+                            ? styles.equipo
+                            : styles.herramienta
                           : styles.insumo
                       }`}
                     >
-                      {item.tipo === "herramienta" ? "🛠️ Equipo" : "📦 Insumo"}
+                      {item.tipo === "herramienta"
+                        ? item.tool?.tipo === "Equipo"
+                          ? "🔧 Equipo"
+                          : "🛠️ Herramienta"
+                        : "📦 Insumo"}
                       {item.fechaEliminacion && " (Eliminado)"}
                     </span>
                     <div className={styles.cardActions}>

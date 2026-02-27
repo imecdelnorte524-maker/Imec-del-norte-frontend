@@ -265,7 +265,7 @@ export default function EditInventoryModal({
       }
 
       if (Object.keys(inventoryData).length > 0) {
-        await inventory.updateInventory(item.inventarioId, inventoryData);
+        await inventory.update(item.inventarioId, inventoryData);
       }
 
       // 2. HERRAMIENTA
@@ -304,8 +304,11 @@ export default function EditInventoryModal({
         if (toolData.valorUnitario !== item.tool.valorUnitario) {
           toolUpdateData.valorUnitario = toolData.valorUnitario;
         }
-        if (toolData.caracteristicasTecnicas !== item.tool.caracteristicasTecnicas) {
-          toolUpdateData.caracteristicasTecnicas = toolData.caracteristicasTecnicas;
+        if (
+          toolData.caracteristicasTecnicas !== item.tool.caracteristicasTecnicas
+        ) {
+          toolUpdateData.caracteristicasTecnicas =
+            toolData.caracteristicasTecnicas;
         }
         if (toolData.observacion !== item.tool.observacion) {
           toolUpdateData.observacion = toolData.observacion;
@@ -818,11 +821,17 @@ export default function EditInventoryModal({
                     <div className={styles.quantityControl}>
                       <input
                         type="number"
-                        value={supplyData.cantidadActual}
+                        value={
+                          supplyData.cantidadActual === 0
+                            ? ""
+                            : supplyData.cantidadActual
+                        }
                         onChange={(e) =>
                           handleSupplyChange(
                             "cantidadActual",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value) || 0,
                           )
                         }
                         min="0"
@@ -844,11 +853,15 @@ export default function EditInventoryModal({
                     <div className={styles.quantityControl}>
                       <input
                         type="number"
-                        value={supplyData.stockMin}
+                        value={
+                          supplyData.stockMin === 0 ? "" : supplyData.stockMin
+                        }
                         onChange={(e) =>
                           handleSupplyChange(
                             "stockMin",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value) || 0,
                           )
                         }
                         min="0"
@@ -876,11 +889,17 @@ export default function EditInventoryModal({
                       <span className={styles.currencySymbol}>$</span>
                       <input
                         type="number"
-                        value={supplyData.valorUnitario}
+                        value={
+                          supplyData.valorUnitario === 0
+                            ? ""
+                            : supplyData.valorUnitario
+                        }
                         onChange={(e) =>
                           handleSupplyChange(
                             "valorUnitario",
-                            parseFloat(e.target.value) || 0,
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value) || 0,
                           )
                         }
                         min="0"

@@ -5,6 +5,10 @@ import DashboardLayout from "../components/layout/DashboardLayout";
 import { clients as clientsAPI } from "../api/clients";
 import { imagesApi } from "../api/images";
 import { getEquipmentByClientRequest } from "../api/equipment";
+import { getAllOrdersRequest } from "../api/orders";
+import { warehouses, type Warehouse } from "../api/warehouses";
+import WarehouseModal from "../components/warehouses/WarehouseModal";
+import { useAuth } from "../hooks/useAuth";
 import type {
   Client,
   ClientImage,
@@ -38,6 +42,7 @@ function getPrincipalContacto(client: Client): UsuarioContacto | null {
 export default function ClientDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const logoFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const logoMenuRef = useRef<HTMLDivElement>(null);
@@ -57,6 +62,33 @@ export default function ClientDetailsPage() {
   const [logoHover, setLogoHover] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showLightbox, setShowLightbox] = useState(false);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+  const [totalOrders, setTotalOrders] = useState(0);
+
+  // Estados para bodegas
+  const [warehousesList, setWarehousesList] = useState<Warehouse[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(false);
+  const [showWarehouses, setShowWarehouses] = useState(false);
+
+  // Determinar rol del usuario
+  const roleName = user?.role?.nombreRol?.toLowerCase() || "";
+  const isAdmin = roleName === "administrador";
+  const isSecretaria = roleName === "secretaria";
+
+  // Función para cargar bodegas (solo si hay cliente)
+  const loadWarehouses = async (clientId: number) => {
+    if (!clientId) return;
+
+    try {
+      setWarehousesLoading(true);
+      const data = await warehouses.getByClient(clientId);
+      setWarehousesList(data);
+    } catch (err) {
+      console.error("Error cargando bodegas:", err);
+    } finally {
+      setWarehousesLoading(false);
+    }
+  };
 
   // Cargar datos del cliente
   useEffect(() => {
@@ -120,6 +152,23 @@ export default function ClientDetailsPage() {
         } finally {
           setEquipmentLoading(false);
         }
+
+        // 5. Cargar órdenes del cliente
+        try {
+          const ordersResponse = await getAllOrdersRequest({
+            search: clientData.nombre,
+          });
+          const clientOrders = ordersResponse.services.filter(
+            (order) => order.cliente_empresa?.id_cliente === clientId,
+          );
+          setTotalOrders(clientOrders.length);
+        } catch (err) {
+          console.error("Error cargando órdenes del cliente:", err);
+          setTotalOrders(0);
+        }
+
+        // 6. Cargar bodegas del cliente (SOLO después de tener clientData)
+        await loadWarehouses(clientId);
       } catch (err: any) {
         console.error("Error cargando cliente:", err);
         setError(err.message || "Error al cargar el cliente");
@@ -317,6 +366,58 @@ export default function ClientDetailsPage() {
     setCurrentImageIndex((prev) =>
       prev === 0 ? clientImages.length - 1 : prev - 1,
     );
+  };
+
+  // Manejadores para redirecciones
+  const handleViewOrders = () => {
+    if (client) {
+      // Para ADMIN o SECRETARIA: enviar filtro de cliente para que se seleccione automáticamente
+      if (isAdmin || isSecretaria) {
+        navigate("/orders", {
+          state: {
+            clientId: client.idCliente,
+            clientName: client.nombre,
+            filterByClient: true,
+            status: "all",
+            selectCompany: true,
+            companyId: client.idCliente,
+          },
+        });
+      } else {
+        // Para otros roles (cliente, técnico) solo pasar información básica
+        navigate("/orders", {
+          state: {
+            clientId: client.idCliente,
+            clientName: client.nombre,
+            filterByClient: true,
+            status: "all",
+          },
+        });
+      }
+    }
+  };
+
+  const handleViewEquipments = () => {
+    if (client) {
+      navigate("/equipment", {
+        state: {
+          clientId: client.idCliente,
+          clientName: client.nombre,
+          clientNit: client.nit,
+        },
+      });
+    }
+  };
+
+  const handleCreateWarehouse = () => {
+    setShowWarehouseModal(true);
+  };
+
+  const handleWarehouseSuccess = () => {
+    if (client) {
+      loadWarehouses(client.idCliente);
+    }
+    setShowWarehouseModal(false);
   };
 
   // Árbol de subáreas
@@ -576,28 +677,62 @@ export default function ClientDetailsPage() {
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats con redirecciones */}
           <div className={styles.quickStats}>
-            <div className={styles.statItem}>
+            <div
+              className={`${styles.statItem} ${styles.clickableStat}`}
+              onClick={handleViewEquipments}
+              title="Ver todos los equipos del cliente"
+            >
               <span className={styles.statIcon}>⚙️</span>
               <span className={styles.statValue}>{totalEquipments}</span>
               <span className={styles.statLabel}>
                 Equipo{totalEquipments !== 1 ? "s" : ""}
               </span>
             </div>
-            <div className={styles.statItem}>
+
+            <div
+              className={`${styles.statItem} ${styles.clickableStat}`}
+              onClick={() => setActiveTab("areas")}
+              title="Ver áreas y subáreas"
+            >
               <span className={styles.statIcon}>🏢</span>
               <span className={styles.statValue}>{areas.length}</span>
               <span className={styles.statLabel}>
                 Área{areas.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <div className={styles.statItem}>
+
+            <div
+              className={`${styles.statItem} ${styles.clickableStat}`}
+              onClick={() => setActiveTab("gallery")}
+              title="Ver galería de imágenes"
+            >
               <span className={styles.statIcon}>🖼️</span>
               <span className={styles.statValue}>{clientImages.length}</span>
               <span className={styles.statLabel}>
                 Imagen{clientImages.length !== 1 ? "es" : ""}
               </span>
+            </div>
+
+            <div
+              className={`${styles.statItem} ${styles.clickableStat}`}
+              onClick={handleViewOrders}
+              title="Ver órdenes de servicio del cliente"
+            >
+              <span className={styles.statIcon}>📋</span>
+              <span className={styles.statValue}>{totalOrders}</span>
+              <span className={styles.statLabel}>Órdenes</span>
+            </div>
+
+            <div
+              className={`${styles.statItem} ${styles.clickableStat}`}
+              onClick={handleCreateWarehouse}
+              title="Crear nueva bodega"
+            >
+              <span className={styles.statIcon}>🏭</span>
+              <span className={styles.statValue}>+</span>
+              <span className={styles.statLabel}>Bodega</span>
             </div>
           </div>
 
@@ -817,6 +952,68 @@ export default function ClientDetailsPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* SECCIÓN DE BODEGAS */}
+              <div className={styles.warehousesSection}>
+                <div className={styles.sectionHeader}>
+                  <h3 className={styles.sectionTitle}>
+                    <span className={styles.sectionIcon}>🏭</span>
+                    Bodegas ({warehousesList.length})
+                  </h3>
+                  <button
+                    className={styles.toggleWarehousesBtn}
+                    onClick={() => setShowWarehouses(!showWarehouses)}
+                  >
+                    {showWarehouses ? "Ocultar" : "Mostrar"}
+                  </button>
+                </div>
+
+                {warehousesLoading ? (
+                  <div className={styles.loadingBox}>
+                    <div className={styles.spinner}></div>
+                    <span>Cargando bodegas...</span>
+                  </div>
+                ) : warehousesList.length === 0 ? (
+                  <div className={styles.emptyWarehouses}>
+                    <p>No hay bodegas registradas para este cliente.</p>
+                  </div>
+                ) : (
+                  showWarehouses && (
+                    <div className={styles.warehousesGrid}>
+                      {warehousesList.map((warehouse) => (
+                        <div
+                          key={warehouse.bodegaId}
+                          className={styles.warehouseCard}
+                        >
+                          <div className={styles.warehouseHeader}>
+                            <h4 className={styles.warehouseName}>
+                              {warehouse.nombre}
+                            </h4>
+                            <span
+                              className={`${styles.warehouseStatus} ${warehouse.activa ? styles.active : styles.inactive}`}
+                            >
+                              {warehouse.activa ? "Activa" : "Inactiva"}
+                            </span>
+                          </div>
+
+                          {warehouse.descripcion && (
+                            <p className={styles.warehouseDescription}>
+                              {warehouse.descripcion}
+                            </p>
+                          )}
+
+                          {warehouse.direccion && (
+                            <div className={styles.warehouseAddress}>
+                              <span className={styles.addressIcon}>📍</span>
+                              {warehouse.direccion}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
               </div>
             </section>
           )}
@@ -1097,6 +1294,14 @@ export default function ClientDetailsPage() {
             </section>
           )}
         </main>
+
+        {/* Modal de creación de bodegas */}
+        <WarehouseModal
+          isOpen={showWarehouseModal}
+          onClose={() => setShowWarehouseModal(false)}
+          onSuccess={handleWarehouseSuccess}
+          clientId={client?.idCliente}
+        />
       </div>
     </DashboardLayout>
   );

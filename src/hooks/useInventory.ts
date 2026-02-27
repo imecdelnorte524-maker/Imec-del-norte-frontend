@@ -1,6 +1,5 @@
-// src/hooks/useInventory.ts
 import { useState, useEffect } from "react";
-import { inventory as inventoryAPI } from "../api/inventory";
+import { inventory as inventoryAPI } from "../api/inventory"; // ✅ Esto importa el objeto
 import { toolsApi } from "../api/tools";
 import { suppliesApi } from "../api/supplies";
 import { warehouses as warehousesApi } from "../api/warehouses";
@@ -33,7 +32,7 @@ export const useInventory = (filter?: "todos" | "herramientas" | "insumos") => {
     try {
       setLoading(true);
       setError(null);
-      const data = await inventoryAPI.getAllInventory();
+      const data = await inventoryAPI.getAll(); // ✅ Cambiado de getAllInventory a getAll
       setInventory(data);
     } catch (err: any) {
       setError(err.message || "Error al cargar el inventario");
@@ -159,7 +158,7 @@ export const useInventoryActions = () => {
   const updateInsumoQuantity = async (id: number, cantidadActual: number) => {
     setLoading(true);
     try {
-      await inventoryAPI.updateStock(id, cantidadActual);
+      await inventoryAPI.updateStock(id, cantidadActual); // ✅ updateStock existe
       return true;
     } catch (err: any) {
       setError(err.message);
@@ -173,7 +172,7 @@ export const useInventoryActions = () => {
   const updateHerramientaLocation = async (id: number, data: any) => {
     setLoading(true);
     try {
-      await inventoryAPI.updateInventory(id, data);
+      await inventoryAPI.update(id, data); // ✅ Cambiado de updateInventory a update
       return true;
     } catch (err: any) {
       setError(err.message);
@@ -187,7 +186,7 @@ export const useInventoryActions = () => {
   const deleteInventoryItem = async (id: number) => {
     setLoading(true);
     try {
-      await inventoryAPI.deleteInventory(id);
+      await inventoryAPI.delete(id); // ✅ Cambiado de deleteInventory a delete
       return true;
     } catch (err: any) {
       setError(err.message);

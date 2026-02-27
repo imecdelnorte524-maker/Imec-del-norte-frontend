@@ -33,12 +33,10 @@ export function useWorkOrders() {
 
   // Escuchar eventos de WebSocket
   useSocketEvent(socket, "workOrders.created", (newOrder: Order) => {
-    console.log("📥 Orden creada:", newOrder);
     setWorkOrders((prev) => [newOrder, ...prev]);
   });
 
   useSocketEvent(socket, "workOrders.updated", (updatedOrder: Order) => {
-    console.log("📥 Orden actualizada:", updatedOrder);
     setWorkOrders((prev) =>
       prev.map((order) =>
         order.orden_id === updatedOrder.orden_id ? updatedOrder : order,
@@ -47,7 +45,6 @@ export function useWorkOrders() {
   });
 
   useSocketEvent(socket, "workOrders.statusUpdated", (updatedOrder: Order) => {
-    console.log("📥 Estado actualizado:", updatedOrder.estado);
     setWorkOrders((prev) =>
       prev.map((order) =>
         order.orden_id === updatedOrder.orden_id ? updatedOrder : order,
@@ -56,7 +53,6 @@ export function useWorkOrders() {
   });
 
   useSocketEvent(socket, "workOrders.deleted", ({ id }: { id: number }) => {
-    console.log("📥 Orden eliminada:", id);
     setWorkOrders((prev) => prev.filter((order) => order.orden_id !== id));
   });
 

@@ -1,5 +1,3 @@
-/* src/styles/components/orders/OrderList.module.css */
-
 /* CONTENEDOR PRINCIPAL */
 .container {
   padding: var(--spacing-lg);
@@ -34,6 +32,12 @@
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   border-color: var(--primary-300);
+}
+
+/* Tarjeta seleccionada (selección múltiple) */
+.orderCardSelected {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
 /* Borde lateral por estado */
@@ -697,6 +701,7 @@
     width: 95%;
   }
 }
+
 @media (max-width: 768px) {
   .filterGrid {
     grid-template-columns: 1fr;
@@ -728,6 +733,10 @@
 /* PEQUEÑO (MÓVIL) */
 
 @media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
   .filterInput,
   .filterSelect,
   .companySearchInput {
@@ -759,5 +768,69 @@
 @media (min-width: 1400px) {
   .filterGrid {
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+/* BARRA DE SELECCIÓN (selección múltiple) */
+
+.selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  flex-wrap: wrap;
+}
+
+.selectAllLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--gray-700);
+}
+
+.selectAllLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-600);
+  cursor: pointer;
+  margin: 0;
+}
+
+.selectedCount {
+  color: var(--primary-700);
+  font-weight: 500;
+  background-color: var(--primary-50);
+  border-radius: var(--border-radius-full);
+  padding: var(--spacing-xs) var(--spacing-md);
+}
+
+/* Checkbox dentro de la tarjeta */
+.cardCheckboxWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--spacing-xs);
+}
+
+.cardCheckboxLabel {
+  display: flex;
+  align-items: center;
+}
+
+.cardCheckboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-600);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Responsive barra de selección */
+@media (max-width: 768px) {
+  .selectionBar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

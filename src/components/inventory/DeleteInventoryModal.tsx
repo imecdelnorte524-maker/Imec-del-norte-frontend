@@ -1,6 +1,5 @@
-// src/components/inventory/DeleteInventoryModal.tsx
 import { useState } from "react";
-import { inventory } from "../../api/inventory";
+import { inventory } from "../../api/inventory"; // ✅ Usamos el objeto inventory
 import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import styles from "../../styles/components/inventory/DeleteInventoryModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
@@ -32,8 +31,8 @@ export default function DeleteConfirmationModal({
       setLoading(true);
       setError(null);
 
-      // Ahora el backend elimina inventario + herramienta/insumo asociado
-      await inventory.deleteInventoryAndItem(item.inventarioId);
+      // ✅ Usamos deleteComplete del objeto inventory
+      await inventory.deleteComplete(item.inventarioId);
 
       onSuccess();
       onClose();

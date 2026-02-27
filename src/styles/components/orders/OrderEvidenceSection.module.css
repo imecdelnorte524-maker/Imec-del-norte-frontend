@@ -167,7 +167,7 @@
 .imageViewerOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(132, 129, 129, 0.624);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -178,10 +178,10 @@
 
 .imageViewerContent {
   position: relative;
-  background: #0f172a;
+  background: #c2c7d37f;
   border-radius: 16px;
   max-width: 1200px;
-  width: 100%;
+  width: 90%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;

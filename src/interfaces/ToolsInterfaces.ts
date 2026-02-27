@@ -12,10 +12,7 @@ export type ToolStatus = (typeof ToolStatus)[keyof typeof ToolStatus];
 
 export const ToolType = {
   HERRAMIENTA: "Herramienta",
-  INSTRUMENTO: "Instrumento",
-  EQUIPO: "Equipo",
-  MAQUINARIA: "Maquinaria",
-  ELECTRONICO: "Electrónico",
+  EQUIPO: "Equipo"
 } as const;
 
 export type ToolType = (typeof ToolType)[keyof typeof ToolType];

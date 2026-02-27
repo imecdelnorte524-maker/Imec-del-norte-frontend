@@ -2,13 +2,13 @@
 import type {
   EvaporatorData,
   CondenserData,
+  AirConditionerTypeOption,
 } from "../../../interfaces/EquipmentInterfaces";
 import styles from "../../../styles/components/equipment/equipment-details/ComponentsEditForms.module.css";
 
 import EvaporatorEditForm from "./forms/EvaporatorEditForm";
 import CondenserEditForm from "./forms/CondenserEditForm";
 
-// Tipos de aire acondicionado que permiten múltiples componentes
 const MULTIPLE_COMPONENT_TYPES = [
   "MultiSplit",
   "Refrigerante Variable",
@@ -28,6 +28,8 @@ interface ComponentsEditFormsProps {
   canAddMoreCondensers?: boolean;
   airConditionerTypeName?: string;
   canHaveMultipleComponents?: boolean;
+  airConditionerTypes?: AirConditionerTypeOption[];
+  onEvaporatorTypeChange?: (index: number, typeId: number) => void;
 }
 
 export default function ComponentsEditForms({
@@ -38,8 +40,9 @@ export default function ComponentsEditForms({
   onCondensersChange,
   airConditionerTypeName = "",
   canHaveMultipleComponents = false,
+  airConditionerTypes = [],
+  onEvaporatorTypeChange,
 }: ComponentsEditFormsProps) {
-  // 🔥 FUNCIÓN PARA VERIFICAR SI EL TIPO PERMITE MÚLTIPLES COMPONENTES
   const allowsMultipleComponents = (): boolean => {
     if (!airConditionerTypeName) return false;
     const typeName = airConditionerTypeName.toLowerCase();
@@ -57,10 +60,26 @@ export default function ComponentsEditForms({
 
   const handleEvaporatorChange = (
     index: number,
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
+    const { name, value } = e.target;
     const updated = [...evaporators];
-    updated[index] = { ...updated[index], [e.target.name]: e.target.value };
+
+    // Si es el campo de tipo, convertirlo a número si es necesario
+    if (name === "airConditionerTypeEvapId") {
+      updated[index] = {
+        ...updated[index],
+        [name]: value ? parseInt(value) : undefined,
+      };
+
+      // Notificar al padre si hay un manejador específico
+      if (onEvaporatorTypeChange && value) {
+        onEvaporatorTypeChange(index, parseInt(value));
+      }
+    } else {
+      updated[index] = { ...updated[index], [name]: value };
+    }
+
     onEvaporatorsChange(updated);
   };
 
@@ -71,6 +90,24 @@ export default function ComponentsEditForms({
   const handleRemoveEvaporator = (index: number) => {
     const updated = evaporators.filter((_, i) => i !== index);
     onEvaporatorsChange(updated);
+  };
+
+  // Manejador específico para cambio de tipo
+  const handleEvaporatorTypeChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const value = e.target.value;
+    const updated = [...evaporators];
+    updated[index] = {
+      ...updated[index],
+      airConditionerTypeEvapId: value ? parseInt(value) : undefined,
+    };
+    onEvaporatorsChange(updated);
+
+    if (onEvaporatorTypeChange && value) {
+      onEvaporatorTypeChange(index, parseInt(value));
+    }
   };
 
   // Motores de evaporador
@@ -263,6 +300,10 @@ export default function ComponentsEditForms({
                 index={index}
                 saving={saving}
                 onChange={handleEvaporatorChange}
+                // Props para el selector de tipo
+                showTypeSelector={canHaveMultiple}
+                airConditionerTypes={airConditionerTypes}
+                onTypeChange={handleEvaporatorTypeChange}
                 // 👇 PASAMOS LA REGLA DE VISIBILIDAD
                 canRemove={canShowRemoveEvaporator}
                 onRemove={() => handleRemoveEvaporator(index)}
@@ -312,7 +353,6 @@ export default function ComponentsEditForms({
                 index={index}
                 saving={saving}
                 onChange={handleCondenserChange}
-                // 👇 PASAMOS LA REGLA DE VISIBILIDAD
                 canRemove={canShowRemoveCondenser}
                 onRemove={() => handleRemoveCondenser(index)}
                 onMotorChange={handleCondenserMotorChange}

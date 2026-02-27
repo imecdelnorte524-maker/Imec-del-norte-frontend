@@ -26,6 +26,9 @@ interface Props {
     tecnicoId?: number;
     clienteId?: number;
   };
+  selectable?: boolean;
+  selectedOrderIds?: number[];
+  onSelectionChange?: (ids: number[]) => void;
 }
 
 interface DateFilters {
@@ -66,11 +69,14 @@ export default function OrderList({
   initialFilter = "all",
   initialOrderId,
   filters = {},
+  selectable = false,
+  selectedOrderIds = [],
+  onSelectionChange,
 }: Props) {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState<
-    "all" | "pending" | "assigned"| "in_progress" | "completed" | "cancelled"
+    "all" | "pending" | "assigned" | "in_progress" | "completed" | "cancelled"
   >(initialFilter);
 
   // Controla si ya se hizo el auto‑select para el ID actual
@@ -91,6 +97,7 @@ export default function OrderList({
       ?.normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase() === "tecnico";
+
   // Filtros de fecha
   const [dateFilters, setDateFilters] = useState<DateFilters>({
     startDate: "",
@@ -415,6 +422,49 @@ export default function OrderList({
     }
     return null;
   };
+
+  // --- ÓRDENES COMPLETADAS VISIBLES ---
+  const completedVisibleOrders = useMemo(
+    () => filteredOrders.filter((o) => o.estado === "Completado"),
+    [filteredOrders],
+  );
+
+  // --- SELECCIÓN DE ÓRDENES ---
+
+  const handleToggleSelect = (orderId: number, checked: boolean) => {
+    if (!onSelectionChange) return;
+    if (checked) {
+      if (!selectedOrderIds.includes(orderId)) {
+        onSelectionChange([...selectedOrderIds, orderId]);
+      }
+    } else {
+      onSelectionChange(selectedOrderIds.filter((id) => id !== orderId));
+    }
+  };
+
+  const handleToggleSelectAll = (checked: boolean) => {
+    if (!onSelectionChange) return;
+
+    const completedIds = completedVisibleOrders.map((o) => o.orden_id);
+
+    if (checked) {
+      // Seleccionar todas las COMPLETADAS visibles (sin duplicar)
+      const merged = Array.from(
+        new Set([...selectedOrderIds, ...completedIds]),
+      );
+      onSelectionChange(merged);
+    } else {
+      // Quitar solo las COMPLETADAS visibles del listado actual
+      const remaining = selectedOrderIds.filter(
+        (id) => !completedIds.includes(id),
+      );
+      onSelectionChange(remaining);
+    }
+  };
+
+  const allSelected =
+    completedVisibleOrders.length > 0 &&
+    completedVisibleOrders.every((o) => selectedOrderIds.includes(o.orden_id));
 
   if (loading || companiesLoading)
     return <div className={styles.loading}>Cargando órdenes...</div>;
@@ -748,6 +798,26 @@ export default function OrderList({
         )}
       </div>
 
+      {/* Barra de selección (checkbox seleccionar todo) */}
+      {selectable && completedVisibleOrders.length > 0 && (
+        <div className={styles.selectionBar}>
+          <label className={styles.selectAllLabel}>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => handleToggleSelectAll(e.target.checked)}
+            />
+            Seleccionar todas las órdenes Finalizadas visibles
+          </label>
+          {selectedOrderIds.length > 0 && (
+            <span className={styles.selectedCount}>
+              {selectedOrderIds.length} seleccionada
+              {selectedOrderIds.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Grid de órdenes */}
       <div className={styles.ordersGrid}>
         {filteredOrders.map((order) => {
@@ -759,13 +829,21 @@ export default function OrderList({
           const mainEquipment =
             order.equipos && order.equipos.length > 0 ? order.equipos[0] : null;
           const location = mainEquipment
-            ? `${mainEquipment.area?.nombre || ""} ${mainEquipment.subArea?.nombre ? `- ${mainEquipment.subArea.nombre}` : ""}`.trim()
+            ? `${mainEquipment.area?.nombre || ""} ${
+                mainEquipment.subArea?.nombre
+                  ? `- ${mainEquipment.subArea.nombre}`
+                  : ""
+              }`.trim()
             : "";
+
+          const isSelected = selectedOrderIds.includes(order.orden_id);
 
           return (
             <div
               key={order.orden_id}
-              className={`${styles.orderCard} ${getCardStatusClass(order)}`}
+              className={`${styles.orderCard} ${getCardStatusClass(order)} ${
+                selectable && isSelected ? styles.orderCardSelected : ""
+              }`}
               onClick={() => onViewOrder(order)}
               role="button"
               tabIndex={0}
@@ -775,6 +853,24 @@ export default function OrderList({
                 }
               }}
             >
+              {/* Checkbox por tarjeta: solo para completadas */}
+              {selectable && order.estado === "Completado" && (
+                <div
+                  className={styles.cardCheckboxWrapper}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <label className={styles.cardCheckboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) =>
+                        handleToggleSelect(order.orden_id, e.target.checked)
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+
               <div className={styles.cardHeader}>
                 <h3>#{order.orden_id}</h3>
                 <div className={styles.serviceBadge}>

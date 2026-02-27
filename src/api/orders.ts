@@ -16,6 +16,7 @@ import type {
   AcInspection,
   WorkOrderEvidencePhase,
   CostEstado,
+  DownloadedFile,
 } from "../interfaces/OrderInterfaces";
 
 export interface CreateAcInspectionPayload {
@@ -373,6 +374,23 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
     acInspections,
     images,
   };
+};
+
+// Extrae el nombre de archivo desde Content-Disposition si viene del backend
+const getFileNameFromContentDisposition = (
+  contentDisposition: string | undefined,
+  fallbackName: string,
+): string => {
+  if (!contentDisposition) return fallbackName;
+
+  const fileNameMatch = contentDisposition.match(
+    /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/,
+  );
+  if (fileNameMatch != null && fileNameMatch[1]) {
+    return fileNameMatch[1].replace(/['"]/g, "");
+  }
+
+  return fallbackName;
 };
 
 // 🔧 Obtener órdenes por cliente empresa y categoría
@@ -907,4 +925,88 @@ export const createAcInspectionAfterRequest = async (
     payload,
   );
   return response.data?.data;
+};
+
+// Descargar informe PDF interno de una orden
+export const downloadInternalReportRequest = async (
+  orderId: number,
+): Promise<DownloadedFile> => {
+  const response = await api.get(`/work-orders/${orderId}/informe`, {
+    responseType: "blob",
+  });
+
+  const disposition = response.headers["content-disposition"];
+  const fileName = getFileNameFromContentDisposition(
+    disposition,
+    `OT-${orderId}-interno.pdf`,
+  );
+
+  return {
+    blob: response.data as Blob,
+    fileName,
+  };
+};
+
+// Descargar informe PDF versión cliente de una orden
+export const downloadClientReportRequest = async (
+  orderId: number,
+): Promise<DownloadedFile> => {
+  const response = await api.get(`/work-orders/${orderId}/informe-client`, {
+    responseType: "blob",
+  });
+
+  const disposition = response.headers["content-disposition"];
+  const fileName = getFileNameFromContentDisposition(
+    disposition,
+    `Informe-Orden-Servicio-${orderId}-cliente.pdf`,
+  );
+
+  return {
+    blob: response.data as Blob,
+    fileName,
+  };
+};
+
+export const sendWorkOrderReportsByEmailRequest = async (payload: {
+  orderIds: number[];
+  reportType: "internal" | "client";
+  toEmail: string;
+  ccEmails?: string[];
+  subject?: string;
+  message?: string;
+}): Promise<any> => {
+  const response = await api.post("/work-orders/send-reports", payload);
+  return response.data;
+};
+
+export const sendWorkOrderReportsToClientsRequest = async (payload?: {
+  message?: string;
+}): Promise<any> => {
+  const response = await api.post(
+    "/work-orders/send-reports-to-clients",
+    payload ?? {},
+  );
+  return response.data;
+};
+
+export const downloadBatchReportsRequest = async (params: {
+  orderIds: number[];
+  reportType: "internal" | "client";
+}): Promise<DownloadedFile> => {
+  const response = await api.post("/work-orders/download-reports", params, {
+    responseType: "blob",
+  });
+
+  const disposition = response.headers["content-disposition"];
+  const defaultName =
+    params.reportType === "internal"
+      ? "informes-internos-ordenes.zip"
+      : "informes-cliente-ordenes.zip";
+
+  const fileName = getFileNameFromContentDisposition(disposition, defaultName);
+
+  return {
+    blob: response.data as Blob,
+    fileName,
+  };
 };

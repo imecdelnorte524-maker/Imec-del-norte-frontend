@@ -1,4 +1,3 @@
-// src/api/warehouses.ts
 import api from "./axios";
 
 export interface Warehouse {
@@ -7,6 +6,7 @@ export interface Warehouse {
   descripcion?: string;
   direccion?: string;
   activa: boolean;
+  clienteId?: number | null; // 👈 AGREGAR clienteId
   fechaCreacion: Date;
   fechaActualizacion: Date;
 }
@@ -21,7 +21,20 @@ export const warehouses = {
     } catch (error: any) {
       console.error("Error obteniendo bodegas:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener bodegas"
+        error.response?.data?.message || "Error al obtener bodegas",
+      );
+    }
+  },
+
+  // Obtener bodegas por cliente
+  getByClient: async (clientId: number): Promise<Warehouse[]> => {
+    try {
+      const response = await api.get(`/warehouses/cliente/${clientId}`);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Error obteniendo bodegas del cliente:", error);
+      throw new Error(
+        error.response?.data?.message || "Error al obtener bodegas del cliente",
       );
     }
   },
@@ -34,25 +47,24 @@ export const warehouses = {
     } catch (error: any) {
       console.error("Error obteniendo bodega:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener bodega"
+        error.response?.data?.message || "Error al obtener bodega",
       );
     }
   },
 
-  // Crear bodega
+  // Crear bodega (ahora acepta clienteId)
   create: async (warehouseData: {
     nombre: string;
     descripcion?: string;
     direccion?: string;
+    clienteId?: number | null; // 👈 AGREGAR clienteId
   }): Promise<Warehouse> => {
     try {
       const response = await api.post("/warehouses", warehouseData);
       return response.data.data;
     } catch (error: any) {
       console.error("Error creando bodega:", error);
-      throw new Error(
-        error.response?.data?.message || "Error al crear bodega"
-      );
+      throw new Error(error.response?.data?.message || "Error al crear bodega");
     }
   },
 
@@ -64,7 +76,8 @@ export const warehouses = {
       descripcion?: string;
       direccion?: string;
       activa?: boolean;
-    }
+      clienteId?: number | null; // 👈 AGREGAR
+    },
   ): Promise<Warehouse> => {
     try {
       const response = await api.patch(`/warehouses/${id}`, updateData);
@@ -72,7 +85,7 @@ export const warehouses = {
     } catch (error: any) {
       console.error("Error actualizando bodega:", error);
       throw new Error(
-        error.response?.data?.message || "Error al actualizar bodega"
+        error.response?.data?.message || "Error al actualizar bodega",
       );
     }
   },
@@ -85,7 +98,7 @@ export const warehouses = {
     } catch (error: any) {
       console.error("Error eliminando bodega:", error);
       throw new Error(
-        error.response?.data?.message || "Error al eliminar bodega"
+        error.response?.data?.message || "Error al eliminar bodega",
       );
     }
   },
@@ -98,7 +111,7 @@ export const warehouses = {
     } catch (error: any) {
       console.error("Error obteniendo estadísticas:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener estadísticas"
+        error.response?.data?.message || "Error al obtener estadísticas",
       );
     }
   },

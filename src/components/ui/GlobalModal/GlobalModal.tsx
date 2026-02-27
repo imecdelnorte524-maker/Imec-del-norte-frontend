@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useModal, type ModalButton } from '../../../context/ModalContext';
-import styles from './GlobalModal.module.css';
+import styles from '../../../styles/components/ui/GlobalModal/GlobalModal.module.css';
 
 const iconMap = {
   info: (
