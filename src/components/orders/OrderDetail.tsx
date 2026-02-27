@@ -15,21 +15,26 @@ import {
 import { usersApi } from "../../api/users";
 import { inventory } from "../../api/inventory";
 import { getEquipmentByClientRequest } from "../../api/equipment";
-import { useOrderDetail, useOrderMutations } from "../../hooks/useOrders";
+import { useOrderMutations } from "../../hooks/useOrders";
 import type {
   BillingEstado,
   Order,
   UpdateOrderData,
+  AssociatedEquipment,
+  CostEstado,
 } from "../../interfaces/OrderInterfaces";
 import type { Usuario } from "../../interfaces/UserInterfaces";
 import type { Equipment } from "../../interfaces/EquipmentInterfaces";
 import styles from "../../styles/components/orders/OrderDetail.module.css";
-import type { Inventory } from "../../interfaces/InventoryInterfaces";
+import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../../utils/sounds";
 import { useAuth } from "../../hooks/useAuth";
 import OrderSignatureModal from "./OrderSignatureModal";
 import OrderEvidenceSection from "./OrderEvidenceSection";
-import OrderEvidenceModal from "./OrderEvidenceModal";
+import OrderEditModal from "./OrderEditModal";
+import AcInspectionModal from "./AcInspectionModal";
+import AcTechnicalDataSection from "./AcTechnicalDataSection";
+import EquipmentSelectionModal from "./EquipmentSelectionModal";
 
 interface Props {
   order: Order;
@@ -57,17 +62,13 @@ const normalizeUserRole = (role: string): string => {
 
 type PendingPostRatingAction = "openBillingModal" | "openInvoiceModal" | null;
 
-export default function OrderDetail({
-  order: initialOrderData,
-  onBack,
-  userRole,
-}: Props) {
+export default function OrderDetail({ order, onBack, userRole }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { order } = useOrderDetail(initialOrderData.orden_id, initialOrderData);
-  const currentOrder = order || initialOrderData;
+  const currentOrder = order;
+
   const {
     updateOrder,
     assignTechnician,
@@ -86,7 +87,6 @@ export default function OrderDetail({
     (user as any)?.role?.nombreRol || (user as any)?.role || userRole,
   );
 
-  // Quién puede calificar técnicos
   const canRateTechnicians =
     normalizedAuthRole === "admin" || normalizedAuthRole === "supervisor";
 
@@ -99,6 +99,10 @@ export default function OrderDetail({
     CANCELADA: "Cancelada" as const,
     RECHAZADA: "Rechazada" as const,
   };
+
+  const isAirConditioningOrder =
+    (currentOrder.servicio.categoria_servicio || "").toLowerCase().trim() ===
+    "aires acondicionados";
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,18 +123,19 @@ export default function OrderDetail({
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   const [showInventoryModal, setShowInventoryModal] = useState(false);
-  const [inventoryItems, setInventoryItems] = useState<Inventory[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
-  const [selectedInventoryId, setSelectedInventoryId] = useState<number | "">(
-    "",
+  const [selectedInventoryIds, setSelectedInventoryIds] = useState<number[]>(
+    [],
   );
-  // borrar
-  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
-  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const [selectedQuantities, setSelectedQuantities] = useState<
+    Record<number, number>
+  >({});
   const [showBillingModal, setShowBillingModal] = useState(false);
   const [selectedBillingStatus, setSelectedBillingStatus] =
     useState<BillingEstado>("");
+  const [selectedCostStatus, setSelectedCostStatus] = useState<CostEstado>("");
   const [billingError, setBillingError] = useState<string | null>(null);
 
   const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
@@ -139,28 +144,46 @@ export default function OrderDetail({
     id: null,
   });
 
-  // --- Modal Emergencia ---
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [clientEquipments, setClientEquipments] = useState<Equipment[]>([]);
   const [selectedEmergencyEquipments, setSelectedEmergencyEquipments] =
     useState<number[]>([]);
   const [loadingEquipments, setLoadingEquipments] = useState(false);
-  const [selectedEmergencyTechId, setSelectedEmergencyTechId] = useState<
-    number | null
-  >(null);
 
-  // dentro del componente
+  const [selectedEmergencyTechnicians, setSelectedEmergencyTechnicians] =
+    useState<number[]>([]);
+  const [emergencyLeaderId, setEmergencyLeaderId] = useState<number | null>(
+    null,
+  );
+  const [emergencyComment, setEmergencyComment] = useState("");
+
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureLoading, setSignatureLoading] = useState(false);
 
-  // --- Modal Pausa ---
   const [showPauseModal, setShowPauseModal] = useState(false);
   const [pauseObservation, setPauseObservation] = useState("");
+
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const [showAcInspectionModal, setShowAcInspectionModal] = useState(false);
+  const [showEqSelector, setShowEqSelector] = useState(false);
+  const [selectedEquipment, setSelectedEquipment] =
+    useState<AssociatedEquipment | null>(null);
+  const [acPhase, setAcPhase] = useState<"BEFORE" | "AFTER">("BEFORE");
 
   const supplyDetails = currentOrder.supplyDetails ?? [];
   const toolDetails = currentOrder.toolDetails ?? [];
 
-  // --- Rating ---
+  const [activeEquipmentId, setActiveEquipmentId] = useState<number | null>(
+    currentOrder.equipos?.[0]?.equipmentId ?? null,
+  );
+
+  const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
+
+  useEffect(() => {
+    setActiveEquipmentId(currentOrder.equipos?.[0]?.equipmentId ?? null);
+  }, [currentOrder.orden_id, currentOrder.equipos?.length]);
+
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratings, setRatings] = useState<Record<number, number>>({});
   const [ratingError, setRatingError] = useState<string | null>(null);
@@ -169,6 +192,34 @@ export default function OrderDetail({
   const [showRatingNotice, setShowRatingNotice] = useState(false);
 
   const isSavingRatings = rateTechnicians.status === "pending";
+
+  const handleOpenAcInspectionForEquipment = (eq: AssociatedEquipment) => {
+    setSelectedEquipment(eq);
+
+    const hasBefore =
+      currentOrder.acInspections?.some(
+        (insp) =>
+          insp.equipmentId === eq.equipmentId && insp.phase === "BEFORE",
+      ) ?? false;
+
+    const hasAfter =
+      currentOrder.acInspections?.some(
+        (insp) => insp.equipmentId === eq.equipmentId && insp.phase === "AFTER",
+      ) ?? false;
+
+    let nextPhase: "BEFORE" | "AFTER" = "BEFORE";
+
+    if (!hasBefore) {
+      nextPhase = "BEFORE";
+    } else if (hasBefore && !hasAfter) {
+      nextPhase = "AFTER";
+    } else {
+      nextPhase = "BEFORE";
+    }
+
+    setAcPhase(nextPhase);
+    setShowAcInspectionModal(true);
+  };
 
   useEffect(() => {
     if (!isAdminOrSecretaria) return;
@@ -194,25 +245,114 @@ export default function OrderDetail({
     }
   }, [selectedTechnicians, leaderTechnicianId]);
 
+  useEffect(() => {
+    if (
+      selectedEmergencyTechnicians.length > 0 &&
+      !selectedEmergencyTechnicians.includes(emergencyLeaderId || 0)
+    ) {
+      setEmergencyLeaderId(selectedEmergencyTechnicians[0]);
+    } else if (selectedEmergencyTechnicians.length === 0) {
+      setEmergencyLeaderId(null);
+    }
+  }, [selectedEmergencyTechnicians, emergencyLeaderId]);
+
   const refreshData = async () => {
-    queryClient.invalidateQueries({
+    await queryClient.invalidateQueries({
       queryKey: ["orderDetail", currentOrder.orden_id],
     });
-    queryClient.invalidateQueries({ queryKey: ["dashboardOrders"] });
-    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    await queryClient.refetchQueries({
+      queryKey: ["orderDetail", currentOrder.orden_id],
+    });
   };
 
-  // --- Emergencia ---
+  const hasBillingStatus = currentOrder.estado_facturacion !== "";
+
+  const canEditOrderDetails =
+    isAdminOrSecretaria &&
+    currentOrder.estado !== validStatuses.COMPLETADO &&
+    !hasBillingStatus;
+
+  const handleStartOrderClick = () => {
+    if (isAirConditioningOrder) {
+      setAcPhase("BEFORE");
+      if (currentOrder.equipos.length === 1) {
+        setSelectedEquipment(currentOrder.equipos[0]);
+        setShowAcInspectionModal(true);
+      } else {
+        setShowEqSelector(true);
+      }
+    } else {
+      handleStatusUpdate(validStatuses.EN_PROCESO);
+    }
+  };
+
+  const hasReceiptSignature =
+    !!currentOrder.received_by_name &&
+    !!currentOrder.received_by_position &&
+    !!currentOrder.received_by_signature_data;
+
+  const handleCompleteOrderClick = () => {
+    if (isAirConditioningOrder) {
+      const totalEq = currentOrder.equipos.length;
+      const completedInspections =
+        currentOrder.acInspections?.filter((i) => i.phase === "AFTER").length ||
+        0;
+
+      if (completedInspections < totalEq) {
+        setAcPhase("AFTER");
+
+        if (currentOrder.equipos.length === 1) {
+          setSelectedEquipment(currentOrder.equipos[0]);
+          setShowAcInspectionModal(true);
+        } else {
+          setShowEqSelector(true);
+        }
+      } else if (!hasReceiptSignature) {
+        setShowSignatureModal(true);
+      } else {
+        handleStatusUpdate(validStatuses.COMPLETADO);
+      }
+    } else {
+      if (hasReceiptSignature) {
+        handleStatusUpdate(validStatuses.COMPLETADO);
+      } else {
+        setShowSignatureModal(true);
+      }
+    }
+  };
+
+  const handleEquipmentSelected = (eq: AssociatedEquipment) => {
+    setSelectedEquipment(eq);
+    setShowEqSelector(false);
+    setShowAcInspectionModal(true);
+  };
+
+  const handleAcInspectionSuccess = async () => {
+    setShowAcInspectionModal(false);
+    await refreshData();
+
+    if (
+      acPhase === "BEFORE" &&
+      (currentOrder.estado === "Pendiente" ||
+        currentOrder.estado === "Asignada")
+    ) {
+      await handleStatusUpdate(validStatuses.EN_PROCESO);
+    }
+  };
+
   const handleOpenEmergencyModal = async () => {
     setShowEmergencyModal(true);
     setLoadingEquipments(true);
     setSelectedEmergencyEquipments([]);
+    setSelectedEmergencyTechnicians([]);
+    setEmergencyLeaderId(null);
+    setEmergencyComment("");
 
     const currentTechs = currentOrder.technicians || [];
     if (currentTechs.length === 1) {
-      setSelectedEmergencyTechId(currentTechs[0].tecnicoId);
-    } else {
-      setSelectedEmergencyTechId(null);
+      const onlyTechId = currentTechs[0].tecnicoId;
+      setSelectedEmergencyTechnicians([onlyTechId]);
+      setEmergencyLeaderId(onlyTechId);
     }
 
     try {
@@ -229,15 +369,49 @@ export default function OrderDetail({
     }
   };
 
+  const handleOpenEditModal = async () => {
+    setError(null);
+    if (
+      currentOrder.cliente_empresa?.id_cliente &&
+      clientEquipments.length === 0
+    ) {
+      try {
+        setLoadingEquipments(true);
+        const data = await getEquipmentByClientRequest(
+          currentOrder.cliente_empresa.id_cliente,
+        );
+        setClientEquipments(data);
+      } catch (err) {
+        console.error("Error cargando equipos para edición", err);
+      } finally {
+        setLoadingEquipments(false);
+      }
+    }
+    setShowEditModal(true);
+  };
+
   const toggleEmergencyEquipment = (eqId: number) => {
     setSelectedEmergencyEquipments((prev) =>
       prev.includes(eqId) ? prev.filter((id) => id !== eqId) : [...prev, eqId],
     );
   };
 
+  const toggleEmergencyTechnician = (techId: number) => {
+    setSelectedEmergencyTechnicians((prev) =>
+      prev.includes(techId)
+        ? prev.filter((id) => id !== techId)
+        : [...prev, techId],
+    );
+  };
+
   const confirmEmergencyOrder = async () => {
-    if (!selectedEmergencyTechId) {
-      alert("Debe seleccionar un técnico para la emergencia.");
+    if (selectedEmergencyTechnicians.length === 0) {
+      alert("Debe seleccionar al menos un técnico para la emergencia.");
+      return;
+    }
+
+    if (selectedEmergencyEquipments.length === 0) {
+      alert("Debe seleccionar al menos un equipo para la emergencia.");
       return;
     }
 
@@ -246,20 +420,33 @@ export default function OrderDetail({
 
     try {
       const equipmentIds = selectedEmergencyEquipments;
+      const technicianIds = selectedEmergencyTechnicians;
+
+      const leaderId =
+        emergencyLeaderId && technicianIds.includes(emergencyLeaderId)
+          ? emergencyLeaderId
+          : technicianIds[0];
+
+      const commentToSend =
+        emergencyComment.trim() ||
+        `Emergencia creada desde orden ${currentOrder.orden_id}`;
 
       const emergencyOrder = await createEmergencyOrderRequest(
         currentOrder.orden_id,
         {
-          technicianIds: [selectedEmergencyTechId],
-          leaderTechnicianId: selectedEmergencyTechId,
+          technicianIds,
+          leaderTechnicianId: leaderId,
           equipmentIds,
-          comentarios: `Emergencia creada desde orden ${currentOrder.orden_id}`,
+          comentarios: commentToSend,
         },
       );
 
       await refreshData();
       setShowEmergencyModal(false);
-      navigate(`/orders?ordenId=${emergencyOrder.orden_id}`);
+
+      navigate("/orders", {
+        state: { initialOrderId: emergencyOrder.orden_id },
+      });
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -272,7 +459,6 @@ export default function OrderDetail({
     }
   };
 
-  // --- Estados y actualizaciones ---
   const handleStatusUpdate = async (
     newStatus: Order["estado"],
     pauseObs?: string,
@@ -305,6 +491,41 @@ export default function OrderDetail({
       }
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al actualizar orden");
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveOrderDetails = async (changes: {
+    comentarios?: string;
+    equipmentIds: number[];
+  }) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const dataToSend: any = {};
+      if (changes.comentarios !== undefined) {
+        dataToSend.comentarios = changes.comentarios;
+      }
+      if (changes.equipmentIds !== undefined) {
+        dataToSend.equipmentIds = changes.equipmentIds;
+        dataToSend.equipment_ids = changes.equipmentIds;
+      }
+
+      await updateOrder.mutateAsync({
+        orderId: currentOrder.orden_id,
+        data: dataToSend,
+      });
+      await refreshData();
+      setShowEditModal(false);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Error al editar la orden",
+      );
       playErrorSound();
     } finally {
       setLoading(false);
@@ -399,12 +620,27 @@ export default function OrderDetail({
       setInvoiceError("Seleccione un archivo");
       return;
     }
+    if (!selectedCostStatus) {
+      setInvoiceError("Seleccione el estado de pago");
+      return;
+    }
+
     setInvoiceLoading(true);
     setInvoiceError(null);
     try {
-      await uploadInvoiceRequest(currentOrder.orden_id, invoiceFile);
+      const formData = new FormData();
+      formData.append("file", invoiceFile);
+
+      await uploadInvoiceRequest(
+        currentOrder.orden_id,
+        formData,
+        selectedCostStatus,
+      );
+
       await refreshData();
       setShowInvoiceModal(false);
+      setSelectedCostStatus("");
+      setInvoiceFile(null);
     } catch (err: any) {
       setInvoiceError(err.response?.data?.message || "Error subiendo factura");
     } finally {
@@ -414,16 +650,17 @@ export default function OrderDetail({
 
   const handleOpenInventoryModal = async () => {
     setInventoryError(null);
-    setSelectedInventoryId("");
-    setSelectedQuantity(1);
+    setSelectedInventoryIds([]);
+    setSelectedQuantities({});
     setShowInventoryModal(true);
     try {
       setInventoryLoading(true);
-      const data = await inventory.getAllInventory();
-      const availableItems = data.filter((item: Inventory) => {
+      const data = await inventory.getAll();
+      const availableItems = data.filter((item: InventoryItem) => {
         const estadoNormalizado =
           item.tool?.estado?.toLowerCase().trim() ||
-          item.supply?.estado?.toLowerCase().trim();
+          item.supply?.estado?.toLowerCase().trim() ||
+          "";
         return estadoNormalizado === "disponible";
       });
       setInventoryItems(availableItems);
@@ -434,7 +671,59 @@ export default function OrderDetail({
     }
   };
 
-  // ---- Lógica de rating: detección de necesidad de calificar ----
+  const toggleInventorySelection = (inventarioId: number) => {
+    setSelectedInventoryIds((prev) => {
+      if (prev.includes(inventarioId)) {
+        // quitar
+        const next = prev.filter((id) => id !== inventarioId);
+        // limpiar cantidad asociada
+        setSelectedQuantities((q) => {
+          const { [inventarioId]: _, ...rest } = q;
+          return rest;
+        });
+        return next;
+      } else {
+        // agregar
+        return [...prev, inventarioId];
+      }
+    });
+  };
+
+  const handleQuantityChange = (inventarioId: number, value: number) => {
+    setSelectedQuantities((prev) => ({
+      ...prev,
+      [inventarioId]: value,
+    }));
+  };
+
+  const handleMarkAsPaid = async () => {
+    setShowPaymentConfirmModal(true);
+  };
+
+  const confirmMarkAsPaid = async () => {
+    setShowPaymentConfirmModal(false);
+    setLoading(true);
+    setError(null);
+
+    const payload: UpdateOrderData = {
+      estado_pago: "Pagado" as CostEstado,
+    };
+
+    try {
+      await updateOrder.mutateAsync({
+        orderId: currentOrder.orden_id,
+        data: payload,
+      });
+      await refreshData();
+    } catch (err: any) {
+      console.error("Error completo:", err);
+      setError(err.response?.data?.message || "Error al marcar como pagado");
+      playErrorSound();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hasTechnicians =
     currentOrder.technicians && currentOrder.technicians.length > 0;
 
@@ -457,12 +746,15 @@ export default function OrderDetail({
     }
   }, [needsRating]);
 
+  useEffect(() => {
+    setSelectedCostStatus(currentOrder.estado_pago || "");
+  }, [currentOrder.orden_id, currentOrder.estado_pago]);
+
   const openRatingModal = (action: PendingPostRatingAction) => {
     if (!currentOrder.technicians || currentOrder.technicians.length === 0)
       return;
     const initialRatings: Record<number, number> = {};
     currentOrder.technicians.forEach((t) => {
-      // Si en el futuro ya hubiera rating previo, se podría prellenar
       initialRatings[t.tecnicoId] = t.rating ?? 0;
     });
     setRatings(initialRatings);
@@ -495,44 +787,69 @@ export default function OrderDetail({
   };
 
   const handleAssignInventoryItem = async () => {
-    if (!selectedInventoryId) return;
-    const selected = inventoryItems.find(
-      (i) => i.inventarioId === selectedInventoryId,
-    );
-    if (!selected) return;
+    if (selectedInventoryIds.length === 0) {
+      setInventoryError("Seleccione al menos un ítem");
+      return;
+    }
 
     setInventoryError(null);
     setLoading(true);
+
     try {
-      if (selected.tipo === "insumo") {
-        if (!selected.supply) return;
-        if (!selectedQuantity || selectedQuantity <= 0) {
-          setInventoryError("Cantidad inválida");
-          setLoading(false);
-          return;
+      // 1. Validar cantidades de todos los insumos seleccionados
+      for (const invId of selectedInventoryIds) {
+        const item = inventoryItems.find((i) => i.inventarioId === invId);
+        if (!item) continue;
+
+        if (item.tipo === "insumo") {
+          const qty = selectedQuantities[invId] ?? 1;
+
+          if (!qty || qty <= 0) {
+            setInventoryError(
+              "Cantidad inválida para alguno de los insumos seleccionados",
+            );
+            setLoading(false);
+            return;
+          }
+
+          if (qty > item.cantidadActual) {
+            setInventoryError(
+              `Stock insuficiente para ${item.nombreItem}. Disponible: ${item.cantidadActual}`,
+            );
+            setLoading(false);
+            return;
+          }
         }
-        if (selectedQuantity > selected.cantidadActual) {
-          setInventoryError(`Stock insuficiente: ${selected.cantidadActual}`);
-          setLoading(false);
-          return;
+      }
+
+      // 2. Si todo está OK, hacer las llamadas a la API una por una
+      for (const invId of selectedInventoryIds) {
+        const item = inventoryItems.find((i) => i.inventarioId === invId);
+        if (!item) continue;
+
+        if (item.tipo === "insumo") {
+          if (!item.supply) continue;
+          const qty = selectedQuantities[invId] ?? 1;
+
+          await addSupplyDetailRequest(currentOrder.orden_id, {
+            insumoId: item.supply.insumoId,
+            cantidadUsada: qty,
+          });
+        } else {
+          // herramienta
+          if (!item.tool) continue;
+          await addToolDetailRequest(currentOrder.orden_id, {
+            herramientaId: item.tool.herramientaId,
+          });
         }
-        await addSupplyDetailRequest(currentOrder.orden_id, {
-          insumoId: selected.supply.insumoId,
-          cantidadUsada: selectedQuantity,
-        });
-      } else {
-        if (!selected.tool) return;
-        await addToolDetailRequest(currentOrder.orden_id, {
-          herramientaId: selected.tool.herramientaId,
-        });
       }
 
       await refreshData();
       setShowInventoryModal(false);
-      setSelectedInventoryId("");
-      setSelectedQuantity(1);
+      setSelectedInventoryIds([]);
+      setSelectedQuantities({});
     } catch (err: any) {
-      setInventoryError(err.response?.data?.message || "Error asignando ítem");
+      setInventoryError(err.response?.data?.message || "Error asignando ítems");
     } finally {
       setLoading(false);
     }
@@ -658,7 +975,6 @@ export default function OrderDetail({
       await refreshData();
       setShowSignatureModal(false);
 
-      // Ahora sí, completar la orden
       await handleStatusUpdate(validStatuses.COMPLETADO);
     } catch (err: any) {
       setError(
@@ -669,6 +985,33 @@ export default function OrderDetail({
       playErrorSound();
     } finally {
       setSignatureLoading(false);
+    }
+  };
+
+  const handleViewInvoice = async (url: string, orderId: number) => {
+    if (!url) return;
+
+    try {
+      setLoading(true);
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `factura-${orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Error descargando factura:", error);
+      window.open(url, "_blank");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -690,33 +1033,26 @@ export default function OrderDetail({
         ? styles.billingWarranty
         : styles.billingNotBilled;
 
-  const isEquipmentCategory = [
-    "Aires Acondicionados",
-    "Redes Eléctricas",
-    "Redes Contra Incendios",
-  ].includes(currentOrder.servicio.categoria_servicio || "");
-
   const isReadOnly = currentOrder.estado_facturacion === "Facturado";
 
   const canUploadInvoice =
     isAdminOrSecretaria &&
     currentOrder.estado === validStatuses.COMPLETADO &&
-    currentOrder.estado_facturacion === "Por facturar" &&
-    !isReadOnly;
+    !currentOrder.factura_pdf_url &&
+    !currentOrder.estado_pago;
 
   const canAssignInventory =
     (isAdminOrSecretaria || isTechnician) &&
     !isReadOnly &&
     currentOrder.estado !== validStatuses.CANCELADA &&
-    currentOrder.estado !== validStatuses.RECHAZADA;
+    currentOrder.estado !== validStatuses.RECHAZADA &&
+    currentOrder.estado !== validStatuses.COMPLETADO;
 
   const canBillingStatus =
     isAdminOrSecretaria &&
     !isReadOnly &&
     currentOrder.estado === validStatuses.COMPLETADO &&
     currentOrder.estado_facturacion === "";
-
-  const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const isTechnicianAssigned =
     user &&
@@ -745,24 +1081,26 @@ export default function OrderDetail({
     ((isTechnician && isTechnicianAssigned) || isAdminOrSecretaria);
 
   const canCreateEmergency =
-    isAdminOrSecretaria &&
+    !isClient &&
     !isReadOnly &&
     (currentOrder.estado === validStatuses.ASIGNADA ||
       currentOrder.estado === validStatuses.EN_PROCESO);
-
-  const hasReceiptSignature =
-    !!currentOrder.received_by_name &&
-    !!currentOrder.received_by_position &&
-    !!currentOrder.received_by_signature_data;
 
   const canEditEvidence =
     !isReadOnly &&
     (isAdminOrSecretaria || (isTechnician && !!isTechnicianAssigned));
 
+  const hasBeforeInspection =
+    currentOrder.acInspections?.some((i) => i.phase === "BEFORE") ?? false;
+
+  const handleBackClick = () => {
+    onBack();
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <button onClick={onBack} className={styles.backButton}>
+        <button className={styles.backButton} onClick={handleBackClick}>
           ← Volver
         </button>
         <h1>Orden de Servicio #{currentOrder.orden_id}</h1>
@@ -774,6 +1112,8 @@ export default function OrderDetail({
           >
             {currentOrder.estado}
           </span>
+
+          {/* Badge de estado de facturación */}
           {currentOrder.estado_facturacion !== "" && (
             <span
               className={`${styles.billingBadge} ${getBillingColor(
@@ -783,20 +1123,46 @@ export default function OrderDetail({
               {currentOrder.estado_facturacion}
             </span>
           )}
+
+          {/* Badge de estado de pago - Por pagar */}
+          {currentOrder.estado_pago === "Por pagar" && (
+            <span className={`${styles.paymentBadge} ${styles.paymentPending}`}>
+              <span className={styles.paymentIcon}>⏳</span>
+              {currentOrder.estado_pago}
+            </span>
+          )}
+
+          {/* Badge de estado de pago - Pagado */}
+          {currentOrder.estado_pago === "Pagado" && (
+            <span className={`${styles.paymentBadge} ${styles.paymentPaid}`}>
+              <span className={styles.paymentIcon}>✓</span>
+              Pagado
+            </span>
+          )}
+
+          {/* Botón de ver factura mejorado */}
           {currentOrder.factura_pdf_url && (
-            <a
-              href={`${apiUrl}${currentOrder.factura_pdf_url}`}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.invoiceLinkButton}
-            >
-              Ver Factura
-            </a>
+            <div className={styles.invoiceActions}>
+              <button
+                onClick={() => {
+                  if (currentOrder.factura_pdf_url) {
+                    handleViewInvoice(
+                      currentOrder.factura_pdf_url,
+                      currentOrder.orden_id,
+                    );
+                  }
+                }}
+                className={styles.invoiceLinkButton}
+              >
+                <span className={styles.invoiceIcon}>📄</span>
+                Ver Factura
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Notificación tipo "push" en el centro cuando hay calificación pendiente */}
+      {/* Notificación calificación pendiente */}
       {needsRating && showRatingNotice && !showRatingModal && (
         <div className={styles.pushOverlay}>
           <div className={styles.pushCard}>
@@ -828,6 +1194,7 @@ export default function OrderDetail({
 
       {error && <div className={styles.error}>{error}</div>}
 
+      {/* DETALLES */}
       <div className={styles.detailsGrid}>
         <div className={styles.section}>
           <h3>Información Cliente</h3>
@@ -998,7 +1365,7 @@ export default function OrderDetail({
           </div>
         )}
 
-        {(toolDetails.length > 0 || supplyDetails.length > 0) && (
+        {(toolDetails.length > 0 || supplyDetails.length > 0) && !isClient && (
           <div className={styles.section}>
             <h3>Inventario Asignado</h3>
             {toolDetails.length > 0 && (
@@ -1081,38 +1448,64 @@ export default function OrderDetail({
         )}
       </div>
 
-      {isEquipmentCategory && (
-        <div className={styles.problemSection}>
-          <h3>Equipo y Hoja de Vida</h3>
-          <p>
-            {currentOrder.servicio.tipo_trabajo === "Instalación"
-              ? !currentOrder.equipos || currentOrder.equipos.length === 0
-                ? "Instalación sin hoja de vida asociada."
-                : `Instalación con ${currentOrder.equipos.length} equipo${
-                    currentOrder.equipos.length !== 1 ? "s" : ""
-                  } asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`
-              : !currentOrder.equipos || currentOrder.equipos.length === 0
-                ? "Mantenimiento sin hoja de vida asociada."
-                : `Mantenimiento con ${currentOrder.equipos.length} equipo${
-                    currentOrder.equipos.length !== 1 ? "s" : ""
-                  } asociado${currentOrder.equipos.length !== 1 ? "s" : ""}.`}
-          </p>
-        </div>
+      {isAirConditioningOrder && hasBeforeInspection && (
+        <AcTechnicalDataSection
+          acInspections={currentOrder.acInspections}
+          equipments={currentOrder.equipos}
+          onEquipmentChange={setActiveEquipmentId}
+          onEditEquipmentInspection={handleOpenAcInspectionForEquipment}
+          estadoOrden={currentOrder.estado}
+        />
       )}
 
-      <OrderEvidenceSection
-        orderId={currentOrder.orden_id}
-        canEdit={canEditEvidence}
-      />
-      {currentOrder.comentarios && (
-        <div className={styles.commentsSection}>
-          <h3>Comentarios</h3>
-          <p>{currentOrder.comentarios}</p>
-        </div>
+      {hasBeforeInspection && (
+        <OrderEvidenceSection
+          orderId={currentOrder.orden_id}
+          canEdit={canEditEvidence}
+          orderStatus={currentOrder.estado}
+          equipments={currentOrder.equipos}
+          activeEquipmentId={activeEquipmentId}
+        />
       )}
+
+      <div className={styles.commentsSection}>
+        <h3>Comentarios y Observaciones</h3>
+
+        <div className={styles.commentsContainer}>
+          {/* 1. Comentario General de la Solicitud */}
+          {currentOrder.comentarios && (
+            <div className={styles.commentBlock}>
+              <div className={styles.commentHeader}>
+                <strong>Nota General de la Orden</strong>
+              </div>
+              <div className={styles.commentContent}>
+                <p>{currentOrder.comentarios}</p>
+              </div>
+            </div>
+          )}
+
+          {!currentOrder.comentarios &&
+            (!currentOrder.acInspections ||
+              currentOrder.acInspections.length === 0) &&
+            !currentOrder.images?.some((i) => i.observation) && (
+              <p className={styles.unassigned}>
+                No hay comentarios ni observaciones registradas para esta orden.
+              </p>
+            )}
+        </div>
+      </div>
 
       {/* ACCIONES */}
       <div className={styles.actions}>
+        {canEditOrderDetails && (
+          <button
+            className={styles.secondaryButton}
+            onClick={handleOpenEditModal}
+          >
+            Editar Orden
+          </button>
+        )}
+
         {canAssignInventory && (
           <button
             className={styles.secondaryButton}
@@ -1122,14 +1515,16 @@ export default function OrderDetail({
           </button>
         )}
 
-        {canBillingStatus && (
-          <button
-            className={styles.secondaryButton}
-            onClick={handleOpenBillingModal}
-          >
-            Asignar Estado de Facturación
-          </button>
-        )}
+        {canBillingStatus &&
+          !currentOrder.estado_pago &&
+          currentOrder.estado_facturacion === "" && (
+            <button
+              className={styles.secondaryButton}
+              onClick={handleOpenBillingModal}
+            >
+              Asignar Estado de Facturación
+            </button>
+          )}
 
         {canCreateEmergency && (
           <button
@@ -1141,14 +1536,30 @@ export default function OrderDetail({
           </button>
         )}
 
-        {canUploadInvoice && (
-          <button
-            className={styles.invoiceButton}
-            onClick={handleOpenInvoiceModal}
-          >
-            Facturar
-          </button>
-        )}
+        {canUploadInvoice &&
+          currentOrder.estado_facturacion === "Por facturar" && (
+            <button
+              className={styles.invoiceButton}
+              onClick={handleOpenInvoiceModal}
+            >
+              <span className={styles.buttonIcon}>📎</span>
+              Facturar
+            </button>
+          )}
+
+        {/* Botón para marcar como pagado */}
+        {currentOrder.estado_pago === "Por pagar" &&
+          currentOrder.factura_pdf_url &&
+          isAdminOrSecretaria && (
+            <button
+              className={styles.payButton}
+              onClick={handleMarkAsPaid}
+              disabled={loading}
+            >
+              <span className={styles.payButtonIcon}>✓</span>
+              Marcar como Pagado
+            </button>
+          )}
 
         {isAdminOrSecretaria &&
           !isReadOnly &&
@@ -1175,7 +1586,7 @@ export default function OrderDetail({
         {canTechnicianStartOrder && (
           <button
             className={styles.startButton}
-            onClick={() => handleStatusUpdate(validStatuses.EN_PROCESO)}
+            onClick={handleStartOrderClick}
             disabled={loading}
           >
             Iniciar Orden
@@ -1208,15 +1619,7 @@ export default function OrderDetail({
         {canTechnicianCompleteOrder && (
           <button
             className={styles.completeButton}
-            onClick={() => {
-              // si ya hay firma registrada, permitimos completar directo
-              if (hasReceiptSignature) {
-                handleStatusUpdate(validStatuses.COMPLETADO);
-              } else {
-                // abrimos modal de firma
-                setShowSignatureModal(true);
-              }
-            }}
+            onClick={handleCompleteOrderClick}
             disabled={loading}
           >
             Completar Orden
@@ -1237,309 +1640,96 @@ export default function OrderDetail({
           )}
       </div>
 
-      {/* MODAL CALIFICACIÓN (BLOQUEANTE) */}
-      {showRatingModal && (
-        <div className={styles.modal}>
-          <div className={styles.modalContent}>
-            <div className={styles.ratingModalHeader}>
-              <h3>Calificar técnicos de la orden</h3>
-              <p>
-                Asigna una calificación de 0 a 5 estrellas (con pasos de 0.5)
-                para cada técnico. Esta acción es obligatoria antes de facturar.
-              </p>
-            </div>
-
-            {ratingError && <div className={styles.error}>{ratingError}</div>}
-
-            <div className={styles.ratingList}>
-              {currentOrder.technicians?.map((tech) => {
-                const value = ratings[tech.tecnicoId] ?? 0;
-                const fullStars = Math.floor(value);
-                const hasHalf = value - fullStars >= 0.5;
-
-                return (
-                  <div key={tech.id} className={styles.ratingTechnicianRow}>
-                    <div className={styles.ratingAvatar}>
-                      {(tech.technician.nombre?.[0] || "").toUpperCase()}
-                      {(tech.technician.apellido?.[0] || "").toUpperCase()}
-                    </div>
-                    <div className={styles.ratingInfo}>
-                      <div className={styles.ratingTechnicianHeader}>
-                        {tech.technician.nombre} {tech.technician.apellido}
-                        {tech.isLeader && (
-                          <span className={styles.leaderChip}>Líder</span>
-                        )}
-                      </div>
-
-                      <div className={styles.ratingStars}>
-                        {Array.from({ length: 5 }).map((_, index) => {
-                          const starIndex = index + 1;
-                          let starClass = styles.starEmpty;
-                          if (starIndex <= fullStars) {
-                            starClass = styles.starFull;
-                          } else if (starIndex === fullStars + 1 && hasHalf) {
-                            starClass = styles.starHalf;
-                          }
-                          return (
-                            <span
-                              key={starIndex}
-                              className={`${styles.star} ${starClass}`}
-                            >
-                              ★
-                            </span>
-                          );
-                        })}
-                      </div>
-
-                      <div className={styles.ratingSliderWrapper}>
-                        <input
-                          type="range"
-                          min={0}
-                          max={5}
-                          step={0.5}
-                          value={value}
-                          onChange={(e) =>
-                            setRatings((prev) => ({
-                              ...prev,
-                              [tech.tecnicoId]: Number(e.target.value),
-                            }))
-                          }
-                        />
-                        <span className={styles.ratingValue}>
-                          {value.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className={styles.modalActions}>
-              <button onClick={handleSubmitRatings} disabled={isSavingRatings}>
-                {isSavingRatings ? "Guardando..." : "Guardar calificaciones"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODALS RESTO */}
-      {confirmModal.isOpen && (
-        <div className={styles.modal}>
-          <div className={styles.confirmationModalContent}>
-            <span className={styles.confirmationIcon}>⚠️</span>
-            <h3>¿Confirmar?</h3>
-            <p>Se eliminará el elemento.</p>
-            <div className={styles.confirmationActions}>
-              <button
-                className={styles.cancelDeleteButton}
-                onClick={closeConfirmModal}
-              >
-                Cancelar
-              </button>
-              <button
-                className={styles.confirmDeleteButton}
-                onClick={handleConfirmDelete}
-                disabled={loading}
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showInventoryModal && (
+      {/* MODAL ESTADO DE FACTURACIÓN */}
+      {showBillingModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeaderRow}>
-              <h3>Asignar Herramientas/Insumos</h3>
+              <h3>Asignar Estado de Facturación</h3>
               <button
-                onClick={() => setShowInventoryModal(false)}
+                onClick={() => setShowBillingModal(false)}
                 className={styles.modalCloseButton}
               >
                 ×
               </button>
             </div>
-            {inventoryLoading && (
-              <div className={styles.loading}>
-                Cargando inventario disponible...
-              </div>
-            )}
-            {inventoryError && (
-              <div className={styles.error}>{inventoryError}</div>
-            )}
-            {!inventoryLoading && (
-              <>
-                {inventoryItems.length === 0 ? (
-                  <div className={styles.warning}>
-                    No hay ítems disponibles en el inventario
-                  </div>
-                ) : (
-                  <>
-                    <div className={styles.formRow}>
-                      <label>Ítem Disponible</label>
-                      <select
-                        className={styles.technicianSelect}
-                        value={selectedInventoryId}
-                        onChange={(e) => {
-                          setSelectedInventoryId(
-                            Number(e.target.value)
-                              ? Number(e.target.value)
-                              : "",
-                          );
-                          setSelectedQuantity(1);
-                        }}
-                      >
-                        <option value="">Seleccionar ítem disponible...</option>
-                        {inventoryItems.map((i: Inventory) => (
-                          <option key={i.inventarioId} value={i.inventarioId}>
-                            {i.nombreItem} ({i.tipo}) - Stock:{" "}
-                            {i.tipo === "insumo"
-                              ? i.cantidadActual
-                              : "Disponible"}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {inventoryItems.find(
-                      (i: Inventory) => i.inventarioId === selectedInventoryId,
-                    )?.tipo === "insumo" && (
-                      <div className={styles.formRow}>
-                        <label>Cantidad a usar</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={selectedQuantity}
-                          onChange={(e) =>
-                            setSelectedQuantity(Number(e.target.value))
-                          }
-                        />
-                        <small className={styles.helperText}>
-                          Máximo disponible:{" "}
-                          {inventoryItems.find(
-                            (i: Inventory) =>
-                              i.inventarioId === selectedInventoryId,
-                          )?.cantidadActual || 0}
-                        </small>
-                      </div>
-                    )}
-                    <div className={styles.formActions}>
-                      <button onClick={() => setShowInventoryModal(false)}>
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={handleAssignInventoryItem}
-                        disabled={!selectedInventoryId || loading}
-                      >
-                        Guardar
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
-      {showAssignForm && (
-        <div className={styles.modal}>
-          <div className={styles.modalContent}>
-            <div className={styles.modalHeaderRow}>
-              <h3>Asignar Técnico(s)</h3>
-              <button
-                onClick={() => {
-                  setShowAssignForm(false);
-                  setSelectedTechnicians([]);
-                  setLeaderTechnicianId(null);
-                }}
-                className={styles.modalCloseButton}
-              >
-                ×
-              </button>
-            </div>
+            {billingError && <div className={styles.error}>{billingError}</div>}
+
             <div className={styles.formRow}>
-              <label>Seleccionar Técnicos</label>
-              <div className={styles.scrollBoxLarge}>
-                {technicians.map((t: Usuario) => {
-                  const isSelected = selectedTechnicians.includes(t.usuarioId);
-                  return (
-                    <div
-                      key={t.usuarioId}
-                      className={`${styles.selectableRow} ${
-                        isSelected ? styles.selectableRowSelected : ""
-                      }`}
-                      onClick={() => toggleTechnicianSelection(t.usuarioId)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleTechnicianSelection(t.usuarioId)}
-                        className={styles.checkboxInline}
-                      />
-                      <div className={styles.flexGrow}>
-                        <strong>
-                          {t.nombre} {t.apellido}
-                        </strong>
-                        <div className={styles.rowMeta}>{t.email}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <small className={styles.helperText}>
-                Seleccione uno o más técnicos para asignar a esta orden.
-              </small>
+              <label>Estado de Facturación</label>
+              <select
+                className={styles.technicianSelect}
+                value={selectedBillingStatus}
+                onChange={(e) =>
+                  setSelectedBillingStatus(e.target.value as BillingEstado)
+                }
+              >
+                <option value="">Seleccionar estado...</option>
+                <option value="Sin facturar">Sin factura</option>
+                <option value="Por facturar">Por facturar</option>
+                <option value="Garantía">Garantía</option>
+              </select>
             </div>
-            {selectedTechnicians.length > 1 && (
-              <div className={styles.formRow}>
-                <label>Técnico Líder</label>
-                <select
-                  className={styles.technicianSelect}
-                  value={leaderTechnicianId || ""}
-                  onChange={(e) =>
-                    setLeaderTechnicianId(Number(e.target.value))
-                  }
-                >
-                  {selectedTechnicians.map((techId) => {
-                    const tech = technicians.find(
-                      (t) => t.usuarioId === techId,
-                    );
-                    return (
-                      <option key={techId} value={techId}>
-                        {tech?.nombre} {tech?.apellido}
-                      </option>
-                    );
-                  })}
-                </select>
-                <small className={styles.helperText}>
-                  El líder será el responsable principal de la orden.
-                </small>
-              </div>
-            )}
+
             <div className={styles.formActions}>
               <button
-                onClick={() => {
-                  setShowAssignForm(false);
-                  setSelectedTechnicians([]);
-                  setLeaderTechnicianId(null);
-                }}
+                className={styles.cancelButton}
+                onClick={() => setShowBillingModal(false)}
               >
                 Cancelar
               </button>
               <button
-                onClick={handleAssignTechnicians}
-                disabled={selectedTechnicians.length === 0 || loading}
+                onClick={handleAssignBillingStatus}
+                disabled={!selectedBillingStatus || loading}
               >
-                {loading ? "Asignando..." : "Asignar"}
+                Guardar
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL EDICIÓN ORDEN (comentarios + equipos) */}
+      <OrderEditModal
+        order={currentOrder}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleSaveOrderDetails}
+        loading={loading}
+        equipments={clientEquipments}
+      />
+
+      {/* MODAL SELECTOR DE EQUIPO */}
+      <EquipmentSelectionModal
+        isOpen={showEqSelector}
+        onClose={() => setShowEqSelector(false)}
+        equipments={currentOrder.equipos}
+        order={currentOrder}
+        phase={acPhase}
+        onSelect={handleEquipmentSelected}
+      />
+
+      {/* MODAL INSPECCIÓN AC (Pasa el equipo seleccionado) */}
+      {selectedEquipment && (
+        <AcInspectionModal
+          order={currentOrder}
+          equipment={selectedEquipment}
+          phase={acPhase}
+          isOpen={showAcInspectionModal}
+          onClose={() => setShowAcInspectionModal(false)}
+          onSuccess={handleAcInspectionSuccess}
+        />
+      )}
+
+      <OrderSignatureModal
+        isOpen={showSignatureModal}
+        onClose={() => setShowSignatureModal(false)}
+        onSubmit={handleSubmitSignature}
+        loading={signatureLoading}
+      />
+
+      {/* OTROS MODALES (RECHAZO, PAUSA, INVENTARIO, ETC) */}
       {showRejectForm && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
@@ -1564,20 +1754,83 @@ export default function OrderDetail({
         </div>
       )}
 
+      {/* MODAL FACTURA */}
       {showInvoiceModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
-            <h3>Subir Factura</h3>
+            <div className={styles.modalHeaderRow}>
+              <h3>Subir Factura</h3>
+              <button
+                onClick={() => setShowInvoiceModal(false)}
+                className={styles.modalCloseButton}
+              >
+                ×
+              </button>
+            </div>
+
             {invoiceError && <div className={styles.error}>{invoiceError}</div>}
+
             <form onSubmit={handleUploadInvoice}>
+              {/* SOLO EL SELECT DE ESTADO DE PAGO (NO el de facturación) */}
               <div className={styles.formRow}>
-                <label>Archivo PDF</label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setInvoiceFile(e.target.files?.[0] || null)}
-                />
+                <label className={styles.formLabel}>Estado de Pago</label>
+                <select
+                  className={styles.paymentStatusSelect}
+                  value={selectedCostStatus}
+                  onChange={(e) =>
+                    setSelectedCostStatus(e.target.value as CostEstado)
+                  }
+                  required
+                >
+                  <option value="">Seleccionar estado...</option>
+                  <option value="Pagado">Pagado</option>
+                  <option value="Por pagar">Por pagar</option>
+                </select>
               </div>
+
+              {/* UPLOAD DE ARCHIVO */}
+              <div className={styles.formRow}>
+                <label className={styles.formLabel}>Archivo PDF</label>
+                <div className={styles.fileUploadContainer}>
+                  <input
+                    type="file"
+                    id="invoice-file"
+                    accept="application/pdf"
+                    onChange={(e) =>
+                      setInvoiceFile(e.target.files?.[0] || null)
+                    }
+                    className={styles.fileInput}
+                  />
+                  <label
+                    htmlFor="invoice-file"
+                    className={styles.fileInputLabel}
+                  >
+                    <span className={styles.fileIcon}>📄</span>
+                    <span className={styles.fileText}>
+                      {invoiceFile
+                        ? invoiceFile.name
+                        : "Seleccionar archivo PDF"}
+                    </span>
+                    <span className={styles.fileButton}>Examinar</span>
+                  </label>
+                </div>
+                {invoiceFile && (
+                  <div className={styles.filePreview}>
+                    <span className={styles.filePreviewIcon}>✓</span>
+                    <span className={styles.filePreviewName}>
+                      {invoiceFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setInvoiceFile(null)}
+                      className={styles.fileRemoveButton}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className={styles.formActions}>
                 <button
                   type="button"
@@ -1585,8 +1838,14 @@ export default function OrderDetail({
                 >
                   Cancelar
                 </button>
-                <button type="submit" disabled={invoiceLoading || !invoiceFile}>
-                  Subir
+                <button
+                  type="submit"
+                  disabled={
+                    invoiceLoading || !invoiceFile || !selectedCostStatus
+                  }
+                  className={styles.submitButton}
+                >
+                  {invoiceLoading ? "Subiendo..." : "Subir Factura"}
                 </button>
               </div>
             </form>
@@ -1603,15 +1862,17 @@ export default function OrderDetail({
               Esta acción creará una nueva orden de emergencia.
             </p>
 
-            {currentOrder.technicians && currentOrder.technicians.length > 1 ? (
-              <div className={styles.formRow}>
-                <label className={styles.modalSectionTitle}>
-                  Seleccione el técnico para la emergencia:
-                </label>
+            <div className={styles.formRow}>
+              <label className={styles.modalSectionTitle}>
+                Seleccione los técnicos para la emergencia:
+              </label>
+              {currentOrder.technicians &&
+              currentOrder.technicians.length > 0 ? (
                 <div className={styles.scrollBoxSmall}>
                   {currentOrder.technicians.map((tech) => {
-                    const isSelected =
-                      selectedEmergencyTechId === tech.tecnicoId;
+                    const isSelected = selectedEmergencyTechnicians.includes(
+                      tech.tecnicoId,
+                    );
                     return (
                       <label
                         key={tech.tecnicoId}
@@ -1620,37 +1881,59 @@ export default function OrderDetail({
                         }`}
                       >
                         <input
-                          type="radio"
-                          name="emergencyTech"
-                          value={tech.tecnicoId}
+                          type="checkbox"
                           checked={isSelected}
                           onChange={() =>
-                            setSelectedEmergencyTechId(tech.tecnicoId)
+                            toggleEmergencyTechnician(tech.tecnicoId)
                           }
                           className={styles.checkboxInline}
                         />
                         {tech.technician.nombre} {tech.technician.apellido}
                         {tech.isLeader && (
                           <span className={styles.leaderChipSmall}>
-                            (Líder)
+                            (Líder actual)
                           </span>
                         )}
                       </label>
                     );
                   })}
                 </div>
-              </div>
-            ) : (
-              <div className={styles.warning}>
-                <p>
-                  El técnico actual{" "}
-                  <strong>
-                    {currentOrder.technicians?.[0]?.technician.nombre}
-                  </strong>{" "}
-                  será asignado a la emergencia.
-                </p>
-              </div>
-            )}
+              ) : (
+                <div className={styles.warning}>
+                  La orden original no tiene técnicos asignados.
+                </div>
+              )}
+            </div>
+
+            <div className={styles.formRow}>
+              <label>Técnico líder de la emergencia</label>
+              <select
+                className={styles.technicianSelect}
+                value={emergencyLeaderId || ""}
+                onChange={(e) => setEmergencyLeaderId(Number(e.target.value))}
+              >
+                {selectedEmergencyTechnicians.map((techId) => {
+                  const tech = currentOrder.technicians?.find(
+                    (t) => t.tecnicoId === techId,
+                  );
+                  return (
+                    <option key={techId} value={techId}>
+                      {tech?.technician.nombre} {tech?.technician.apellido}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <div className={styles.formRow}>
+              <label>Comentario para la orden de emergencia</label>
+              <textarea
+                className={styles.rejectTextarea}
+                value={emergencyComment}
+                onChange={(e) => setEmergencyComment(e.target.value)}
+                placeholder="Ej: Falla crítica en equipo, prioridad alta..."
+              />
+            </div>
 
             <p className={styles.modalSectionTitle}>
               Seleccione los equipos que atenderá en esta emergencia:
@@ -1743,65 +2026,363 @@ export default function OrderDetail({
         </div>
       )}
 
-      {showBillingModal && (
+      {/* MODAL INVENTARIO */}
+      {showInventoryModal && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeaderRow}>
-              <h3>Asignar Estado de Facturación</h3>
+              <h3>Asignar Herramientas/Insumos</h3>
               <button
-                onClick={() => setShowBillingModal(false)}
+                onClick={() => setShowInventoryModal(false)}
                 className={styles.modalCloseButton}
               >
                 ×
               </button>
             </div>
+            {inventoryLoading && (
+              <div className={styles.loading}>
+                Cargando inventario disponible...
+              </div>
+            )}
+            {inventoryError && (
+              <div className={styles.error}>{inventoryError}</div>
+            )}
+            {!inventoryLoading && (
+              <>
+                {inventoryItems.length === 0 ? (
+                  <div className={styles.warning}>
+                    No hay ítems disponibles en el inventario
+                  </div>
+                ) : (
+                  <>
+                    <p className={styles.modalDescription}>
+                      Seleccione uno o varios ítems de inventario y, en el caso
+                      de insumos, indique la cantidad a usar.
+                    </p>
 
-            {billingError && <div className={styles.error}>{billingError}</div>}
+                    <div className={styles.scrollBoxLarge}>
+                      {inventoryItems.map((i: InventoryItem) => {
+                        const isSelected = selectedInventoryIds.includes(
+                          i.inventarioId,
+                        );
+                        const qty = selectedQuantities[i.inventarioId] ?? 1;
 
-            <div className={styles.formRow}>
-              <label>Estado de Facturación</label>
-              <select
-                className={styles.technicianSelect}
-                value={selectedBillingStatus}
-                onChange={(e) =>
-                  setSelectedBillingStatus(e.target.value as BillingEstado)
-                }
+                        return (
+                          <div
+                            key={i.inventarioId}
+                            className={`${styles.selectableRow} ${
+                              isSelected ? styles.selectableRowSelected : ""
+                            }`}
+                            onClick={() =>
+                              toggleInventorySelection(i.inventarioId)
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className={styles.checkboxInline}
+                            />
+                            <div className={styles.flexGrow}>
+                              <strong>
+                                {i.nombreItem} ({i.tipo})
+                              </strong>
+                              <div className={styles.rowMeta}>
+                                Stock:{" "}
+                                {i.tipo === "insumo"
+                                  ? i.cantidadActual
+                                  : "Disponible"}
+                              </div>
+
+                              {/* Si es insumo y está seleccionado, mostramos campo de cantidad */}
+                              {i.tipo === "insumo" && isSelected && (
+                                <div className={styles.formRow}>
+                                  <label>Cantidad a usar</label>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={i.cantidadActual}
+                                    value={qty}
+                                    onChange={(e) =>
+                                      handleQuantityChange(
+                                        i.inventarioId,
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                  />
+                                  <small className={styles.helperText}>
+                                    Máximo disponible: {i.cantidadActual}
+                                  </small>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className={styles.formActions}>
+                      <button onClick={() => setShowInventoryModal(false)}>
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleAssignInventoryItem}
+                        disabled={selectedInventoryIds.length === 0 || loading}
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ASIGNAR TÉCNICOS */}
+      {showAssignForm && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeaderRow}>
+              <h3>Asignar Técnico(s)</h3>
+              <button
+                onClick={() => {
+                  setShowAssignForm(false);
+                  setSelectedTechnicians([]);
+                  setLeaderTechnicianId(null);
+                }}
+                className={styles.modalCloseButton}
               >
-                <option value="">Seleccionar estado...</option>
-                <option value="Sin facturar">Sin factura</option>
-                <option value="Por facturar">Por facturar</option>
-                <option value="Garantía">Garantía</option>
-              </select>
+                ×
+              </button>
             </div>
-
+            <div className={styles.formRow}>
+              <label>Seleccionar Técnicos</label>
+              <div className={styles.scrollBoxLarge}>
+                {technicians.map((t: Usuario) => {
+                  const isSelected = selectedTechnicians.includes(t.usuarioId);
+                  return (
+                    <div
+                      key={t.usuarioId}
+                      className={`${styles.selectableRow} ${
+                        isSelected ? styles.selectableRowSelected : ""
+                      }`}
+                      onClick={() => toggleTechnicianSelection(t.usuarioId)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleTechnicianSelection(t.usuarioId)}
+                        className={styles.checkboxInline}
+                      />
+                      <div className={styles.flexGrow}>
+                        <strong>
+                          {t.nombre} {t.apellido}
+                        </strong>
+                        <div className={styles.rowMeta}>{t.email}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {selectedTechnicians.length > 1 && (
+              <div className={styles.formRow}>
+                <label>Técnico Líder</label>
+                <select
+                  className={styles.technicianSelect}
+                  value={leaderTechnicianId || ""}
+                  onChange={(e) =>
+                    setLeaderTechnicianId(Number(e.target.value))
+                  }
+                >
+                  {selectedTechnicians.map((techId) => {
+                    const tech = technicians.find(
+                      (t) => t.usuarioId === techId,
+                    );
+                    return (
+                      <option key={techId} value={techId}>
+                        {tech?.nombre} {tech?.apellido}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
             <div className={styles.formActions}>
-              <button onClick={() => setShowBillingModal(false)}>
+              <button
+                onClick={() => {
+                  setShowAssignForm(false);
+                  setSelectedTechnicians([]);
+                  setLeaderTechnicianId(null);
+                }}
+              >
                 Cancelar
               </button>
               <button
-                onClick={handleAssignBillingStatus}
-                disabled={!selectedBillingStatus || loading}
+                onClick={handleAssignTechnicians}
+                disabled={selectedTechnicians.length === 0 || loading}
               >
-                Guardar
+                {loading ? "Asignando..." : "Asignar"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <OrderSignatureModal
-        isOpen={showSignatureModal}
-        onClose={() => setShowSignatureModal(false)}
-        onSubmit={handleSubmitSignature}
-        loading={signatureLoading}
-      />
-      {/* MODAL EVIDENCIAS */}
-      <OrderEvidenceModal
-        orderId={currentOrder.orden_id}
-        isOpen={showEvidenceModal}
-        onClose={() => setShowEvidenceModal(false)}
-        canEdit={canEditEvidence}
-      />
+      {/* MODAL CALIFICACIÓN (BLOQUEANTE) */}
+      {showRatingModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalContent}>
+            <button
+              className={styles.closeButtonRating}
+              onClick={() => setShowRatingModal(false)}
+            >
+              X
+            </button>
+            <div className={styles.ratingModalHeader}>
+              <h3>Calificar técnicos de la orden</h3>
+              <p>
+                Asigna una calificación de 0 a 5 estrellas (con pasos de 0.5)
+                para cada técnico.
+              </p>
+            </div>
+
+            {ratingError && <div className={styles.error}>{ratingError}</div>}
+
+            <div className={styles.ratingList}>
+              {currentOrder.technicians?.map((tech) => {
+                const value = ratings[tech.tecnicoId] ?? 0;
+                const fullStars = Math.floor(value);
+                const hasHalf = value - fullStars >= 0.5;
+
+                return (
+                  <div key={tech.id} className={styles.ratingTechnicianRow}>
+                    <div className={styles.ratingAvatar}>
+                      {(tech.technician.nombre?.[0] || "").toUpperCase()}
+                      {(tech.technician.apellido?.[0] || "").toUpperCase()}
+                    </div>
+                    <div className={styles.ratingInfo}>
+                      <div className={styles.ratingTechnicianHeader}>
+                        {tech.technician.nombre} {tech.technician.apellido}
+                      </div>
+
+                      <div className={styles.ratingStars}>
+                        {Array.from({ length: 5 }).map((_, index) => {
+                          const starIndex = index + 1;
+                          let starClass = styles.starEmpty;
+                          if (starIndex <= fullStars) {
+                            starClass = styles.starFull;
+                          } else if (starIndex === fullStars + 1 && hasHalf) {
+                            starClass = styles.starHalf;
+                          }
+                          return (
+                            <span
+                              key={starIndex}
+                              className={`${styles.star} ${starClass}`}
+                            >
+                              ★
+                            </span>
+                          );
+                        })}
+                      </div>
+
+                      <div className={styles.ratingSliderWrapper}>
+                        <input
+                          type="range"
+                          min={0}
+                          max={5}
+                          step={0.5}
+                          value={value}
+                          onChange={(e) =>
+                            setRatings((prev) => ({
+                              ...prev,
+                              [tech.tecnicoId]: Number(e.target.value),
+                            }))
+                          }
+                        />
+                        <span className={styles.ratingValue}>
+                          {value.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className={styles.modalActions}>
+              <button onClick={handleSubmitRatings} disabled={isSavingRatings}>
+                {isSavingRatings ? "Guardando..." : "Guardar calificaciones"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMACIÓN DE PAGO */}
+      {showPaymentConfirmModal && (
+        <div className={styles.modal}>
+          <div className={styles.confirmationModalContent}>
+            <div className={styles.confirmationIconWrapper}>
+              <span className={styles.confirmationIcon}>💰</span>
+            </div>
+            <h3 className={styles.confirmationTitle}>Confirmar Pago</h3>
+            <p className={styles.confirmationText}>
+              ¿Está seguro de marcar esta orden como pagada?
+            </p>
+            <div className={styles.confirmationActions}>
+              <button
+                className={styles.cancelDeleteButton}
+                onClick={() => setShowPaymentConfirmModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.confirmPayButton}
+                onClick={confirmMarkAsPaid}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className={styles.loadingSpinner}></span>
+                    Procesando...
+                  </>
+                ) : (
+                  "Sí, marcar como pagado"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMACIÓN BORRADO */}
+      {confirmModal.isOpen && (
+        <div className={styles.modal}>
+          <div className={styles.confirmationModalContent}>
+            <span className={styles.confirmationIcon}>⚠️</span>
+            <h3>¿Confirmar?</h3>
+            <p>Se eliminará el elemento.</p>
+            <div className={styles.confirmationActions}>
+              <button
+                className={styles.cancelDeleteButton}
+                onClick={closeConfirmModal}
+              >
+                Cancelar
+              </button>
+              <button
+                className={styles.confirmDeleteButton}
+                onClick={handleConfirmDelete}
+                disabled={loading}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

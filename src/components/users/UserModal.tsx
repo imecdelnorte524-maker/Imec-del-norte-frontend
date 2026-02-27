@@ -285,8 +285,6 @@ export default function UserModal({
           ...formData,
           fechaNacimiento: formData.fechaNacimiento || undefined,
           genero: formData.genero || undefined,
-          // Para creación, si es Cliente dejamos tipo/cedula con su valor por defecto
-          // y position con lo que haya escrito
           position: isClienteRole ? formData.position : "",
         };
 

@@ -52,6 +52,7 @@ interface EquipmentInfoEditFormProps {
   onSubAreaChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onEvaporatorsChange: (evaporators: EvaporatorData[]) => void;
   onCondensersChange: (condensers: CondenserData[]) => void;
+  onEvaporatorTypeChange?: (index: number, typeId: number) => void; // 🔴 NUEVO
   onSave: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
@@ -75,6 +76,7 @@ export default function EquipmentInfoEditForm({
   onSubAreaChange,
   onEvaporatorsChange,
   onCondensersChange,
+  onEvaporatorTypeChange, // 🔴 NUEVO
   onSave,
   onCancel,
 }: EquipmentInfoEditFormProps) {
@@ -208,8 +210,10 @@ export default function EquipmentInfoEditForm({
           canAddMoreCondensers={canAddMoreCondensers}
           canHaveMultipleComponents={canHaveMultipleComponents}
           airConditionerTypeName={
-            selectedAcType?.name || equipment.airConditionerType?.name || ""
+            equipment?.airConditionerType?.name || selectedAcType?.name
           }
+          airConditionerTypes={airConditionerTypes} // 🔴 PASAR LOS TIPOS
+          onEvaporatorTypeChange={onEvaporatorTypeChange} // 🔴 PASAR EL HANDLER
         />
       )}
 

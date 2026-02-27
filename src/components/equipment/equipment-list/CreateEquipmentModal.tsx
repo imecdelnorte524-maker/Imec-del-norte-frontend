@@ -4,11 +4,12 @@ import { EvaporatorForm, CondenserForm } from "./forms";
 import styles from "../../../styles/components/equipment/equipment-list/CreateEquipmentModal.module.css";
 import detailStyles from "../../../styles/pages/EquipmentDetailPage.module.css";
 
-import type {
-  AirConditionerTypeOption,
-  EvaporatorData,
-  CondenserData,
-  PlanMantenimientoData,
+import {
+  type AirConditionerTypeOption,
+  type EvaporatorData,
+  type CondenserData,
+  type PlanMantenimientoData,
+  MULTIPLE_COMPONENT_TYPES,
 } from "../../../interfaces/EquipmentInterfaces";
 import type { AreaSimple } from "../../../interfaces/AreaInterfaces";
 import type { Order } from "../../../interfaces/OrderInterfaces";
@@ -16,22 +17,10 @@ import type { Order } from "../../../interfaces/OrderInterfaces";
 // Reutilizamos la misma modal que en EquipmentDetailPage
 import { AddPhotoModal } from "../equipment-details";
 
-// Tipos de aire acondicionado que permiten múltiples componentes
-const MULTIPLE_COMPONENT_TYPES = [
-  "MultiSplit",
-  "Refrigerante Variable",
-  "VRF",
-  "VRV",
-  "Variable Refrigerant Flow",
-  "Sistema Multi Split",
-];
-
 interface CreateEquipmentModalProps {
   isOpen: boolean;
   loading: boolean;
   error: string | null;
-
-  // Formulario principal
   createForm: {
     clientId: number;
     category: string;
@@ -67,7 +56,7 @@ interface CreateEquipmentModalProps {
   onRemoveCondenser: (index: number) => void;
   onEvaporatorChange: (
     index: number,
-    e: React.ChangeEvent<HTMLInputElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
   onCondenserChange: (
     index: number,
@@ -155,6 +144,12 @@ export default function CreateEquipmentModal({
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
+  // --- ESTADO PARA VALIDACIÓN DE ÁREA ---
+  const [validationErrors, setValidationErrors] = useState<{
+    area?: string;
+    subArea?: string;
+  }>({});
+
   // 🔧 EFECTO PARA CARGAR ÓRDENES CON DEBOUNCING
   useEffect(() => {
     if (debounceTimerRef.current) {
@@ -200,6 +195,37 @@ export default function CreateEquipmentModal({
     }
   }, [client, createForm.category, onLoadOrders]);
 
+  // --- MANEJADOR DE SUBMIT CON VALIDACIÓN DE ÁREA ---
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Validar que se haya seleccionado un área
+    const errors: { area?: string; subArea?: string } = {};
+
+    if (!selectedAreaId || selectedAreaId === null) {
+      errors.area = "Debes seleccionar un área para el equipo";
+    }
+
+    // Si hay errores, mostrarlos y no enviar
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+
+      // Hacer scroll al error
+      setTimeout(() => {
+        const errorElement = document.querySelector(`.${styles.errorMessage}`);
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+
+      return;
+    }
+
+    // Limpiar errores y enviar
+    setValidationErrors({});
+    onSubmit(e, photoFiles[0] || null);
+  };
+
   if (!isOpen) return null;
 
   // Función para verificar si el tipo seleccionado permite múltiples componentes
@@ -216,15 +242,11 @@ export default function CreateEquipmentModal({
   const evapCount = evaporators.length;
   const condCount = condensers.length;
 
-  const canAddMoreEvaporators =
-    canHaveMultipleComponents || evapCount === 0;
-  const canAddMoreCondensers =
-    canHaveMultipleComponents || condCount === 0;
+  const canAddMoreEvaporators = canHaveMultipleComponents || evapCount === 0;
+  const canAddMoreCondensers = canHaveMultipleComponents || condCount === 0;
 
-  const canRemoveEvaporator =
-    canHaveMultipleComponents && evapCount > 1;
-  const canRemoveCondenser =
-    canHaveMultipleComponents && condCount > 1;
+  const canRemoveEvaporator = canHaveMultipleComponents && evapCount > 1;
+  const canRemoveCondenser = canHaveMultipleComponents && condCount > 1;
 
   const handleAcTypeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -276,10 +298,6 @@ export default function CreateEquipmentModal({
     setShowAddPhotoModal(false);
   };
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    onSubmit(e, photoFiles[0] || null);
-  };
-
   return (
     <div className={styles.modal}>
       <div className={styles.modalContent}>
@@ -300,7 +318,9 @@ export default function CreateEquipmentModal({
         <form onSubmit={handleFormSubmit}>
           {/* Categoría */}
           <div className={styles.formRow}>
-            <label>Categoría del equipo *</label>
+            <label>
+              Categoría del equipo <span className={styles.required}>*</span>
+            </label>
             <select
               name="category"
               value={createForm.category}
@@ -324,7 +344,10 @@ export default function CreateEquipmentModal({
           {/* Tipo de aire acondicionado (solo para aires) */}
           {isAirConditioner && (
             <div className={styles.formRow}>
-              <label>Tipo de Aire Acondicionado *</label>
+              <label>
+                Tipo de Aire Acondicionado{" "}
+                <span className={styles.required}>*</span>
+              </label>
               <div className={styles.creatableSelect}>
                 <select
                   name="airConditionerTypeId"
@@ -382,7 +405,9 @@ export default function CreateEquipmentModal({
 
           {/* Estado */}
           <div className={styles.formRow}>
-            <label>Estado *</label>
+            <label>
+              Estado <span className={styles.required}>*</span>
+            </label>
             <select
               name="status"
               value={createForm.status || "Activo"}
@@ -598,15 +623,35 @@ export default function CreateEquipmentModal({
           )}
 
           {/* Selector jerárquico + gestión de áreas integrada */}
-          <HierarchicalAreaSelector
-            areas={areas}
-            selectedAreaId={selectedAreaId}
-            selectedSubAreaId={selectedSubAreaId}
-            disabled={loading}
-            onAreaChange={onAreaChange}
-            onSubAreaChange={onSubAreaChange}
-            clientId={client?.idCliente ?? null}
-          />
+          <div
+            className={`${styles.formRow} ${validationErrors.area ? styles.hasError : ""}`}
+          >
+            <label>
+              Área <span className={styles.required}>*</span>
+            </label>
+            <HierarchicalAreaSelector
+              areas={areas}
+              selectedAreaId={selectedAreaId}
+              selectedSubAreaId={selectedSubAreaId}
+              disabled={loading}
+              onAreaChange={onAreaChange}
+              onSubAreaChange={onSubAreaChange}
+              clientId={client?.idCliente ?? null}
+            />
+            {validationErrors.area && (
+              <div className={styles.errorMessage}>
+                <span className={styles.errorIcon}>⚠️</span>
+                {validationErrors.area}
+              </div>
+            )}
+            {/* Mostrar error del backend si está relacionado con área */}
+            {error && error.toLowerCase().includes("área") && (
+              <div className={styles.errorMessage}>
+                <span className={styles.errorIcon}>⚠️</span>
+                {error}
+              </div>
+            )}
+          </div>
 
           {/* Fecha de instalación */}
           <div className={styles.formRow}>
@@ -683,8 +728,29 @@ export default function CreateEquipmentModal({
                       </div>
                       <EvaporatorForm
                         data={evaporator}
-                        onChange={(e) => onEvaporatorChange(index, e)}
+                        onChange={(e) => {
+                          onEvaporatorChange(index, e);
+                        }}
+                        onTypeChange={(e) => {
+                          e.preventDefault();
+                          const selectedValue = e.target.value;
+                          const customEvent = {
+                            target: {
+                              name: "airConditionerTypeEvapId",
+                              value: selectedValue,
+                              type: "select-one",
+                            },
+                          } as React.ChangeEvent<HTMLInputElement>;
+                          onEvaporatorChange(index, customEvent);
+                          setTimeout(() => {
+                          }, 100);
+                        }}
                         disabled={loading}
+                        loading={loading}
+                        showTypeSelector={canHaveMultipleComponents}
+                        airConditionerTypes={airConditionerTypes}
+                        selectedTypeId={evaporator.airConditionerTypeEvapId}
+                        index={index}
                       />
                     </div>
                   ))
@@ -834,8 +900,8 @@ export default function CreateEquipmentModal({
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className={styles.submitButton}
+              disabled={loading || !selectedAreaId}
+              className={`${styles.submitButton} ${!selectedAreaId ? styles.disabled : ""}`}
             >
               {loading ? (
                 <>

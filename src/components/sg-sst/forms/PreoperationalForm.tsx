@@ -13,34 +13,21 @@ import SignaturePad from "../SignaturePad";
 import { useChecklistForm } from "../../../hooks/useToolChecklists";
 import styles from "../../../styles/components/sg-sst/forms/PreoperationalForm.module.css";
 import { playErrorSound } from "../../../utils/sounds";
-
-interface OrderToolDetail {
-  detalleHerramientaId: number;
-  tiempoUso: string;
-  nombreHerramienta: string;
-  marca: string;
-  serial?: string;
-  modelo?: string;
-  tipo?: string;
-}
+import {
+  type OrderToolDetail,
+  type Tool as ApiTool,
+  ToolType,
+  ToolStatus,
+} from "../../../interfaces/ToolsInterfaces";
 
 interface OrderWithTools extends Omit<Order, "toolDetails"> {
   toolDetails?: OrderToolDetail[];
 }
 
-interface Tool {
-  herramienta_id: number;
-  nombre: string;
-  marca?: string;
-  serial?: string;
-  modelo?: string;
-  tipo: string;
-  estado: string;
-  caracteristicasTecnicas?: string;
-  observacion?: string;
-  valorUnitario?: number;
+type ToolWithDetail = ApiTool & {
+  herramientaId: number;
   detalleHerramientaId?: number;
-}
+};
 
 interface PreoperationalFormProps {
   onSubmit: (data: PreoperationalFormData) => void;
@@ -50,7 +37,7 @@ interface PreoperationalFormProps {
   userName: string;
 }
 
-// Definir los valores válidos para checklist
+// Valores válidos para checklist
 const CHECK_VALUES: CheckValue[] = ["GOOD", "REGULAR", "BAD"];
 
 export default function PreoperationalForm({
@@ -62,12 +49,12 @@ export default function PreoperationalForm({
 }: PreoperationalFormProps) {
   const navigate = useNavigate();
 
-  const [allTools, setAllTools] = useState<Tool[]>([]);
-  const [toolsForSelectedOrder, setToolsForSelectedOrder] = useState<Tool[]>(
-    [],
-  );
+  const [allTools, setAllTools] = useState<ToolWithDetail[]>([]);
+  const [toolsForSelectedOrder, setToolsForSelectedOrder] = useState<
+    ToolWithDetail[]
+  >([]);
   const [loadingTools, setLoadingTools] = useState(false);
-  const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
+  const [selectedTool, setSelectedTool] = useState<ToolWithDetail | null>(null);
   const [signatureData, setSignatureData] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,7 +99,7 @@ export default function PreoperationalForm({
     }, 2000);
   };
 
-  // Validar formulario
+  // Validación global del formulario
   const isFormValid = useMemo(() => {
     const hasSelectedOrder = !!selectedOrder;
     const hasSelectedTool = !!selectedTool;
@@ -178,10 +165,11 @@ export default function PreoperationalForm({
     }
   };
 
-  // Cargar herramientas y órdenes
+  // Cargar herramientas y órdenes al montar
   useEffect(() => {
     loadAllTools();
     loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadAllTools = async () => {
@@ -189,7 +177,7 @@ export default function PreoperationalForm({
       setLoadingTools(true);
       setError("");
       const toolList = await toolsApi.getAvailableHerramientas();
-      setAllTools(toolList || []);
+      setAllTools((toolList || []) as ToolWithDetail[]);
     } catch (error: any) {
       console.error("Error cargando herramientas:", error);
       setError(error.message || "Error al cargar la lista de herramientas");
@@ -217,36 +205,58 @@ export default function PreoperationalForm({
     }
   };
 
-  // Función para convertir toolDetails a objetos Tool
-  const convertToolDetailsToTools = (
-    toolDetails: OrderToolDetail[],
-  ): Tool[] => {
-    return toolDetails.map((toolDetail, index) => ({
-      herramienta_id: toolDetail.detalleHerramientaId || index + 1000,
+  // Helper: crear herramienta sintética a partir de un detalle de orden
+  const createSyntheticToolFromDetail = (
+    toolDetail: OrderToolDetail,
+    index: number,
+  ): ToolWithDetail => {
+    const now = new Date().toISOString();
+    return {
+      herramientaId:
+        (toolDetail as any).herramientaId ||
+        toolDetail.detalleHerramientaId ||
+        index + 1000,
       nombre: toolDetail.nombreHerramienta,
-      marca: toolDetail.marca || "Sin marca",
-      serial: toolDetail.serial || "N/A",
-      modelo: toolDetail.modelo || "N/A",
-      tipo: toolDetail.tipo || "Herramienta",
-      estado: "disponible",
+      marca: toolDetail.marca || "",
+      serial: toolDetail.serial || "",
+      modelo: toolDetail.modelo || "",
+      caracteristicasTecnicas: "",
+      observacion: "",
+      fechaRegistro: now,
+      fechaEliminacion: undefined,
+      tipo: ToolType.HERRAMIENTA,
+      estado: ToolStatus.DISPONIBLE,
+      motivoEliminacion: undefined,
+      observacionEliminacion: undefined,
+      valorUnitario: 0,
+      cantidadActual: 1,
+      inventarioId: undefined,
+      bodega: undefined,
+      imagenes: [],
       detalleHerramientaId: toolDetail.detalleHerramientaId,
-      caracteristicasTecnicas: undefined,
-      observacion: undefined,
-      valorUnitario: undefined,
-    }));
+    };
   };
 
-  // Función para encontrar herramientas del inventario que coincidan con las de la orden
+  // Convierte OrderToolDetail en herramientas sintéticas
+  const convertToolDetailsToTools = (
+    toolDetails: OrderToolDetail[],
+  ): ToolWithDetail[] => {
+    return toolDetails.map((toolDetail, index) =>
+      createSyntheticToolFromDetail(toolDetail, index),
+    );
+  };
+
+  // Encuentra herramientas del inventario que coinciden con las de la orden
   const findMatchingInventoryTools = (
     toolDetails: OrderToolDetail[],
-  ): Tool[] => {
+  ): ToolWithDetail[] => {
     if (!allTools || allTools.length === 0) {
       return convertToolDetailsToTools(toolDetails);
     }
 
-    const matchedTools: Tool[] = [];
+    const matchedTools: ToolWithDetail[] = [];
 
-    toolDetails.forEach((toolDetail) => {
+    toolDetails.forEach((toolDetail, index) => {
       const matchingTool = allTools.find(
         (inventoryTool) =>
           inventoryTool.nombre.toLowerCase() ===
@@ -259,16 +269,7 @@ export default function PreoperationalForm({
           detalleHerramientaId: toolDetail.detalleHerramientaId,
         });
       } else {
-        matchedTools.push({
-          herramienta_id: toolDetail.detalleHerramientaId || Date.now(),
-          nombre: toolDetail.nombreHerramienta,
-          marca: toolDetail.marca || "Sin marca",
-          serial: toolDetail.serial || "N/A",
-          modelo: toolDetail.modelo || "N/A",
-          tipo: toolDetail.tipo || "Herramienta",
-          estado: "disponible",
-          detalleHerramientaId: toolDetail.detalleHerramientaId,
-        });
+        matchedTools.push(createSyntheticToolFromDetail(toolDetail, index));
       }
     });
 
@@ -291,7 +292,7 @@ export default function PreoperationalForm({
       workOrderId: order ? order.orden_id : 0,
     }));
 
-    // Resetear herramienta seleccionada cuando cambia la orden
+    // Reset herramienta seleccionada cuando cambia la orden
     setSelectedTool(null);
     setToolsForSelectedOrder([]);
 
@@ -314,7 +315,7 @@ export default function PreoperationalForm({
     }
   };
 
-  const handleToolSelect = async (tool: Tool) => {
+  const handleToolSelect = async (tool: ToolWithDetail) => {
     try {
       setSelectedTool(tool);
 
@@ -417,9 +418,7 @@ export default function PreoperationalForm({
         userName,
       };
 
-      if (onSubmit) {
-        await onSubmit(callbackData);
-      }
+      await onSubmit(callbackData);
 
       redirectToReportsList();
     } catch (error: any) {
@@ -486,7 +485,6 @@ export default function PreoperationalForm({
     });
   }, [orders]);
 
-  // Función para obtener el label de un valor
   const getValueLabel = (value: CheckValue): string => {
     switch (value) {
       case "GOOD":
@@ -718,7 +716,7 @@ export default function PreoperationalForm({
                         : `tool-index-${index}`
                     }
                     className={`${styles.equipmentCard} ${
-                      selectedTool?.herramienta_id === tool.herramienta_id
+                      selectedTool?.herramientaId === tool.herramientaId
                         ? styles.selected
                         : ""
                     }`}

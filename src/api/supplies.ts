@@ -1,19 +1,18 @@
 // src/api/supplies.ts
 import api from "./axios";
-
-export interface SupplyUpdateData {
-  nombre?: string;
-  estado?: string;
-  valorUnitario?: number;
-  unidadMedida?: string;
-  stockMin?: number;
-  categoria?: string;
-}
+import type {
+  Supply,
+  CreateSupplyPayload,
+  UpdateSupplyPayload,
+  SuppliesStats,
+  SupplyApiResponse,
+} from "../interfaces/SuppliesInterfaces";
 
 export const suppliesApi = {
-  getAvailableInsumos: async () => {
+  // ✅ Obtener todos los insumos (no eliminados)
+  getAvailableInsumos: async (): Promise<Supply[]> => {
     try {
-      const response = await api.get("/supplies");
+      const response = await api.get<SupplyApiResponse<Supply[]>>("/supplies");
       return response.data.data;
     } catch (error: any) {
       console.error("Error obteniendo insumos:", error);
@@ -23,34 +22,32 @@ export const suppliesApi = {
     }
   },
 
-  createInsumo: async (insumoData: any, file?: File) => {
+  // ✅ Crear insumo (+ opcionalmente subir imagen)
+  createInsumo: async (
+    insumoData: CreateSupplyPayload,
+    file?: File,
+  ): Promise<Supply> => {
     try {
-      const valorUnitario = parseFloat(insumoData.valorUnitario) || 0;
-      const stockMin = parseFloat(insumoData.stockMin) || 0;
-      const cantidadInicial = parseFloat(insumoData.cantidadInicial) || 0;
-
-      // ⚠️ CORREGIDO: SOLO campos permitidos por el backend
-      const datosParaEnviar: any = {
-        nombre: insumoData.nombre || "",
-        categoria: insumoData.categoria || "General",
-        unidadMedida: insumoData.unidadMedida || "Unidad",
-        stockMin,
-        valorUnitario,
-        estado: insumoData.estado || "Disponible",
-        cantidadInicial,
+      const payload: CreateSupplyPayload = {
+        ...insumoData,
+        valorUnitario: Number(insumoData.valorUnitario) || 0,
+        stockMin:
+          insumoData.stockMin !== undefined
+            ? Number(insumoData.stockMin)
+            : undefined,
+        cantidadInicial:
+          insumoData.cantidadInicial !== undefined
+            ? Number(insumoData.cantidadInicial)
+            : undefined,
       };
 
-      // Solo incluir bodegaId si tiene valor (es opcional)
-      if (insumoData.bodegaId !== undefined && insumoData.bodegaId !== null) {
-        datosParaEnviar.bodegaId = insumoData.bodegaId;
-      }
-
-      // 1. Crear insumo
-      const response = await api.post("/supplies", datosParaEnviar);
-
+      const response = await api.post<SupplyApiResponse<Supply>>(
+        "/supplies",
+        payload,
+      );
       const insumoCreado = response.data.data;
 
-      // 2. Si hay archivo, subirlo a Cloudinary via /images/supply/:id
+      // Subir imagen si se proporciona
       if (file && insumoCreado.insumoId) {
         try {
           const formData = new FormData();
@@ -71,11 +68,11 @@ export const suppliesApi = {
       console.error("❌ ERROR CREANDO INSUMO:", error);
       console.error("🔍 Detalles del error:", error.response?.data);
 
-      if (error.response?.data?.message) {
-        const messages = Array.isArray(error.response.data.message)
-          ? error.response.data.message.join(", ")
-          : error.response.data.message;
-        console.error("📢 Mensajes del backend:", messages);
+      const backendMessage = error.response?.data?.message;
+      if (backendMessage) {
+        const messages = Array.isArray(backendMessage)
+          ? backendMessage.join(", ")
+          : backendMessage;
         throw new Error(messages);
       }
 
@@ -105,10 +102,9 @@ export const suppliesApi = {
     }
   },
 
-  deleteInsumo: async (insumoId: number) => {
+  deleteInsumo: async (insumoId: number): Promise<void> => {
     try {
-      const response = await api.delete(`/supplies/${insumoId}`);
-      return response.data;
+      await api.delete(`/supplies/${insumoId}`);
     } catch (error: any) {
       console.error("❌ Error eliminando insumo:", error);
       throw new Error(
@@ -117,14 +113,39 @@ export const suppliesApi = {
     }
   },
 
-  updateSupply: async (insumoId: number, data: SupplyUpdateData) => {
+  // ✅ Actualizar insumo
+  updateSupply: async (
+    insumoId: number,
+    data: UpdateSupplyPayload,
+  ): Promise<Supply> => {
     try {
-      const response = await api.patch(`/supplies/${insumoId}`, data);
-      return response.data;
+      const response = await api.patch<SupplyApiResponse<Supply>>(
+        `/supplies/${insumoId}`,
+        data,
+      );
+      return response.data.data;
     } catch (error: any) {
       console.error("Error actualizando insumo:", error);
       throw new Error(
         error.response?.data?.message || "Error al actualizar insumo",
+      );
+    }
+  },
+
+  // (Opcional) ✅ Obtener estadísticas de insumos
+  getStats: async (): Promise<SuppliesStats> => {
+    try {
+      const response = await api.get<SupplyApiResponse<SuppliesStats>>(
+        "/supplies",
+        {
+          params: { stats: true },
+        },
+      );
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(
+        error.response?.data?.message ||
+          "Error al obtener estadísticas de insumos",
       );
     }
   },

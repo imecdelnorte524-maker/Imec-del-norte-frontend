@@ -289,22 +289,6 @@
   }
 }
 
-/* Soporte para modo oscuro automático */
-@media (prefers-color-scheme: dark) {
-  .primaryButton {
-    background: #059669;
-  }
-  
-  .primaryButton:hover {
-    background: #047857;
-  }
-  
-  .activeTab {
-    background: var(--primary-900);
-    color: var(--primary-200);
-  }
-}
-
 /* Mejoras para tablets en orientación horizontal */
 @media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
   .sectionHeader {

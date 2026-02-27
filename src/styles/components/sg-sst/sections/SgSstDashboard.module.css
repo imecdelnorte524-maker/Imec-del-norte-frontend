@@ -351,22 +351,6 @@
   }
 }
 
-/* Modo oscuro */
-@media (prefers-color-scheme: dark) {
-  .userNote {
-    background: var(--surface);
-    color: var(--text-secondary);
-  }
-
-  .card {
-    background: var(--surface);
-  }
-
-  .infoCard {
-    background: var(--surface);
-  }
-}
-
 /* Mejoras de accesibilidad */
 @media (prefers-reduced-motion: reduce) {
   .card,

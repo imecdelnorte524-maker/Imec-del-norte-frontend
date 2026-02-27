@@ -1,6 +1,7 @@
 // src/api/axios.ts
 import axios from "axios";
 import { playErrorSound } from "../utils/sounds";
+import { getSocketId } from "../lib/socket";
 
 // Configuración base de axios
 const api = axios.create({
@@ -27,8 +28,22 @@ api.interceptors.request.use(
   (error) => {
     console.error("Error en request:", error);
     return Promise.reject(error);
-  }
+  },
 );
+
+api.interceptors.request.use((config) => {
+  const socketId = getSocketId();
+  if (socketId) {
+    config.headers["x-socket-id"] = socketId;
+  }
+
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
 
 // Interceptor para manejar respuestas
 api.interceptors.response.use(
@@ -39,11 +54,7 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url: string = error.config?.url || "";
 
-    console.error(
-      "❌ Error en response:",
-      status,
-      error.response?.data
-    );
+    console.error("❌ Error en response:", status, error.response?.data);
 
     if (status && status >= 400) {
       playErrorSound();
@@ -76,7 +87,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

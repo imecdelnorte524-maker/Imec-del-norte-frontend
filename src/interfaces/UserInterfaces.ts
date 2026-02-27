@@ -13,6 +13,7 @@ export interface Usuario {
   email: string;
   username: string;
   telefono: string | null;
+  position?: string | null;
   activo: boolean;
   fechaCreacion: string;
   fechaNacimiento?: string | null;
@@ -21,14 +22,10 @@ export interface Usuario {
   resetTokenExpiry?: string | null;
   mustChangePassword?: boolean;
   role: Rol;
-
-  // Nuevos campos de perfil (opcionales)
   ubicacionResidencia?: string | null;
   arl?: string | null;
   eps?: string | null;
   afp?: string | null;
-
-  // Contacto de emergencia
   contactoEmergenciaNombre?: string | null;
   contactoEmergenciaTelefono?: string | null;
   contactoEmergenciaParentesco?: string | null;
@@ -50,8 +47,6 @@ export interface CreateUsuarioDto {
   activo?: boolean;
   fechaNacimiento?: string;
   genero?: string;
-
-  // Opcionales
   ubicacionResidencia?: string;
   arl?: string;
   eps?: string;
@@ -79,8 +74,6 @@ export interface UpdateUsuarioDto {
   fechaNacimiento?: string | null;
   genero?: string | null;
   position?: string | null;
-
-  // Nuevos campos opcionales (permitir null para limpiar)
   ubicacionResidencia?: string | null;
   arl?: string | null;
   eps?: string | null;

@@ -1,5 +1,9 @@
 // src/api/users.ts
-import type { CreateUsuarioDto, UpdateUsuarioDto, Usuario } from "../interfaces/UserInterfaces";
+import type {
+  CreateUsuarioDto,
+  UpdateUsuarioDto,
+  Usuario,
+} from "../interfaces/UserInterfaces";
 import type { Rol } from "../interfaces/RolesInterfaces";
 import api from "./axios";
 
@@ -13,11 +17,13 @@ const mapUsuarioFromBackend = (data: any): Usuario => ({
   email: data.email ?? "",
   username: data.username ?? data.user_name ?? "",
   telefono: data.telefono ?? null,
+  position: data.position ?? "",
   activo:
     typeof data.activo === "boolean"
       ? data.activo
       : data.activo === 1 || data.activo === "1",
-  fechaCreacion: data.fechaCreacion ?? data.createdAt ?? new Date().toISOString(),
+  fechaCreacion:
+    data.fechaCreacion ?? data.createdAt ?? new Date().toISOString(),
   fechaNacimiento: data.fechaNacimiento ?? data.birthdate ?? null,
   genero: data.genero ?? null,
   resetToken: data.resetToken ?? null,
@@ -25,7 +31,8 @@ const mapUsuarioFromBackend = (data: any): Usuario => ({
   mustChangePassword: data.mustChangePassword ?? false,
 
   // Nuevos campos (con varios posibles nombres desde backend)
-  ubicacionResidencia: data.ubicacionResidencia ?? data.ubicacion ?? data.address ?? null,
+  ubicacionResidencia:
+    data.ubicacionResidencia ?? data.ubicacion ?? data.address ?? null,
   arl: data.arl ?? data.arlName ?? null,
   eps: data.eps ?? null,
   afp: data.afp ?? null,
@@ -71,6 +78,7 @@ const mapCreateUserToBackend = (data: CreateUsuarioDto) => {
     telefono: data.telefono || null,
     rolId: data.rolId,
     activo: data.activo ?? true,
+    position: data.position,
   };
 
   if (data.fechaNacimiento && data.fechaNacimiento.trim() !== "") {
@@ -135,6 +143,8 @@ const mapUpdateUserToBackend = (data: UpdateUsuarioDto) => {
     mapped.contactoEmergenciaTelefono = data.contactoEmergenciaTelefono;
   if (data.contactoEmergenciaParentesco !== undefined)
     mapped.contactoEmergenciaParentesco = data.contactoEmergenciaParentesco;
+  mapped.contactoEmergenciaTelefono = data.contactoEmergenciaTelefono;
+  if (data.position !== undefined) mapped.position = data.position;
 
   return mapped;
 };
@@ -154,7 +164,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error obteniendo usuarios:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener usuarios"
+        error.response?.data?.message || "Error al obtener usuarios",
       );
     }
   },
@@ -166,7 +176,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error obteniendo usuario:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener usuario"
+        error.response?.data?.message || "Error al obtener usuario",
       );
     }
   },
@@ -179,7 +189,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error obteniendo perfil propio:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener perfil"
+        error.response?.data?.message || "Error al obtener perfil",
       );
     }
   },
@@ -197,7 +207,7 @@ export const usersApi = {
         error.response?.data?.error ||
         "Error al crear usuario";
       throw new Error(
-        Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage
+        Array.isArray(errorMessage) ? errorMessage.join(", ") : errorMessage,
       );
     }
   },
@@ -211,10 +221,10 @@ export const usersApi = {
     } catch (error: any) {
       console.error(
         "Error actualizando usuario:",
-        error.response?.data || error
+        error.response?.data || error,
       );
       throw new Error(
-        error.response?.data?.message || "Error al actualizar usuario"
+        error.response?.data?.message || "Error al actualizar usuario",
       );
     }
   },
@@ -226,7 +236,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error desactivando usuario:", error);
       throw new Error(
-        error.response?.data?.message || "Error al desactivar usuario"
+        error.response?.data?.message || "Error al desactivar usuario",
       );
     }
   },
@@ -238,7 +248,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error activando usuario:", error);
       throw new Error(
-        error.response?.data?.message || "Error al activar usuario"
+        error.response?.data?.message || "Error al activar usuario",
       );
     }
   },
@@ -250,7 +260,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error obteniendo técnicos:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener técnicos"
+        error.response?.data?.message || "Error al obtener técnicos",
       );
     }
   },
@@ -262,7 +272,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error obteniendo clientes:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener clientes"
+        error.response?.data?.message || "Error al obtener clientes",
       );
     }
   },
@@ -293,7 +303,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error subiendo foto de usuario:", error);
       throw new Error(
-        error.response?.data?.message || "Error al subir foto de usuario"
+        error.response?.data?.message || "Error al subir foto de usuario",
       );
     }
   },
@@ -305,7 +315,7 @@ export const usersApi = {
     } catch (error: any) {
       console.error("Error eliminando foto de usuario:", error);
       throw new Error(
-        error.response?.data?.message || "Error al eliminar foto de usuario"
+        error.response?.data?.message || "Error al eliminar foto de usuario",
       );
     }
   },

@@ -1,4 +1,3 @@
-/* src/styles/pages/InventoryPage.module.css */
 .page {
   padding: 24px;
   max-width: 1400px;
@@ -41,7 +40,9 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .statCard:hover {
@@ -114,21 +115,83 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* ===== BOTÓN DE EXPORTAR EXCEL ===== */
+.actionButtons {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.btnExport {
+  background: #059669;
+  color: white;
+  border: none;
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btnExport:hover:not(:disabled) {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.btnExport:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btnIcon {
+  font-size: 1.1rem;
+}
+
 .btnPrimary {
   background: var(--primary-600);
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 0.625rem 1.25rem;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btnPrimary:hover {
+  background: var(--primary-700);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Spinner para estado de carga */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Contenedor principal responsivo */
@@ -197,6 +260,11 @@
   color: #166534;
 }
 
+.itemType.equipo {
+  background: #fcf8dc;
+  color: #a3811a;
+}
+
 .unit {
   color: #6b7280;
   font-size: 0.8rem;
@@ -223,10 +291,26 @@
   color: #166534;
 }
 
-.actionButtons {
+.status.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status.inactive {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status.deleted {
+  background: #fca5a5;
+  color: #7f1d1d;
+}
+
+/* Acciones por fila */
+.rowActions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .btnAction {
@@ -253,6 +337,58 @@
   color: #ef4444;
 }
 
+.btnAction.softDelete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+  min-width: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnAction.softDelete:hover {
+  background: #fffbeb;
+  color: #f59e0b;
+}
+
+/* Filtro de eliminados */
+.showDeletedCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.showDeletedCheckbox input {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.showDeletedCheckbox span {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Estados para items eliminados */
+.deletedRow {
+  background-color: #fef2f2 !important;
+  opacity: 0.7;
+}
+
+.deletedCard {
+  background-color: #fef2f2 !important;
+  opacity: 0.7;
+  border-color: #fecaca;
+}
+
 /* Vista móvil - tarjetas */
 .mobileView {
   display: none;
@@ -265,7 +401,9 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
   padding: 16px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .mobileCard:hover {
@@ -413,6 +551,21 @@
     width: 100%;
   }
 
+  .actionButtons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btnExport,
+  .btnPrimary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rowActions {
+    justify-content: flex-start;
+  }
+
   .stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
@@ -440,6 +593,10 @@
 
   .table {
     min-width: 800px;
+  }
+
+  .showDeletedCheckbox {
+    align-self: flex-start;
   }
 }
 
@@ -486,6 +643,12 @@
     padding: 40px 16px;
     font-size: 1rem;
   }
+
+  .btnExport,
+  .btnPrimary {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+  }
 }
 
 /* Mejoras de accesibilidad para móvil */
@@ -518,6 +681,11 @@
     box-shadow: none;
   }
 
+  .btnExport:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
   .btnAction:hover {
     background: none;
   }
@@ -526,87 +694,9 @@
     background: none;
     color: inherit;
   }
-}
 
-/* Agregar al final de src/styles/pages/InventoryPage.module.css */
-
-/* Filtro de eliminados */
-.showDeletedCheckbox {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.showDeletedCheckbox input {
-  width: 1rem;
-  height: 1rem;
-  cursor: pointer;
-}
-
-.showDeletedCheckbox span {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-/* Estados para items eliminados */
-.deletedRow {
-  background-color: #fef2f2 !important;
-  opacity: 0.7;
-}
-
-.deletedCard {
-  background-color: #fef2f2 !important;
-  opacity: 0.7;
-  border-color: #fecaca;
-}
-
-.status.deleted {
-  background-color: #fca5a5 !important;
-  color: #7f1d1d !important;
-}
-
-/* Botón de soft delete */
-.btnAction.softDelete {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: all 0.2s;
-  font-size: 1.1rem;
-  min-width: 40px;
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btnAction.softDelete:hover {
-  background: #fffbeb;
-  color: #f59e0b;
-}
-
-/* Mejorar estilos de estado */
-.status.warning {
-  background: #fef3c7 !important;
-  color: #92400e !important;
-}
-
-.status.inactive {
-  background: #f3f4f6 !important;
-  color: #6b7280 !important;
-}
-
-/* Responsividad mejorada para filtros */
-@media (max-width: 768px) {
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .showDeletedCheckbox {
-    align-self: flex-start;
+  .btnAction.softDelete:hover {
+    background: none;
+    color: inherit;
   }
 }

@@ -1,244 +1,179 @@
-/* src/components/equipment-detail/AddPhotoModal.module.css */
-
 .modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(2px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: var(--spacing-md);
-  z-index: 2000;
-  box-sizing: border-box;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .addPhotoModal {
-  background: var(--white);
-  border-radius: var(--border-radius-lg);
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  max-width: 550px;
-  width: 100%;
-  padding: var(--spacing-lg);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  overflow-y: auto;
+  background: white;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 .modalHeaderRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
-  flex-shrink: 0;
+  margin-bottom: 20px;
 }
 
 .modalHeaderRow h4 {
   margin: 0;
-  font-size: var(--font-size-lg);
-  color: var(--gray-800);
+  font-size: 1.25rem;
+  color: #1a202c;
 }
 
 .modalCloseButton {
-  background: transparent;
+  background: none;
   border: none;
   font-size: 1.5rem;
-  line-height: 1;
   cursor: pointer;
-  color: var(--gray-400);
-  padding: 4px;
-  border-radius: var(--border-radius);
-  transition: all 0.2s;
+  color: #a0aec0;
 }
 
-.modalCloseButton:hover {
-  background: var(--gray-100);
-  color: var(--gray-800);
+/* Esconder el input original */
+.hiddenInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
-.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius);
-  margin-bottom: var(--spacing-lg);
-  text-align: center;
-}
-
-.formRow {
+/* El Dropzone / Label */
+.dropzone {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
-  width: 100%;
-  margin-bottom: var(--spacing-md);
-}
-
-.formRow label {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--gray-700);
-}
-
-.fileInput {
-  border: 2px dashed var(--gray-300);
-  background: var(--gray-50);
-  padding: var(--spacing-lg);
-  text-align: center;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  background: #f7fafc;
   cursor: pointer;
-  width: 100%;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-  border-radius: var(--border-radius);
+  transition: all 0.3s ease;
+  text-align: center;
 }
 
-.fileInput:hover {
-  border-color: var(--primary-400);
-  background: var(--primary-50);
+.dropzone:hover {
+  border-color: #4299e1;
+  background: #ebf8ff;
 }
 
-.selectedFilesList {
-  margin-top: var(--spacing-md);
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-sm);
+.dropzoneCompact {
+  padding: 20px;
+  border-style: solid;
+  background: #fff;
 }
 
-.selectedFilesList p {
-  margin: 0 0 var(--spacing-xs) 0;
-  font-size: var(--font-size-sm);
-  color: var(--gray-800);
-  border-bottom: 1px solid var(--gray-100);
-  padding-bottom: 4px;
+.uploadIcon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
 }
 
-.selectedFilesList ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  max-height: 150px;
+.uploadText {
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 4px;
+}
+
+.dropzone small {
+  color: #718096;
+}
+
+/* Contenedor de Previsualización */
+.previewContainer {
+  margin-top: 24px;
+  max-height: 250px;
   overflow-y: auto;
 }
 
-.selectedFilesList li {
-  padding: 4px 0;
-  font-size: var(--font-size-xs);
-  color: var(--gray-600);
-  border-bottom: 1px dashed var(--gray-100);
+.previewTitle {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+}
+
+.previewItem {
   display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.selectedFilesList li:last-child {
-  border-bottom: none;
-}
-
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--gray-200);
-  flex-wrap: wrap;
-}
-
-.formActions button {
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius);
-  border: none;
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-.formActions button:first-child {
-  background: var(--gray-200);
-  color: var(--gray-700);
-}
-
-.formActions button:first-child:hover:not(:disabled) {
-  background: var(--gray-300);
-}
-
-.formActions button:last-child {
-  background: var(--primary-500);
-  color: white;
-}
-
-.formActions button:last-child:hover:not(:disabled) {
-  background: var(--primary-600);
-}
-
-.formActions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-@media (max-width: 768px) {
-  .formActions {
-    flex-direction: column;
-  }
-
-  .formActions button {
-    width: 100%;
-    padding: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .modalOverlay {
-    padding: 10px;
-  }
-
-  .addPhotoModal {
-    padding: var(--spacing-md);
-  }
-}
-
-.formRow input[type="file"],
-.fileInput {
-  border: 2px dashed var(--gray-300);
-  background: var(--gray-50);
-  padding: var(--spacing-md);
-  text-align: left;
-  cursor: pointer;
-  width: 100%;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-  border-radius: var(--border-radius);
-}
-
-.fileInput:hover {
-  border-color: var(--primary-400);
-  background: var(--primary-50);
-}
-
-.selectedFilesList li {
-  padding: 4px 0;
-  font-size: var(--font-size-xs);
-  color: var(--gray-600);
-  border-bottom: 1px dashed var(--gray-100);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.selectedFilesList li:last-child {
-  border-bottom: none;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .previewImage {
-  width: 48px;
-  height: 48px;
-  border-radius: 4px;
+  width: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
-  flex-shrink: 0;
+  border-radius: 8px;
+  border: 1px solid #edf2f7;
+}
+
+.fileName {
+  font-size: 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #4a5568;
+}
+
+/* Acciones */
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.formActions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.cancelBtn {
+  background: #edf2f7;
+  border: none;
+  color: #4a5568;
+}
+
+.submitBtn {
+  background: #3182ce;
+  border: none;
+  color: white;
+}
+
+.submitBtn:disabled {
+  background: #a0aec0;
+  cursor: not-allowed;
+}
+
+.error {
+  background: #fff5f5;
+  color: #c53030;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+  border: 1px solid #fed7d7;
 }

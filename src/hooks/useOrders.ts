@@ -1,8 +1,8 @@
-// src/hooks/useOrders.ts
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import {
   getAllOrdersRequest,
+  getAllOrdersForTechniciansRequest,
   getOrderByIdRequest,
   createOrderRequest,
   updateOrderRequest,
@@ -28,8 +28,8 @@ import type {
   CreateOrderData,
   UpdateOrderData,
 } from "../interfaces/OrderInterfaces";
-import { useSocket } from "../context/SocketContext"; // <-- NUEVO
-import { useSocketEvent } from "./useSocketEvent"; // <-- NUEVO
+import { useSocket } from "../context/SocketContext";
+import { useSocketEvent } from "./useSocketEvent";
 
 // ---------------------------------------------------------------------------
 // Helper global de tiempo real para órdenes
@@ -49,7 +49,6 @@ function useWorkOrdersRealtime() {
   };
 
   const invalidateDetails = () => {
-    // Invalida todos los detalles: ["orderDetail", id]
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orderDetail] });
   };
 
@@ -59,7 +58,6 @@ function useWorkOrdersRealtime() {
     invalidateDetails();
   };
 
-  // No dependemos del payload, sólo invalidamos cache
   useSocketEvent(socket, "workOrders.created", onChange);
   useSocketEvent(socket, "workOrders.updated", onChange);
   useSocketEvent(socket, "workOrders.deleted", onChange);
@@ -84,7 +82,7 @@ export const useDashboardOrders = (filters?: {
   clienteId?: number;
 }) => {
   const queryClient = useQueryClient();
-  useWorkOrdersRealtime(); // activar WS
+  useWorkOrdersRealtime();
 
   const { data, isLoading, error } = useQuery({
     queryKey: [QUERY_KEYS.dashboardOrders, filters],
@@ -107,9 +105,7 @@ export const useDashboardOrders = (filters?: {
 // ---------------------------------------------------------------------------
 // MIS ÓRDENES (técnico/cliente) usando /work-orders
 // ---------------------------------------------------------------------------
-export const useMyOrders = (filters?: {
-  estado?: string; // "Pendiente", "Asignada", "En Proceso", ...
-}) => {
+export const useMyOrders = (filters?: { estado?: string }) => {
   const queryClient = useQueryClient();
   useWorkOrdersRealtime();
 
@@ -189,8 +185,6 @@ export const useDashboardMetrics = () => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [QUERY_KEYS.dashboardMetrics],
     queryFn: getDashboardMetricsRequest,
-    // Si confías sólo en WS, puedes quitar el polling:
-    // refetchInterval: 30000,
   });
 
   return {
@@ -206,7 +200,13 @@ export const useDashboardMetrics = () => {
 // ---------------------------------------------------------------------------
 export const useOrders = (
   userRole: "cliente" | "tecnico" | "admin" | "secretaria",
-  filter: "all" | "pending" | "assigned" | "completed" | "cancelled" = "all",
+  filter:
+    | "all"
+    | "pending"
+    | "assigned"
+    | "in_progress"
+    | "completed"
+    | "cancelled" = "all",
 ) => {
   const queryClient = useQueryClient();
   useWorkOrdersRealtime();
@@ -214,33 +214,34 @@ export const useOrders = (
   const { data, isLoading, error } = useQuery({
     queryKey: [QUERY_KEYS.orders, userRole, filter],
     queryFn: async () => {
-      const response = await getAllOrdersRequest();
-      let list: Order[] = response.services || [];
+      let list: Order[] = [];
+
+      // Si es técnico pero queremos todas las órdenes (viene de TechnicianOrdersView con userRole="admin")
+      if (userRole === "admin") {
+        // Usamos el endpoint especial para obtener TODAS las órdenes
+        const response = await getAllOrdersForTechniciansRequest();
+        list = Array.isArray(response) ? response : [];
+      } else {
+        // Comportamiento normal para otros roles
+        const response = await getAllOrdersRequest();
+        list = response.services || [];
+      }
 
       const filterMap: Record<
-        "pending" | "assigned" | "completed" | "cancelled",
+        "pending" | "assigned" | "in_progress" | "completed" | "cancelled",
         Order["estado"]
       > = {
         pending: "Pendiente",
         assigned: "Asignada",
+        in_progress: "En Proceso",
         completed: "Completado",
         cancelled: "Cancelada",
       };
 
       if (filter !== "all") {
         const targetEstado = filterMap[filter];
-
         if (targetEstado) {
           list = list.filter((o) => o.estado === targetEstado);
-
-          if (userRole === "admin" || userRole === "secretaria") {
-            if (filter === "pending") {
-              list = list.filter((o) => (o.technicians?.length || 0) === 0);
-            }
-            if (filter === "assigned") {
-              list = list.filter((o) => (o.technicians?.length || 0) > 0);
-            }
-          }
         }
       }
 
@@ -283,9 +284,9 @@ export const useOrderDetail = (orderId: number, initialData?: Order) => {
     refetch,
   } = useQuery({
     queryKey: [QUERY_KEYS.orderDetail, orderId],
-    queryFn: () => getOrderByIdRequest(orderId), // 👈 ESTO DEBE LLAMAR A /work-orders/{id}
+    queryFn: () => getOrderByIdRequest(orderId),
     initialData,
-    enabled: !!orderId, // 👈 IMPORTANTE: No ejecutar si no hay ID
+    enabled: !!orderId,
   });
 
   return {
@@ -419,7 +420,7 @@ export const useOrderMutations = () => {
     assignTechnician: assignTechnicianMutation,
     unassignTechnician: unassignTechnicianMutation,
     cancelOrder: cancelOrderMutation,
-    rateTechnicians: rateTechniciansMutation, // NUEVO
+    rateTechnicians: rateTechniciansMutation,
   };
 };
 
@@ -496,7 +497,7 @@ interface OrdersCache {
   };
 }
 
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+const CACHE_DURATION = 5 * 60 * 1000;
 
 export function useOrderLoader() {
   const [ordersCache, setOrdersCache] = useState<OrdersCache>({});

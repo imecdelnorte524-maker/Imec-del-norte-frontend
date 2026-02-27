@@ -2,7 +2,7 @@
 
 /* Modal base */
 .modalOverlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -489,102 +489,6 @@
       padding-right: max(1.5rem, env(safe-area-inset-right));
       padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
     }
-  }
-}
-
-/* Modo oscuro */
-@media (prefers-color-scheme: dark) {
-  .modalContainer {
-    background: #1e1e1e;
-  }
-
-  .modalHeader {
-    border-bottom-color: #333;
-  }
-
-  .modalHeader h3 {
-    color: #fff;
-  }
-
-  .closeButton {
-    color: #888;
-  }
-
-  .closeButton:hover {
-    color: #fff;
-    background-color: #333;
-  }
-
-  .formGroup label,
-  .signatureSection label {
-    color: #ccc;
-  }
-
-  .formGroup input {
-    background-color: #2d2d2d;
-    border-color: #444;
-    color: #fff;
-  }
-
-  .formGroup input:hover {
-    border-color: #666;
-  }
-
-  .formGroup input:focus {
-    border-color: #64b5f6;
-    box-shadow: 0 0 0 3px rgba(100, 181, 246, 0.2);
-  }
-
-  .formGroup input::placeholder {
-    color: #666;
-  }
-
-  .formGroup input.error {
-    border-color: #ff8a80;
-    background-color: #3a2a2a;
-  }
-
-  .signaturePadWrapper {
-    background-color: #2d2d2d;
-    border-color: #444;
-  }
-
-  .signaturePadWrapper:hover {
-    background-color: #333;
-    border-color: #666;
-  }
-
-  .signaturePadWrapper:focus-within {
-    border-color: #64b5f6;
-    background-color: #2d2d2d;
-  }
-
-  .signatureInstructions {
-    color: #aaa;
-  }
-
-  .errorMessage {
-    background-color: #3a2a2a;
-    color: #ff8a80;
-    border-left-color: #ff5252;
-  }
-
-  .fieldError {
-    color: #ff8a80;
-  }
-
-  .cancelButton {
-    background-color: #333;
-    color: #ccc;
-  }
-
-  .cancelButton:hover:not(:disabled) {
-    background-color: #444;
-    color: #fff;
-  }
-
-  .modalActions {
-    border-top-color: #333;
   }
 }
 

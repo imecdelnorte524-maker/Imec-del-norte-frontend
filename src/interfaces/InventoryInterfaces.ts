@@ -1,12 +1,139 @@
 // src/interfaces/InventoryInterfaces.ts
-import {
-  ToolStatus,
-  SupplyStatus,
-  ToolType,
-  SupplyCategory,
-  UnitOfMeasure,
-  InventoryItemType,
-} from "../shared/enums/inventory.enum";
+
+export interface InventorySupplyInfo {
+  insumoId: number;
+  nombre: string;
+  categoria: string;
+  unidadMedida: string;
+  stockMin: number;
+  estado: string;
+  valorUnitario: number;
+  descripcion?: string;
+  codigo?: string;
+}
+
+export interface InventoryToolInfo {
+  herramientaId: number;
+  nombre: string;
+  marca: string;
+  serial: string;
+  modelo: string;
+  estado: string;
+  valorUnitario: number;
+  descripcion?: string;
+  codigo?: string;
+  caracteristicasTecnicas?: string;
+  observacion?: string;
+  tipo?: string;
+}
+
+export interface InventoryBodegaInfo {
+  bodegaId: number;
+  nombre: string;
+  descripcion?: string;
+  direccion?: string;
+  activa: boolean;
+  clienteId?: number | null;
+  clienteNombre?: string;
+}
+
+export interface InventoryItem {
+  inventarioId: number;
+  cantidadActual: number;
+  ubicacion?: string;
+  estado?: string;
+  fechaUltimaActualizacion: string;
+  tipo: "insumo" | "herramienta";
+  nombreItem: string;
+  unidadMedida: string;
+  valorUnitario: number;
+  descripcion?: string;
+  codigo?: string;
+  bodega?: InventoryBodegaInfo;
+  supply?: InventorySupplyInfo;
+  tool?: InventoryToolInfo;
+  subtipo?: string;
+}
+
+export interface CreateInventoryPayload {
+  insumoId?: number;
+  herramientaId?: number;
+  cantidadActual?: number;
+  bodegaId?: number;
+  ubicacion?: string;
+}
+
+export interface UpdateInventoryPayload {
+  cantidadActual?: number;
+  bodegaId?: number | null;
+  ubicacion?: string;
+}
+
+export interface UpdateInventoryStockPayload {
+  cantidad: number;
+}
+
+export interface InventoryStatsByBodegaItem {
+  bodegaId: number;
+  bodegaNombre: string;
+  totalItems: number;
+  insumos: number;
+  herramientas: number;
+  totalInsumos: number;
+}
+
+export interface InventoryStatsByEstadoItem {
+  estado: string;
+  cantidad: number;
+}
+
+export interface InventoryStats {
+  totalItems: number;
+  suppliesCount: number;
+  herramientasCount: number;
+  lowStockCount: number;
+  totalValue: number;
+  porBodega: InventoryStatsByBodegaItem[];
+  porEstado: InventoryStatsByEstadoItem[];
+}
+
+export interface DeletedInventoryInfo {
+  id: number;
+  tipo: "insumo" | "herramienta";
+  nombreItem: string;
+  cantidadActual: number;
+  ubicacion?: string | null;
+}
+
+export interface DeletedItemInfo {
+  tipo: "insumo" | "herramienta";
+  id: number;
+  nombre: string;
+  categoria?: string;
+  marca?: string;
+}
+
+export interface InventoryDeleteCompleteResult {
+  deletedInventory: DeletedInventoryInfo;
+  deletedItem: DeletedItemInfo | null;
+}
+
+export interface InventoryDeleteCompleteResponse {
+  message: string;
+  deleted: InventoryDeleteCompleteResult;
+}
+
+export interface InventoryApiResponse<T> {
+  message: string;
+  data: T;
+}
+
+export interface UnitMeasure {
+  unidadMedidaId: number;
+  nombre: string;
+  abreviatura?: string;
+  activa: boolean;
+}
 
 export interface Warehouse {
   bodegaId: number;
@@ -20,79 +147,5 @@ export interface Warehouse {
     nombre: string;
     nit: string;
   };
-  cantidadItems?: number; // Para estadísticas
+  cantidadItems?: number;
 }
-
-export interface UnitMeasure {
-  unidadMedidaId: number;
-  nombre: string;
-  abreviatura?: string;
-  activa: boolean;
-}
-
-export interface Herramienta {
-  herramientaId: number;
-  nombre: string;
-  marca?: string;
-  serial?: string;
-  modelo?: string;
-  caracteristicasTecnicas?: string;
-  fechaRegistro?: string;
-  tipo: ToolType;
-  estado: ToolStatus;
-  valorUnitario: number | null;
-  inventarioId?: number;
-  cantidadActual?: number;
-  ubicacion?: string;
-  bodegaId?: number; // Relación con bodega
-}
-
-export interface Insumo {
-  insumoId: number;
-  nombre: string;
-  categoria: SupplyCategory;
-  unidadMedida?: UnitOfMeasure | string; // Puede ser el objeto o el string por compatibilidad
-  unidadMedidaId?: number;
-  estado: SupplyStatus;
-  fechaRegistro?: string;
-  stockMin: number;
-  valorUnitario: number | null;
-  inventarioId?: number;
-  cantidadActual?: number;
-  ubicacion?: string;
-  bodegaId?: number;
-}
-
-export interface Inventory {
-  inventarioId: number;
-  insumoId?: number;
-  herramientaId?: number;
-  bodegaId?: number;
-  cantidadActual: number;
-  ubicacion?: string;
-  fechaUltimaActualizacion: string;
-  tipo: InventoryItemType;
-  nombreItem: string;
-  bodega?: Warehouse;
-  fechaEliminacion?: string;
-  supply?: {
-    insumoId: number;
-    nombre: string;
-    categoria: SupplyCategory;
-    unidadMedida: any;
-    estado: SupplyStatus;
-    stockMin: number;
-    valorUnitario: number;
-  };
-  tool?: {
-    herramientaId: number;
-    nombre: string;
-    marca: string;
-    serial: string;
-    modelo?: string;
-    estado: ToolStatus;
-    valorUnitario: number;
-  };
-}
-
-export type TipoFiltro = "todos" | "herramientas" | "insumos";

@@ -1,5 +1,3 @@
-/* src/styles/pages/EquipmentDetailPage.module.css */
-
 .container {
   padding: var(--spacing-lg);
   max-width: 1200px;
@@ -48,7 +46,7 @@
   background: var(--gray-300);
 }
 
-/* Header: acciones adicionales (Historial, Agregar imagen, Editar) */
+/* Header: acciones adicionales (Historial, PDF, Agregar imagen, Editar) */
 .headerActions {
   display: flex;
   align-items: center;
@@ -56,37 +54,78 @@
   flex-wrap: wrap;
 }
 
+/* Estilo base para todos los botones del header */
+.secondaryButton,
+.pdfHeaderButton,
+.editButton {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  border: none;
+}
+
+/* Botón secundario (Historial, Agregar imagen) */
 .secondaryButton {
   background: var(--white);
   color: var(--gray-700);
   border: 1px solid var(--gray-300);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
 }
 
 .secondaryButton:hover {
   background: var(--gray-50);
   border-color: var(--gray-400);
+  transform: translateY(-1px);
 }
 
+/* Botón de PDF - usa el mismo estilo que secondaryButton pero con icono */
+.pdfHeaderButton {
+  background: var(--white);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+}
+
+.pdfHeaderButton:hover:not(:disabled) {
+  background: var(--gray-50);
+  border-color: var(--gray-400);
+  transform: translateY(-1px);
+}
+
+.pdfHeaderButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Icono PDF - sin filtro para mantener el color original del SVG */
+.pdfIcon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* Botón de edición (primary) */
 .editButton {
   background: var(--primary-500);
   color: white;
-  border: none;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--border-radius);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: background-color 0.2s;
-  white-space: nowrap;
 }
 
 .editButton:hover {
   background: var(--primary-600);
+  transform: translateY(-1px);
+}
+
+.editButton:disabled {
+  background: var(--primary-300);
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ESTADOS GENERALES */
@@ -439,7 +478,7 @@
 
 /* MODALES */
 .modalOverlay {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -613,100 +652,8 @@
 }
 
 /* =========================================
-   RESPONSIVE DESIGN
+   ÓRDENES DE SERVICIO ASOCIADAS
    ========================================= */
-
-/* Tablet */
-@media (max-width: 1024px) {
-  .container {
-    padding: var(--spacing-md);
-  }
-
-  .formGrid,
-  .componentsGrid,
-  .locationInfo {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--spacing-md);
-  }
-
-  .headerActions {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .headerActions button {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .formGrid,
-  .componentsGrid,
-  .locationInfo {
-    grid-template-columns: 1fr;
-  }
-
-  .detailItem {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .detailItem strong {
-    flex: none;
-    width: 100%;
-  }
-
-  .detailItem span {
-    text-align: left;
-    width: 100%;
-  }
-
-  .formActions {
-    flex-direction: column;
-  }
-
-  .formActions button {
-    width: 100%;
-  }
-
-  .modalOverlay {
-    padding: var(--spacing-sm);
-  }
-
-  .addPhotoModal,
-  .photoViewModal {
-    max-height: 95vh;
-  }
-}
-
-/* Small Mobile */
-@media (max-width: 480px) {
-  .container {
-    padding: var(--spacing-sm);
-  }
-
-  .section,
-  .editFormContainer,
-  .componentsSection,
-  .locationSection,
-  .datesNotesSection {
-    padding: var(--spacing-md);
-  }
-
-  .modalHeader,
-  .modalBody,
-  .modalFooter {
-    padding: var(--spacing-md);
-  }
-}
 .workOrdersList {
   display: flex;
   flex-direction: column;
@@ -881,13 +828,419 @@
   transform: none;
 }
 
-.associateOrderButton::before {
-  content: "";
-  font-size: 1.1em;
+/* ===== Floating PDF Button (solo para documentos) ===== */
+.floatingDocsButton {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-200);
+  background: var(--primary-500);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 900;
+  transition: all 0.15s;
 }
 
-/* Responsive para la sección de órdenes */
+.floatingDocsButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+  background: var(--primary-600);
+}
+
+.floatingDocsButton img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+/* Spinner para estado de carga */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--gray-600);
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Documents Modal - Mejorado ===== */
+.docsModal {
+  background: var(--white);
+  border-radius: var(--border-radius-lg);
+  width: min(760px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Tarjeta de subida */
+.docsUploadCard {
+  background: var(--gray-50);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  border: 1px solid var(--gray-200);
+}
+
+.uploadArea {
+  text-align: center;
+  padding: var(--spacing-xl);
+  background: var(--white);
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--border-radius-lg);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.uploadArea:hover {
+  border-color: var(--primary-500);
+  background: rgba(59, 130, 246, 0.02);
+}
+
+.fileInputHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.uploadLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  color: var(--gray-700);
+}
+
+.uploadLabel svg {
+  color: var(--primary-500);
+  margin-bottom: var(--spacing-xs);
+}
+
+.uploadTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.uploadHint {
+  font-size: var(--font-size-sm);
+  color: var(--gray-500);
+}
+
+/* Archivos seleccionados */
+.selectedFiles {
+  margin-top: var(--spacing-lg);
+  background: var(--white);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+}
+
+.selectedFilesHeader {
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.selectedFilesList {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--spacing-xs);
+}
+
+.selectedFileItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.selectedFileItem:last-child {
+  border-bottom: none;
+}
+
+.selectedFileItem svg {
+  color: var(--primary-500);
+  flex-shrink: 0;
+}
+
+.selectedFileName {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  word-break: break-word;
+}
+
+.selectedFileSize {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.uploadActions {
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.primaryButton {
+  background: var(--primary-500);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--primary-600);
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Lista de documentos */
+.docsListContainer {
+  margin-top: var(--spacing-xl);
+}
+
+.loadingState {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--gray-600);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.loadingState .spinner {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: var(--spacing-xl);
+  background: var(--gray-50);
+  border-radius: var(--border-radius-lg);
+  border: 1px dashed var(--gray-300);
+}
+
+.emptyState svg {
+  color: var(--gray-400);
+  margin-bottom: var(--spacing-md);
+}
+
+.emptyState p {
+  color: var(--gray-600);
+  font-size: var(--font-size-md);
+}
+
+/* Tarjetas de documentos */
+.documentCard {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  transition: all 0.2s;
+  margin-bottom: var(--spacing-sm);
+}
+
+.documentCard:hover {
+  border-color: var(--primary-300);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.documentIcon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: var(--border-radius);
+}
+
+.documentIcon svg {
+  width: 24px;
+  height: 24px;
+  color: #dc2626;
+}
+
+.documentInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.documentName {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--gray-800);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.documentMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-xs);
+}
+
+.documentSize {
+  color: var(--primary-600);
+  font-weight: 500;
+}
+
+.documentDate {
+  color: var(--gray-500);
+}
+
+.documentActions {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-shrink: 0;
+}
+
+/* Mantener estilos existentes pero renombrar para compatibilidad */
+.docsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* =========================================
+   RESPONSIVE DESIGN - MEJORADO
+   ========================================= */
+
+/* Tablet */
+@media (max-width: 1024px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
+  .formGrid,
+  .componentsGrid,
+  .locationInfo {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+
+  .header h1 {
+    text-align: center;
+  }
+
+  .headerActions {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-xs);
+  }
+
+  .secondaryButton,
+  .pdfHeaderButton,
+  .editButton {
+    flex: 1 1 auto;
+    min-width: 120px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: calc(var(--font-size-sm) - 1px);
+  }
+
+  .formGrid,
+  .componentsGrid,
+  .locationInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .detailItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .detailItem strong {
+    flex: none;
+    width: 100%;
+  }
+
+  .detailItem span {
+    text-align: left;
+    width: 100%;
+  }
+
+  .formActions {
+    flex-direction: column;
+  }
+
+  .formActions button {
+    width: 100%;
+  }
+
+  .modalOverlay {
+    padding: var(--spacing-sm);
+  }
+
+  .addPhotoModal,
+  .photoViewModal {
+    max-height: 95vh;
+  }
+
+  /* Órdenes responsive */
   .orderItem {
     flex-direction: column;
     align-items: stretch;
@@ -911,241 +1264,50 @@
 
   .associateOrderButton {
     width: 100%;
+    max-width: none;
   }
-}
 
-/* ===== Floating PDF Button ===== */
-.floatingPdfButton {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  width: 56px;
-  height: 56px;
-  border-radius: 999px;
-  border: 1px solid var(--gray-200);
-  background: var(--primary-500);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 900;
-  transition:
-    transform 0.15s,
-    box-shadow 0.15s,
-    background 0.15s;
-}
-
-.floatingPdfButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
-  background: var(--primary-800);
-}
-
-.floatingPdfButton img {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-}
-
-/* ===== Documents Modal ===== */
-.docsModal {
-  background: var(--white);
-  border-radius: var(--border-radius-lg);
-  width: min(760px, 100%);
-  max-height: 92vh;
-  overflow: hidden;
-  border: 1px solid var(--gray-200);
-}
-
-.docsUploadBox {
-  background: var(--gray-50);
-  border: 1px dashed var(--gray-300);
-  border-radius: var(--border-radius);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-}
-
-.docsUploadLabel {
-  display: block;
-}
-
-.docsFileInput {
-  width: 100%;
-}
-
-.docsUploadHint {
-  display: block;
-  margin-top: var(--spacing-xs);
-  color: var(--gray-600);
-  font-size: var(--font-size-sm);
-}
-
-.docsSelectedList {
-  margin-top: var(--spacing-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.docsSelectedItem {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  padding: 8px 10px;
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-}
-
-.docsFileName {
-  color: var(--gray-700);
-  font-size: var(--font-size-sm);
-  word-break: break-word;
-}
-
-.docsFileMeta {
-  color: var(--gray-500);
-  font-size: var(--font-size-xs);
-  white-space: nowrap;
-}
-
-.docsUploadActions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--spacing-md);
-}
-
-.docsPrimaryButton {
-  background: var(--primary-500);
-  color: white;
-  border: none;
-  padding: 10px 14px;
-  border-radius: var(--border-radius);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.docsPrimaryButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.docsSecondaryButton {
-  background: var(--white);
-  color: var(--gray-700);
-  border: 1px solid var(--gray-300);
-  padding: 8px 12px;
-  border-radius: var(--border-radius);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.docsListHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.docsListHeader h4 {
-  margin: 0;
-  color: var(--gray-800);
-}
-
-.docsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.docsItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  background: var(--white);
-  flex-wrap: wrap;
-}
-
-.docsItemInfo {
-  flex: 1 1 280px;
-  min-width: 220px;
-}
-
-.docsItemName {
-  color: var(--gray-800);
-  font-weight: 600;
-  font-size: var(--font-size-sm);
-  margin-bottom: 4px;
-  word-break: break-word;
-}
-
-.docsItemMeta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--gray-500);
-  font-size: var(--font-size-xs);
-}
-
-.docsItemActions {
-  display: inline-flex;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.iconButton {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid var(--gray-200);
-  background: var(--white);
-  color: var(--gray-700);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s,
-    transform 0.15s;
-  text-decoration: none;
-}
-
-.iconButton:hover {
-  background: var(--gray-50);
-  border-color: var(--gray-300);
-  transform: translateY(-1px);
-}
-
-.iconDanger {
-  color: #dc2626;
-  border-color: #fecaca;
-  background: #fff;
-}
-
-.iconDanger:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
-}
-
-.iconSvg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Responsive tweaks */
-@media (max-width: 768px) {
-  .floatingPdfButton {
+  /* Botón flotante responsive */
+  .floatingDocsButton {
     right: 12px;
     bottom: 12px;
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .floatingDocsButton img {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Documentos responsive */
+  .documentCard {
+    flex-wrap: wrap;
+  }
+
+  .documentInfo {
+    width: 100%;
+    order: 2;
+  }
+
+  .documentName {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .documentActions {
+    width: 100%;
+    order: 3;
+    justify-content: flex-end;
+    margin-top: var(--spacing-xs);
+  }
+
+  .uploadArea {
+    padding: var(--spacing-md);
+  }
+
+  .uploadTitle {
+    font-size: var(--font-size-sm);
   }
 
   .docsItem {
@@ -1155,5 +1317,64 @@
   .docsItemActions {
     width: 100%;
     justify-content: flex-end;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-sm);
+  }
+
+  .section,
+  .editFormContainer,
+  .componentsSection,
+  .locationSection,
+  .datesNotesSection {
+    padding: var(--spacing-md);
+  }
+
+  .modalHeader,
+  .modalBody,
+  .modalFooter {
+    padding: var(--spacing-md);
+  }
+
+  .headerActions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .secondaryButton,
+  .pdfHeaderButton,
+  .editButton {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .floatingDocsButton {
+    width: 44px;
+    height: 44px;
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .floatingDocsButton img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .selectedFileItem {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  .selectedFileName {
+    width: 100%;
+    order: 1;
+  }
+
+  .selectedFileSize {
+    order: 2;
   }
 }

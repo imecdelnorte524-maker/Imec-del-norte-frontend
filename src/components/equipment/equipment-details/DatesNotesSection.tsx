@@ -80,12 +80,10 @@ export default function DatesNotesSection({
         <span>{formatDateTime(equipment.updatedAt)}</span>
       </div>
 
-      {equipment.notes && (
-        <div className={styles.notes}>
-          <strong>Observaciones:</strong>
-          <p>{equipment.notes}</p>
-        </div>
-      )}
+      <div className={styles.notes}>
+        <strong>Observaciones:</strong>
+        <p>{equipment.notes}</p>
+      </div>
 
       {/* Plan de mantenimiento si existe */}
       {equipment.planMantenimiento && (

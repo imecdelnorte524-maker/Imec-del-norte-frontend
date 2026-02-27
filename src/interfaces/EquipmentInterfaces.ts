@@ -1,15 +1,81 @@
 // src/interfaces/EquipmentInterfaces.ts
 
+export const MULTIPLE_COMPONENT_TYPES = [
+  // Variantes de MultiSplit
+  "multisplit",
+  "multi split",
+  "multi-split",
+  "multi_split",
+  "multisplit",
+  "multi-split",
+  "multi_split",
+  "multi split",
+
+  // Variantes de VRF/VRV
+  "vrf",
+  "v r f",
+  "v.r.f",
+  "vrv",
+  "v r v",
+  "v.r.v",
+  "variable refrigerant flow",
+  "variable refrigerant",
+  "refrigerante variable",
+  "caudal variable",
+  "volumen variable",
+
+  // Variantes en español
+  "multisplit",
+  "multi-split",
+  "multi_split",
+  "multi split",
+  "sistema multisplit",
+  "sistema multi split",
+  "sistema de multisplit",
+  "equipo multisplit",
+  "equipo multi split",
+
+  // Otras variantes comunes
+  "inverter multi",
+  "multi inverter",
+  "multi zona",
+  "multizona",
+  "multi-zona",
+  "multi_zona",
+  "multi zona",
+  "sistema multizona",
+  "sistema multi zona",
+
+  // Marcas comerciales comunes
+  "city multi",
+  "city-multi",
+  "city_multi",
+  "city multi",
+  "vrf daikin",
+  "vrv daikin",
+  "vrf lg",
+  "vrv lg",
+  "vrf mitsubishi",
+  "vrv mitsubishi",
+];
+
 // ---------- WorkOrder Info para relación N:M ----------
+export interface WorkOrderDetails {
+  estado?: string;
+  tipoServicio?: string;
+  fechaSolicitud?: string;
+  servicio?: {
+    nombre_servicio: string;
+  } | null;
+  cliente?: any;
+  tecnico?: any;
+}
+
 export interface WorkOrderInfo {
   workOrderId: number;
   description?: string;
   createdAt: string;
-  workOrderDetails?: {
-    estado?: string;
-    tipoServicio?: string;
-    fechaSolicitud?: string;
-  };
+  workOrderDetails?: WorkOrderDetails;
 }
 
 // ---------- Fotos ----------
@@ -33,6 +99,8 @@ export interface MotorData {
   diametroPolea?: string;
   capacidadHp?: string;
   frecuencia?: string;
+  numeroParte?: string;
+  numero_parte?: string;
 }
 
 export interface CompressorData {
@@ -55,6 +123,8 @@ export interface CompressorData {
 }
 
 export interface EvaporatorData {
+  airConditionerTypeEvapId?: number;
+  airConditionerTypeEvap?: AirConditionerTypeInfo;
   marca?: string;
   modelo?: string;
   serial?: string;
@@ -127,6 +197,7 @@ export interface Equipment {
   createdAt: string;
   createdBy: string;
   updatedAt: string;
+  updatedBy?: string | null;
   photos: EquipmentPhoto[];
   evaporators?: EvaporatorData[];
   condensers?: CondenserData[];
@@ -144,13 +215,11 @@ export interface CreateEquipmentData {
   status?: string;
   installationDate?: string | null;
   notes?: string | null;
-  // ⚠️ ELIMINADO: workOrderId (ahora es relación N:M)
   evaporators?: EvaporatorData[];
   condensers?: CondenserData[];
   planMantenimiento?: PlanMantenimientoData | null;
 }
 
-// Para actualizar parcialmente (PATCH)
 export type UpdateEquipmentData = Partial<CreateEquipmentData>;
 
 // ---------- Para formularios ----------
@@ -227,7 +296,7 @@ export interface EquipmentDocument {
   mimeType: string;
   size: number | null;
   createdAt: string;
-  url: string; // puede venir relativo o absoluto
-  downloadUrl: string; // puede venir relativo o absoluto
+  url: string;
+  downloadUrl: string;
   publicId?: string;
 }

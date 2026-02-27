@@ -1,237 +1,203 @@
 // src/api/tools.ts
 import api from "./axios";
-import { ToolStatus, ToolType } from "../shared/enums/inventory.enum";
-
-export interface Tool {
-  herramientaId: number;
-  nombre: string;
-  marca?: string;
-  serial?: string;
-  modelo?: string;
-  caracteristicasTecnicas?: string;
-  observacion?: string;
-  fechaRegistro: Date;
-  fechaActualizacion: Date;
-  fechaEliminacion?: Date;
-  tipo: ToolType;
-  estado: ToolStatus;
-  motivoEliminacion?: string;
-  observacionEliminacion?: string;
-  valorUnitario: number;
-  inventarioId?: number;
-  cantidadActual?: number;
-  bodega?: {
-    bodegaId: number;
-    nombre: string;
-  };
-  imagenes?: string[];
-}
-
-export interface CreateToolDto {
-  nombre: string;
-  marca?: string;
-  serial?: string;
-  modelo?: string;
-  caracteristicasTecnicas?: string;
-  observacion?: string;
-  tipo: ToolType;
-  estado: ToolStatus;
-  valorUnitario: number;
-  bodegaId?: number;
-}
-
-export interface UpdateToolDto {
-  nombre?: string;
-  marca?: string;
-  serial?: string;
-  modelo?: string;
-  caracteristicasTecnicas?: string;
-  observacion?: string;
-  tipo?: ToolType;
-  estado?: ToolStatus;
-  valorUnitario?: number;
-  bodegaId?: number;
-}
-
-export interface ToolUpdateData {
-  nombre?: string;
-  estado?: string;
-  valorUnitario?: number;
-  marca?: string;
-  serial?: string;
-  modelo?: string;
-}
-
-export interface DeleteToolDto {
-  motivo: string;
-  observacion?: string;
-}
+import type {
+  Tool,
+  CreateToolPayload,
+  UpdateToolPayload,
+  DeleteToolPayload,
+  ToolStatus,
+  ToolEliminationReason,
+  ToolApiResponse,
+  ToolEliminationReasonsResponse,
+} from "../interfaces/ToolsInterfaces";
 
 export const toolsApi = {
+  // ✅ Obtener herramientas (con filtros opcionales)
   getAll: async (params?: {
     search?: string;
-    estado?: string;
+    estado?: ToolStatus;
     tipo?: string;
     deleted?: boolean;
   }): Promise<Tool[]> => {
     try {
-      const response = await api.get("/tools", { params });
+      const response = await api.get<ToolApiResponse<Tool[]>>("/tools", {
+        params,
+      });
       return response.data.data;
     } catch (error: any) {
       console.error("Error obteniendo herramientas:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener herramientas"
+        error.response?.data?.message || "Error al obtener herramientas",
       );
     }
   },
 
+  // ✅ Obtener herramienta por ID
   getById: async (id: number): Promise<Tool> => {
     try {
-      const response = await api.get(`/tools/${id}`);
+      const response = await api.get<ToolApiResponse<Tool>>(`/tools/${id}`);
       return response.data.data;
     } catch (error: any) {
       console.error("Error obteniendo herramienta:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener herramienta"
+        error.response?.data?.message || "Error al obtener herramienta",
       );
     }
   },
 
-  create: async (toolData: CreateToolDto): Promise<Tool> => {
+  // ✅ Crear herramienta
+  create: async (toolData: CreateToolPayload): Promise<Tool> => {
     try {
-      const response = await api.post("/tools", toolData);
+      const payload: CreateToolPayload = {
+        ...toolData,
+        valorUnitario: Number(toolData.valorUnitario) || 0,
+      };
+
+      const response = await api.post<ToolApiResponse<Tool>>("/tools", payload);
       return response.data.data;
     } catch (error: any) {
       console.error("Error creando herramienta:", error);
       throw new Error(
-        error.response?.data?.message || "Error al crear herramienta"
+        error.response?.data?.message || "Error al crear herramienta",
       );
     }
   },
 
-  updateTool: async (herramientaId: number, data: ToolUpdateData) => {
+  // ✅ Actualizar herramienta
+  updateTool: async (
+    herramientaId: number,
+    data: UpdateToolPayload,
+  ): Promise<Tool> => {
     try {
-      const response = await api.patch(`/tools/${herramientaId}`, data);
-      return response.data;
+      const response = await api.patch<ToolApiResponse<Tool>>(
+        `/tools/${herramientaId}`,
+        data,
+      );
+      return response.data.data;
     } catch (error: any) {
       console.error("Error actualizando herramienta:", error);
       throw new Error(
-        error.response?.data?.message || "Error al actualizar herramienta"
+        error.response?.data?.message || "Error al actualizar herramienta",
       );
     }
   },
 
-  softDelete: async (id: number, deleteData: DeleteToolDto): Promise<void> => {
+  // ✅ Soft delete con motivo
+  softDelete: async (
+    id: number,
+    deleteData: DeleteToolPayload,
+  ): Promise<void> => {
     try {
       await api.delete(`/tools/${id}/soft`, { data: deleteData });
     } catch (error: any) {
       console.error("Error eliminando herramienta:", error);
       throw new Error(
-        error.response?.data?.message || "Error al eliminar herramienta"
+        error.response?.data?.message || "Error al eliminar herramienta",
       );
     }
   },
 
+  // ✅ Delete permanente
   deletePermanent: async (id: number): Promise<void> => {
     try {
       await api.delete(`/tools/${id}`);
     } catch (error: any) {
       console.error("Error eliminando herramienta permanentemente:", error);
       throw new Error(
-        error.response?.data?.message || "Error al eliminar herramienta"
+        error.response?.data?.message || "Error al eliminar herramienta",
       );
     }
   },
 
+  // ✅ Restaurar herramienta (soft-deleted)
   restore: async (id: number): Promise<Tool> => {
     try {
-      const response = await api.patch(`/tools/${id}/restore`);
+      const response = await api.patch<ToolApiResponse<Tool>>(
+        `/tools/${id}/restore`,
+      );
       return response.data.data;
     } catch (error: any) {
       console.error("Error restaurando herramienta:", error);
       throw new Error(
-        error.response?.data?.message || "Error al restaurar herramienta"
+        error.response?.data?.message || "Error al restaurar herramienta",
       );
     }
   },
 
+  // ✅ Actualizar estado
   updateStatus: async (id: number, estado: ToolStatus): Promise<Tool> => {
     try {
-      const response = await api.patch(`/tools/${id}/status`, { estado });
+      const response = await api.patch<ToolApiResponse<Tool>>(
+        `/tools/${id}/status`,
+        { estado },
+      );
       return response.data.data;
     } catch (error: any) {
       console.error("Error actualizando estado:", error);
       throw new Error(
-        error.response?.data?.message || "Error al actualizar estado"
+        error.response?.data?.message || "Error al actualizar estado",
       );
     }
   },
 
+  // ✅ Obtener solo herramientas eliminadas
   getDeleted: async (): Promise<Tool[]> => {
     try {
-      const response = await api.get("/tools", { params: { deleted: true } });
+      const response = await api.get<ToolApiResponse<Tool[]>>("/tools", {
+        params: { deleted: true },
+      });
       return response.data.data;
     } catch (error: any) {
       console.error("Error obteniendo herramientas eliminadas:", error);
       throw new Error(
         error.response?.data?.message ||
-          "Error al obtener herramientas eliminadas"
+          "Error al obtener herramientas eliminadas",
       );
     }
   },
 
-  getEliminationReasons: async (): Promise<string[]> => {
+  // ✅ Motivos de eliminación
+  getEliminationReasons: async (): Promise<ToolEliminationReason[]> => {
     try {
-      const response = await api.get("/tools/motivos-eliminacion");
+      const response = await api.get<ToolEliminationReasonsResponse>(
+        "/tools/motivos-eliminacion",
+      );
       return response.data.data;
     } catch (error: any) {
       console.error("Error obteniendo motivos de eliminación:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener motivos"
+        error.response?.data?.message || "Error al obtener motivos",
       );
     }
   },
 
-  getAvailableHerramientas: async () => {
+  // ✅ Catálogo de herramientas disponibles (reutiliza getAll sin filtros)
+  getAvailableHerramientas: async (): Promise<Tool[]> => {
     try {
-      const response = await api.get("/tools");
+      const response = await api.get<ToolApiResponse<Tool[]>>("/tools");
       return response.data.data;
     } catch (error: any) {
       console.error("Error obteniendo herramientas:", error);
       throw new Error(
-        error.response?.data?.message || "Error al obtener herramientas"
+        error.response?.data?.message || "Error al obtener herramientas",
       );
     }
   },
 
-  createHerramienta: async (herramientaData: any, file?: File) => {
+  // ✅ Crear herramienta desde catálogo (+ imagen opcional)
+  createHerramienta: async (
+    herramientaData: CreateToolPayload,
+    file?: File,
+  ): Promise<Tool> => {
     try {
-      const valorUnitario = parseFloat(herramientaData.valorUnitario) || 0;
-      
-      // ⚠️ CORREGIDO: Solo campos permitidos por el backend
-      const datosParaEnviar: any = {
-        nombre: herramientaData.nombre || "",
-        marca: herramientaData.marca || "",
-        serial: herramientaData.serial || "",
-        modelo: herramientaData.modelo || "",
-        caracteristicasTecnicas: herramientaData.caracteristicasTecnicas || "",
-        observacion: herramientaData.observacion || "",
-        tipo: herramientaData.tipo || "Herramienta",
-        estado: herramientaData.estado || "Disponible",
-        valorUnitario,
+      const payload: CreateToolPayload = {
+        ...herramientaData,
+        valorUnitario: Number(herramientaData.valorUnitario) || 0,
       };
 
-      // Solo incluir bodegaId si tiene valor (es opcional)
-      if (herramientaData.bodegaId !== undefined && herramientaData.bodegaId !== null) {
-        datosParaEnviar.bodegaId = herramientaData.bodegaId;
-      }
-
-      // 1. Crear herramienta
-      const response = await api.post("/tools", datosParaEnviar);
-
+      const response = await api.post<ToolApiResponse<Tool>>("/tools", payload);
       const herramientaCreada = response.data.data;
 
-      // 2. Si hay archivo, subirlo a Cloudinary
       if (file && herramientaCreada.herramientaId) {
         try {
           const formData = new FormData();
@@ -244,7 +210,7 @@ export const toolsApi = {
               headers: {
                 "Content-Type": "multipart/form-data",
               },
-            }
+            },
           );
         } catch (imgError: any) {
           console.warn("⚠️ No se pudo subir la imagen:", imgError?.message);
@@ -256,18 +222,18 @@ export const toolsApi = {
       console.error("❌ ERROR CREANDO HERRAMIENTA:", error);
       console.error("🔍 Detalles del error:", error.response?.data);
 
-      if (error.response?.data?.message) {
-        const messages = Array.isArray(error.response.data.message)
-          ? error.response.data.message.join(", ")
-          : error.response.data.message;
-        console.error("📢 Mensajes del backend:", messages);
+      const backendMessage = error.response?.data?.message;
+      if (backendMessage) {
+        const messages = Array.isArray(backendMessage)
+          ? backendMessage.join(", ")
+          : backendMessage;
         throw new Error(messages);
       }
 
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Error al crear herramienta"
+          "Error al crear herramienta",
       );
     }
   },
@@ -284,7 +250,7 @@ export const toolsApi = {
           headers: {
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       return response.data;
@@ -294,14 +260,14 @@ export const toolsApi = {
     }
   },
 
-  deleteHerramienta: async (herramientaId: number) => {
+  // ✅ Eliminar herramienta (permanente) por ID (alias)
+  deleteHerramienta: async (herramientaId: number): Promise<void> => {
     try {
-      const response = await api.delete(`/tool/${herramientaId}`);
-      return response.data;
+      await api.delete(`/tools/${herramientaId}`);
     } catch (error: any) {
       console.error("❌ Error eliminando herramienta:", error);
       throw new Error(
-        error.response?.data?.message || "Error al eliminar herramienta"
+        error.response?.data?.message || "Error al eliminar herramienta",
       );
     }
   },

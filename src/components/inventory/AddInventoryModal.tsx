@@ -1,7 +1,5 @@
-// src/components/inventory/AddInventoryModal.tsx
 import { useState, useEffect } from "react";
 import { useCatalogActions } from "../../hooks/useInventory";
-import { inventory as inventoryAPI } from "../../api/inventory";
 import { imagesApi } from "../../api/images";
 import { warehouses, type Warehouse } from "../../api/warehouses";
 import UnitMeasureAutocomplete from "../common/UnitMeasureAutocomplete";
@@ -10,9 +8,13 @@ import styles from "../../styles/components/inventory/AddInventoryModal.module.c
 import {
   ToolStatus,
   ToolType,
+  type CreateToolPayload,
+} from "../../interfaces/ToolsInterfaces";
+import {
   SupplyCategory,
   SupplyStatus,
-} from "../../shared/enums";
+  type CreateSupplyPayload,
+} from "../../interfaces/SuppliesInterfaces";
 
 interface AddInventoryModalProps {
   isOpen: boolean;
@@ -41,33 +43,53 @@ export default function AddInventoryModal({
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Estados para herramientas - SIN ubicacion
-  const [nuevaHerramienta, setNuevaHerramienta] = useState({
+  // Estados para herramientas
+  const [nuevaHerramienta, setNuevaHerramienta] = useState<{
+    nombre: string;
+    marca: string;
+    serial: string;
+    modelo: string;
+    caracteristicasTecnicas: string;
+    observacion: string;
+    tipo: ToolType;
+    estado: ToolStatus;
+    valorUnitario: number;
+    bodegaId?: number;
+  }>({
     nombre: "",
     marca: "",
     serial: "",
     modelo: "",
     caracteristicasTecnicas: "",
     observacion: "",
-    tipo: "Herramienta" as ToolType,
-    estado: "Disponible" as ToolStatus,
+    tipo: ToolType.HERRAMIENTA,
+    estado: ToolStatus.DISPONIBLE,
     valorUnitario: 0,
-    bodegaId: undefined as number | undefined,
+    bodegaId: undefined,
   });
 
-  // Estados para insumos - SIN ubicacion
-  const [nuevoInsumo, setNuevoInsumo] = useState({
+  // Estados para insumos
+  const [nuevoInsumo, setNuevoInsumo] = useState<{
+    nombre: string;
+    categoria: SupplyCategory;
+    unidadMedida: string;
+    stockMin: number;
+    valorUnitario: number;
+    estado: SupplyStatus;
+    cantidadInicial: number;
+    bodegaId?: number;
+  }>({
     nombre: "",
-    categoria: "General" as SupplyCategory,
+    categoria: SupplyCategory.GENERAL,
     unidadMedida: "",
     stockMin: 0,
     valorUnitario: 0,
-    estado: "Disponible" as SupplyStatus,
+    estado: SupplyStatus.DISPONIBLE,
     cantidadInicial: 0,
-    bodegaId: undefined as number | undefined,
+    bodegaId: undefined,
   });
 
-  // Estados separados SOLO para ubicación
+  // Ubicación (queda solo en inventario, pero se envía en el create y el backend lo aplica al inventario)
   const [ubicacionHerramienta, setUbicacionHerramienta] = useState("");
   const [ubicacionInsumo, setUbicacionInsumo] = useState("");
 
@@ -109,55 +131,42 @@ export default function AddInventoryModal({
     }
 
     try {
-      // 1. Crear la herramienta - SOLO datos básicos (SIN ubicacion)
-      const herramientaData = {
+      const herramientaData: CreateToolPayload = {
         nombre: nuevaHerramienta.nombre,
-        marca: nuevaHerramienta.marca,
-        serial: nuevaHerramienta.serial,
-        modelo: nuevaHerramienta.modelo,
-        caracteristicasTecnicas: nuevaHerramienta.caracteristicasTecnicas,
-        observacion: nuevaHerramienta.observacion,
+        marca: nuevaHerramienta.marca || undefined,
+        serial: nuevaHerramienta.serial || undefined,
+        modelo: nuevaHerramienta.modelo || undefined,
+        caracteristicasTecnicas:
+          nuevaHerramienta.caracteristicasTecnicas || undefined,
+        observacion: nuevaHerramienta.observacion || undefined,
         tipo: nuevaHerramienta.tipo,
         estado: nuevaHerramienta.estado,
         valorUnitario: nuevaHerramienta.valorUnitario,
         bodegaId: nuevaHerramienta.bodegaId,
+        ubicacion: ubicacionHerramienta || undefined,
       };
 
-      const herramientaCreada = await createHerramienta(herramientaData);
+      const herramientaCreada = await createHerramienta(
+        herramientaData,
+        toolImages.length ? toolImages[0] : undefined,
+      );
 
       if (!herramientaCreada) {
         throw new Error("No se pudo crear la herramienta");
       }
 
-      // 2. Crear registro en inventario CON la ubicación
-      if (herramientaCreada.herramientaId) {
-        const inventarioPayload = {
-          herramientaId: herramientaCreada.herramientaId,
-          bodegaId: nuevaHerramienta.bodegaId,
-          cantidadActual: 1,
-          ubicacion: ubicacionHerramienta || "",
-        };
-
+      // El backend ya creó el inventario con cantidadActual=1, bodega y ubicacion
+      // Subimos imágenes adicionales si hay más de una
+      if (toolImages.length > 1 && herramientaCreada.herramientaId) {
         try {
-          await inventoryAPI.createInventory(inventarioPayload);
-        } catch (inventoryError: any) {
-          console.error("❌ Error creando inventario:", inventoryError);
-          setApiError(
-            `Herramienta creada pero error en inventario: ${inventoryError.message}`,
-          );
-        }
-      }
-
-      // 3. Subir imágenes si hay
-      if (toolImages.length > 0 && herramientaCreada.herramientaId) {
-        try {
+          const extraImages = toolImages.slice(1);
           await imagesApi.uploadToolImages(
             herramientaCreada.herramientaId,
-            toolImages,
+            extraImages,
           );
         } catch (imgError: any) {
           console.warn(
-            "⚠️ No se pudieron subir todas las imágenes:",
+            "⚠️ No se pudieron subir todas las imágenes adicionales:",
             imgError?.message,
           );
         }
@@ -175,63 +184,44 @@ export default function AddInventoryModal({
     e.preventDefault();
     setApiError(null);
 
-    if (
-      !nuevoInsumo.nombre ||
-      !nuevoInsumo.unidadMedida ||
-      nuevoInsumo.cantidadInicial === undefined
-    ) {
+    if (!nuevoInsumo.nombre || !nuevoInsumo.unidadMedida) {
       alert("Por favor complete los campos obligatorios");
       return;
     }
 
     try {
-      // 1. Crear el insumo - SOLO campos permitidos (SIN ubicacion)
-      const insumoData = {
+      const insumoData: CreateSupplyPayload = {
         nombre: nuevoInsumo.nombre,
         categoria: nuevoInsumo.categoria,
         unidadMedida: nuevoInsumo.unidadMedida,
         stockMin: nuevoInsumo.stockMin,
         valorUnitario: nuevoInsumo.valorUnitario,
         estado: nuevoInsumo.estado,
-        bodegaId: nuevoInsumo.bodegaId,
         cantidadInicial: nuevoInsumo.cantidadInicial,
+        bodegaId: nuevoInsumo.bodegaId,
+        ubicacion: ubicacionInsumo || undefined,
       };
 
-      const insumoCreado = await createInsumo(insumoData);
+      const insumoCreado = await createInsumo(
+        insumoData,
+        supplyImages.length ? supplyImages[0] : undefined,
+      );
 
       if (!insumoCreado) {
         throw new Error("No se pudo crear el insumo");
       }
 
-      // 2. Crear registro en inventario CON la ubicación
-      if (insumoCreado.insumoId) {
-        const inventarioPayload = {
-          insumoId: insumoCreado.insumoId,
-          bodegaId: nuevoInsumo.bodegaId,
-          cantidadActual: nuevoInsumo.cantidadInicial,
-          ubicacion: ubicacionInsumo || "",
-        };
-
+      // El backend ya creó y actualizó inventario (cantidadInicial, bodega, ubicacion)
+      if (supplyImages.length > 1 && insumoCreado.insumoId) {
         try {
-          await inventoryAPI.createInventory(inventarioPayload);
-        } catch (inventoryError: any) {
-          console.error("❌ Error creando inventario:", inventoryError);
-          setApiError(
-            `Insumo creado pero error en inventario: ${inventoryError.message}`,
-          );
-        }
-      }
-
-      // 3. Subir imágenes si hay
-      if (supplyImages.length > 0 && insumoCreado.insumoId) {
-        try {
+          const extraImages = supplyImages.slice(1);
           await imagesApi.uploadSupplyImages(
             insumoCreado.insumoId,
-            supplyImages,
+            extraImages,
           );
         } catch (imgError: any) {
           console.warn(
-            "⚠️ No se pudieron subir todas las imágenes:",
+            "⚠️ No se pudieron subir todas las imágenes adicionales:",
             imgError?.message,
           );
         }
@@ -266,18 +256,18 @@ export default function AddInventoryModal({
       modelo: "",
       caracteristicasTecnicas: "",
       observacion: "",
-      tipo: "Herramienta",
-      estado: "Disponible",
+      tipo: ToolType.HERRAMIENTA,
+      estado: ToolStatus.DISPONIBLE,
       valorUnitario: 0,
       bodegaId: undefined,
     });
     setNuevoInsumo({
       nombre: "",
-      categoria: "General",
+      categoria: SupplyCategory.GENERAL,
       unidadMedida: "",
       stockMin: 0,
       valorUnitario: 0,
-      estado: "Disponible",
+      estado: SupplyStatus.DISPONIBLE,
       cantidadInicial: 0,
       bodegaId: undefined,
     });
@@ -307,13 +297,17 @@ export default function AddInventoryModal({
 
         <div className={styles.tabs}>
           <button
-            className={`${styles.tab} ${activeTab === "herramientas" ? styles.active : ""}`}
+            className={`${styles.tab} ${
+              activeTab === "herramientas" ? styles.active : ""
+            }`}
             onClick={() => setActiveTab("herramientas")}
           >
             🛠️ Nueva Herramienta
           </button>
           <button
-            className={`${styles.tab} ${activeTab === "insumos" ? styles.active : ""}`}
+            className={`${styles.tab} ${
+              activeTab === "insumos" ? styles.active : ""
+            }`}
             onClick={() => setActiveTab("insumos")}
           >
             📦 Nuevo Insumo
@@ -326,6 +320,7 @@ export default function AddInventoryModal({
           <div className={styles.loading}>Cargando...</div>
         ) : (
           <div className={styles.modalBody}>
+            {/* HERRAMIENTAS */}
             {activeTab === "herramientas" && (
               <form onSubmit={handleSubmitHerramienta} className={styles.form}>
                 <div className={styles.formGroup}>
@@ -403,6 +398,44 @@ export default function AddInventoryModal({
                   </small>
                 </div>
 
+                {/* Características Técnicas */}
+                <div className={styles.formGroup}>
+                  <label htmlFor="caracteristicasTecnicas">
+                    Características Técnicas
+                  </label>
+                  <textarea
+                    id="caracteristicasTecnicas"
+                    value={nuevaHerramienta.caracteristicasTecnicas}
+                    onChange={(e) =>
+                      setNuevaHerramienta({
+                        ...nuevaHerramienta,
+                        caracteristicasTecnicas: e.target.value,
+                      })
+                    }
+                    className={styles.textarea}
+                    placeholder="Descripción técnica detallada (ej: potencia, rango, precisión, etc.)"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Observación */}
+                <div className={styles.formGroup}>
+                  <label htmlFor="observacionHerramienta">Observación</label>
+                  <textarea
+                    id="observacionHerramienta"
+                    value={nuevaHerramienta.observacion}
+                    onChange={(e) =>
+                      setNuevaHerramienta({
+                        ...nuevaHerramienta,
+                        observacion: e.target.value,
+                      })
+                    }
+                    className={styles.textarea}
+                    placeholder="Notas adicionales sobre el estado o uso de la herramienta"
+                    rows={2}
+                  />
+                </div>
+
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label htmlFor="tipo">Tipo *</label>
@@ -419,7 +452,7 @@ export default function AddInventoryModal({
                       required
                     >
                       {Object.values(ToolType).map((tipo) => (
-                        <option key={tipo} value={tipo}>
+                        <option key={String(tipo)} value={tipo as string}>
                           {tipo}
                         </option>
                       ))}
@@ -440,7 +473,7 @@ export default function AddInventoryModal({
                       required
                     >
                       {Object.values(ToolStatus).map((estado) => (
-                        <option key={estado} value={estado}>
+                        <option key={String(estado)} value={estado as string}>
                           {estado}
                         </option>
                       ))}
@@ -457,11 +490,18 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="valorHerramienta"
-                      value={nuevaHerramienta.valorUnitario}
+                      value={
+                        nuevaHerramienta.valorUnitario === 0
+                          ? ""
+                          : nuevaHerramienta.valorUnitario
+                      }
                       onChange={(e) =>
                         setNuevaHerramienta({
                           ...nuevaHerramienta,
-                          valorUnitario: parseFloat(e.target.value) || 0,
+                          valorUnitario:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="0"
@@ -523,7 +563,8 @@ export default function AddInventoryModal({
                     </select>
                   )}
                   <small className={styles.helpText}>
-                    La ubicación se guardará solo en el registro de inventario
+                    La ubicación se guarda en el registro de inventario que se
+                    crea automáticamente
                   </small>
                 </div>
 
@@ -564,7 +605,10 @@ export default function AddInventoryModal({
                     id="nombreInsumo"
                     value={nuevoInsumo.nombre}
                     onChange={(e) =>
-                      setNuevoInsumo({ ...nuevoInsumo, nombre: e.target.value })
+                      setNuevoInsumo({
+                        ...nuevoInsumo,
+                        nombre: e.target.value,
+                      })
                     }
                     placeholder="Ej: Tornillos 3mm, Cable eléctrico 2.5mm..."
                     className={styles.input}
@@ -588,7 +632,7 @@ export default function AddInventoryModal({
                       required
                     >
                       {Object.values(SupplyCategory).map((cat) => (
-                        <option key={cat} value={cat}>
+                        <option key={String(cat)} value={cat as string}>
                           {cat}
                         </option>
                       ))}
@@ -616,11 +660,18 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="cantidadInicial"
-                      value={nuevoInsumo.cantidadInicial}
+                      value={
+                        nuevoInsumo.cantidadInicial === 0
+                          ? ""
+                          : nuevoInsumo.cantidadInicial
+                      }
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          cantidadInicial: parseFloat(e.target.value) || 0,
+                          cantidadInicial:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="Ej: 10, 5.5..."
@@ -638,11 +689,16 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="stockMin"
-                      value={nuevoInsumo.stockMin}
+                      value={
+                        nuevoInsumo.stockMin === 0 ? "" : nuevoInsumo.stockMin
+                      }
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          stockMin: parseFloat(e.target.value) || 0,
+                          stockMin:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="0"
@@ -662,11 +718,18 @@ export default function AddInventoryModal({
                     <input
                       type="number"
                       id="valorInsumo"
-                      value={nuevoInsumo.valorUnitario}
+                      value={
+                        nuevoInsumo.valorUnitario === 0
+                          ? ""
+                          : nuevoInsumo.valorUnitario
+                      }
                       onChange={(e) =>
                         setNuevoInsumo({
                           ...nuevoInsumo,
-                          valorUnitario: parseFloat(e.target.value) || 0,
+                          valorUnitario:
+                            e.target.value === ""
+                              ? 0
+                              : parseFloat(e.target.value),
                         })
                       }
                       placeholder="0"
@@ -724,7 +787,8 @@ export default function AddInventoryModal({
                     </select>
                   )}
                   <small className={styles.helpText}>
-                    La ubicación se guardará solo en el registro de inventario
+                    La ubicación se guarda en el registro de inventario que se
+                    crea automáticamente
                   </small>
                 </div>
 

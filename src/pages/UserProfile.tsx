@@ -14,14 +14,28 @@ import { useLocation } from "react-router-dom";
 
 // Iconos para mostrar/ocultar contraseña (puedes usar tu propia librería o SVG)
 const EyeOpenIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
     <circle cx="12" cy="12" r="3"></circle>
   </svg>
 );
 
 const EyeClosedIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+  >
     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
     <line x1="1" y1="1" x2="23" y2="23"></line>
   </svg>
@@ -56,7 +70,7 @@ export default function UserProfilePage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-  
+
   // Estados para mostrar/ocultar contraseña
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -70,7 +84,7 @@ export default function UserProfilePage() {
     special: /[^A-Za-z0-9]/.test(newPassword),
   };
   const allPasswordRulesOk = Object.values(passwordRules).every(Boolean);
-  
+
   // Estado para verificar si las contraseñas coinciden
   const [passwordsMatch, setPasswordsMatch] = useState<boolean>(true);
 
@@ -101,7 +115,7 @@ export default function UserProfilePage() {
 
   // ---------- Helpers de sanitización ----------
   const sanitizeText = (s?: string | null): string | null =>
-    typeof s === "string" ? s.replace(/\s+/g, " ").trim() || null : s ?? null;
+    typeof s === "string" ? s.replace(/\s+/g, " ").trim() || null : (s ?? null);
 
   const sanitizePhone = (s?: string | null): string | null => {
     if (!s) return null;
@@ -154,7 +168,7 @@ export default function UserProfilePage() {
     if (!user) return;
 
     setUbicacionResidencia(
-      (user as any).ubicacionResidencia ?? (user as any).ubicacion ?? ""
+      (user as any).ubicacionResidencia ?? (user as any).ubicacion ?? "",
     );
     setArl((user as any).arl ?? "");
     setEps((user as any).eps ?? "");
@@ -163,17 +177,17 @@ export default function UserProfilePage() {
     setEmergencyName(
       (user as any).contactoEmergenciaNombre ??
         (user as any).contactoEmergencia?.nombre ??
-        ""
+        "",
     );
     setEmergencyPhone(
       (user as any).contactoEmergenciaTelefono ??
         (user as any).contactoEmergencia?.telefono ??
-        ""
+        "",
     );
     setEmergencyRelation(
       (user as any).contactoEmergenciaParentesco ??
         (user as any).contactoEmergencia?.parentesco ??
-        ""
+        "",
     );
   }, [user]);
 
@@ -216,7 +230,7 @@ export default function UserProfilePage() {
         window.history.replaceState(
           {},
           document.title,
-          window.location.pathname
+          window.location.pathname,
         );
       } catch (err) {
         // noop
@@ -343,7 +357,7 @@ export default function UserProfilePage() {
     if (!user || !photo) return;
 
     const confirmDelete = window.confirm(
-      "¿Seguro que deseas eliminar tu foto de perfil?"
+      "¿Seguro que deseas eliminar tu foto de perfil?",
     );
     if (!confirmDelete) return;
 
@@ -381,7 +395,7 @@ export default function UserProfilePage() {
 
     if (!allPasswordRulesOk) {
       setPasswordError(
-        "La nueva contraseña no cumple con los requisitos de seguridad."
+        "La nueva contraseña no cumple con los requisitos de seguridad.",
       );
       return;
     }
@@ -418,14 +432,15 @@ export default function UserProfilePage() {
   };
 
   // Función para manejar click en botones de foto
-  const handlePhotoButtonClick = (action: 'upload' | 'delete') => (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (action === 'upload') {
-      fileInputRef.current?.click();
-    } else if (action === 'delete') {
-      handleDeletePhoto(e);
-    }
-  };
+  const handlePhotoButtonClick =
+    (action: "upload" | "delete") => (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (action === "upload") {
+        fileInputRef.current?.click();
+      } else if (action === "delete") {
+        handleDeletePhoto(e);
+      }
+    };
 
   // Función para cerrar modal de foto
   const handleCloseModal = (e: React.MouseEvent) => {
@@ -510,7 +525,7 @@ export default function UserProfilePage() {
                   <button
                     type="button"
                     className={styles.primaryButton}
-                    onClick={handlePhotoButtonClick('upload')}
+                    onClick={handlePhotoButtonClick("upload")}
                     disabled={loadingPhoto}
                   >
                     {photo ? "Cambiar foto" : "Subir foto"}
@@ -519,7 +534,7 @@ export default function UserProfilePage() {
                     <button
                       type="button"
                       className={styles.secondaryButton}
-                      onClick={handlePhotoButtonClick('delete')}
+                      onClick={handlePhotoButtonClick("delete")}
                       disabled={loadingPhoto}
                     >
                       Eliminar foto
@@ -565,18 +580,32 @@ export default function UserProfilePage() {
                   <span className={styles.detailLabel}>Nombre</span>
                   <span className={styles.detailValue}>{fullName || "—"}</span>
                 </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Tipo de documento</span>
-                  <span className={styles.detailValue}>
-                    {user.tipoCedula || "—"}
-                  </span>
-                </div>
-                <div className={styles.detailItem}>
-                  <span className={styles.detailLabel}>Documento</span>
-                  <span className={styles.detailValue}>
-                    {user.cedula || "—"}
-                  </span>
-                </div>
+                {!isClient && (
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>
+                      Tipo de documento
+                    </span>
+                    <span className={styles.detailValue}>
+                      {user.tipoCedula || "—"}
+                    </span>
+                  </div>
+                )}
+                {!isClient && (
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Documento</span>
+                    <span className={styles.detailValue}>
+                      {user.cedula || "—"}
+                    </span>
+                  </div>
+                )}
+                {isClient && (
+                  <div className={styles.detailItem}>
+                    <span className={styles.detailLabel}>Cargo</span>
+                    <span className={styles.detailValue}>
+                      {user.position || "—"}
+                    </span>
+                  </div>
+                )}
                 <div className={styles.detailItem}>
                   <span className={styles.detailLabel}>Teléfono</span>
                   <span className={styles.detailValue}>
@@ -736,11 +765,21 @@ export default function UserProfilePage() {
                     <button
                       type="button"
                       className={styles.passwordToggle}
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      onClick={() =>
+                        setShowCurrentPassword(!showCurrentPassword)
+                      }
                       tabIndex={-1}
-                      aria-label={showCurrentPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-label={
+                        showCurrentPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                     >
-                      {showCurrentPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}
+                      {showCurrentPassword ? (
+                        <EyeClosedIcon />
+                      ) : (
+                        <EyeOpenIcon />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -765,7 +804,11 @@ export default function UserProfilePage() {
                       className={styles.passwordToggle}
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       tabIndex={-1}
-                      aria-label={showNewPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-label={
+                        showNewPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                     >
                       {showNewPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}
                     </button>
@@ -835,11 +878,21 @@ export default function UserProfilePage() {
                     <button
                       type="button"
                       className={styles.passwordToggle}
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       tabIndex={-1}
-                      aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-label={
+                        showConfirmPassword
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
                     >
-                      {showConfirmPassword ? <EyeClosedIcon /> : <EyeOpenIcon />}
+                      {showConfirmPassword ? (
+                        <EyeClosedIcon />
+                      ) : (
+                        <EyeOpenIcon />
+                      )}
                     </button>
                   </div>
                   {!passwordsMatch && confirmNewPassword && (

@@ -1,16 +1,18 @@
+/* CONTENEDOR PRINCIPAL */
 .container {
   padding: var(--spacing-lg);
   box-sizing: border-box;
 }
 
+/* GRID DE ÓRDENES */
 .ordersGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: var(--spacing-lg);
   margin-top: var(--spacing-lg);
 }
 
-/* Tarjeta de orden */
+/* TARJETA DE ORDEN */
 .orderCard {
   background: var(--white);
   border: 1px solid var(--gray-200);
@@ -32,15 +34,36 @@
   border-color: var(--primary-300);
 }
 
-/* Bordes laterales de tarjeta por estado */
-.orderCardPending { border-left: 4px solid #efd11b; }
-.orderCardInProgress { border-left: 4px solid #3b82f6; }
-.orderCardCompletedBillingPending { border-left: 4px solid #0ea344; }
-.orderCardCompleted { border-left: 4px solid #22c55e; }
-.orderCardCancelled { border-left: 4px solid #f23e3e; }
-.orderCardPendingAssigned { border-left: 4px solid #de16f9; }
-.orderCardPaused { border-left: 4px solid #06d99d; }
+/* Tarjeta seleccionada (selección múltiple) */
+.orderCardSelected {
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
 
+/* Borde lateral por estado */
+.orderCardPending {
+  border-left: 4px solid #efd11b;
+}
+.orderCardInProgress {
+  border-left: 4px solid #3b82f6;
+}
+.orderCardCompletedBillingPending {
+  border-left: 4px solid #0ea344;
+}
+.orderCardCompleted {
+  border-left: 4px solid #22c55e;
+}
+.orderCardCancelled {
+  border-left: 4px solid #f23e3e;
+}
+.orderCardPendingAssigned {
+  border-left: 4px solid #de16f9;
+}
+.orderCardPaused {
+  border-left: 4px solid #06d99d;
+}
+
+/* HEADER DE TARJETA */
 .cardHeader {
   display: flex;
   justify-content: space-between;
@@ -69,6 +92,7 @@
   max-width: 100%;
 }
 
+/* INFORMACIÓN SERVICIO */
 .serviceInfo {
   margin-bottom: var(--spacing-md);
   display: flex;
@@ -82,7 +106,7 @@
   font-size: var(--font-size-sm);
 }
 
-/* FILA DE TAGS (Tipo Servicio + H/I) */
+/* TAGS DE SERVICIO / INVENTARIO / TÉCNICOS */
 .tagsRow {
   display: flex;
   flex-wrap: wrap;
@@ -102,6 +126,12 @@
   font-weight: 500;
 }
 
+.maintenanceTypeTag {
+  background-color: var(--primary-50);
+  border-color: var(--primary-200);
+  color: var(--primary-700);
+}
+
 .inventoryIndicator {
   display: inline-flex;
   align-items: center;
@@ -119,6 +149,19 @@
   margin-left: 4px;
 }
 
+.technicianCountTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+/* INFORMACIÓN CLIENTE / TÉCNICO / UBICACIÓN */
 .clientInfo {
   display: flex;
   flex-direction: column;
@@ -136,6 +179,12 @@
   gap: 6px;
 }
 
+.clientIcon {
+  margin-right: 2px;
+  font-size: 1rem;
+}
+
+/* FECHAS */
 .dates {
   display: flex;
   gap: var(--spacing-md);
@@ -151,6 +200,7 @@
   border-radius: 4px;
 }
 
+/* FOOTER TARJETA */
 .cardFooter {
   display: flex;
   justify-content: space-between;
@@ -167,7 +217,9 @@
   flex-wrap: wrap;
 }
 
-.status, .billingBadge {
+/* BADGES DE ESTADO */
+.status,
+.billingBadge {
   padding: 4px 10px;
   border-radius: var(--border-radius-full);
   font-size: 11px;
@@ -176,16 +228,54 @@
   letter-spacing: 0.5px;
 }
 
-.statusPending { background: #fffbeb; color: #d97706; border: 1px solid #fbff1c; }
-.statusInProgress { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
-.statusCompleted { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-.statusCancelled { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-.statusRejected { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; }
-.statusPaused { background: #d1fae5; color: #047857; border: 1px solid #86efac; }
+.statusPending {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+.statusInProgress {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+}
+.statusCompleted {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+.statusCancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+.statusRejected {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+.statusPaused {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #86efac;
+}
 
-.billingNotBilled { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
-.billingBilled { background: #ecfccb; color: #3f6212; border: 1px solid #d9f99d; }
+.billingNotBilled {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+.billingBilled {
+  background: #ecfccb;
+  color: #3f6212;
+  border: 1px solid #d9f99d;
+}
+.billingWarranty {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border: 1px solid #d8b4fe;
+}
 
+/* BOTÓN VER DETALLES */
 .viewButton {
   background: var(--white);
   color: var(--primary-600);
@@ -203,17 +293,544 @@
   border-color: var(--primary-400);
 }
 
-.loading, .error, .emptyState {
+/* ESTADOS GENERALES */
+.loading,
+.error,
+.emptyState {
   text-align: center;
   padding: var(--spacing-3xl);
   color: var(--gray-500);
 }
-.error { color: #dc2626; background: #fef2f2; border-radius: 8px; }
-.emptyState { background: var(--gray-50); border-radius: 8px; border: 2px dashed var(--gray-300); }
+
+.error {
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+.emptyState {
+  background: var(--gray-50);
+  border-radius: 8px;
+  border: 2px dashed var(--gray-300);
+}
+
+/* RESPONSIVE TARJETAS */
+@media (max-width: 900px) {
+  .ordersGrid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
 
 @media (max-width: 768px) {
-  .ordersGrid { grid-template-columns: 1fr; }
-  .cardFooter { flex-direction: column; align-items: stretch; }
-  .viewButton { width: 100%; text-align: center; margin-top: 8px;}
-  .statusRow { justify-content: space-between; width: 100%; }
+  .ordersGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .viewButton {
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  .statusRow {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+/* BARRA DE FILTROS */
+
+.filtersBar {
+  margin-bottom: var(--spacing-lg);
+}
+
+.toggleFiltersButton {
+  background-color: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 500;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--gray-700);
+  transition: all 0.2s;
+  position: relative;
+}
+
+.toggleFiltersButton:hover {
+  background-color: var(--gray-200);
+  border-color: var(--gray-400);
+}
+
+.toggleFiltersIcon {
+  font-size: 0.8rem;
+}
+
+.filterBadge {
+  background-color: var(--primary-600);
+  color: white;
+  border-radius: var(--border-radius-full);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+/* CONTENEDOR DE FILTROS */
+
+.filtersContainer {
+  background-color: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* GRID DE FILTROS */
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.filterGroup label {
+  font-weight: 500;
+  color: var(--gray-700);
+  font-size: var(--font-size-sm);
+}
+
+.filterInput,
+.filterSelect {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  background-color: var(--white);
+  transition: all 0.2s;
+}
+
+.filterInput:focus,
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--primary-400);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filterInput:hover,
+.filterSelect:hover {
+  border-color: var(--primary-300);
+}
+
+.filterSelect:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.activeFilter {
+  border-color: var(--primary-500) !important;
+  background-color: var(--primary-50) !important;
+  font-weight: 500;
+}
+
+/* ACCIONES DE FILTROS */
+
+.filterActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--gray-200);
+}
+
+.clearFilters {
+  background-color: var(--primary-500);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.clearFilters:hover {
+  background-color: var(--primary-600);
+}
+
+.resultsCount {
+  color: var(--gray-600);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  background-color: var(--gray-100);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--border-radius-full);
+}
+
+/* FILTROS: CHECKBOX (SOLO MÍAS) */
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--gray-700);
+  padding: 6px 0;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-600);
+  margin: 0;
+}
+
+/* JERARQUÍA ÁREAS / SUBÁREAS */
+
+.hierarchyDisplay {
+  background-color: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.hierarchyItem {
+  color: var(--primary-700);
+  font-weight: 500;
+}
+
+.clearSubAreaButton {
+  background-color: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  color: var(--gray-700);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* BUSCADOR DE EMPRESAS */
+
+.companySearchWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.companySearchInput {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  background-color: var(--white);
+  transition: all 0.2s;
+}
+
+.companySearchInput:focus {
+  outline: none;
+  border-color: var(--primary-400);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.companySearchInput:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+}
+
+.companySearchResults {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  background-color: var(--white);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  margin-top: 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.companySearchItem {
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.companySearchItem:hover {
+  background-color: var(--gray-100);
+}
+
+.companySearchItem[aria-selected="true"] {
+  background-color: var(--primary-50);
+  border-left: 3px solid var(--primary-500);
+}
+
+.companyName {
+  display: block;
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.companyNit {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+
+.highlight {
+  background-color: #fef08a;
+  color: #854d0e;
+  font-weight: 500;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.noResults {
+  padding: var(--spacing-md);
+  color: var(--gray-500);
+  text-align: center;
+  font-style: italic;
+}
+
+.suggestion {
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--gray-500);
+  background-color: var(--gray-50);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  border-top: 1px dashed var(--gray-300);
+}
+
+.resultCount {
+  margin-top: 4px;
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  text-align: right;
+}
+
+/* ESTADO VACÍO: BOTÓN LIMPIAR FILTROS */
+
+.clearFiltersEmpty {
+  background-color: var(--gray-500);
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-xl);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all 0.2s;
+  margin-top: var(--spacing-md);
+}
+
+.clearFiltersEmpty:hover {
+  background-color: var(--gray-600);
+}
+
+/* PAGINACIÓN */
+
+.paginationContainer {
+  margin-top: var(--spacing-xl);
+  display: flex;
+  justify-content: center;
+}
+
+/* ANIMACIONES */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* RESPONSIVE FILTROS */
+
+@media (max-width: 1624px) {
+  .filterGrid {
+    display: block;
+    grid-template-columns: 1fr;
+  }
+  .filterGroup {
+    width: 95%;
+  }
+}
+
+@media (max-width: 768px) {
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filterActions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .clearFilters {
+    width: 100%;
+  }
+
+  .resultsCount {
+    text-align: center;
+  }
+
+  .hierarchyDisplay {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .companySearchResults {
+    max-height: 200px;
+  }
+}
+
+/* PEQUEÑO (MÓVIL) */
+
+@media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
+  .filterInput,
+  .filterSelect,
+  .companySearchInput {
+    padding: 10px;
+    font-size: 16px;
+  }
+
+  .checkboxLabel {
+    font-size: var(--font-size-xs);
+  }
+
+  .checkboxLabel input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* LANDSCAPE MÓVIL */
+
+@media (max-width: 896px) and (orientation: landscape) {
+  .filtersContainer {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+}
+
+/* PANTALLAS GRANDES */
+
+@media (min-width: 1400px) {
+  .filterGrid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+/* BARRA DE SELECCIÓN (selección múltiple) */
+
+.selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  flex-wrap: wrap;
+}
+
+.selectAllLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--gray-700);
+}
+
+.selectAllLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-600);
+  cursor: pointer;
+  margin: 0;
+}
+
+.selectedCount {
+  color: var(--primary-700);
+  font-weight: 500;
+  background-color: var(--primary-50);
+  border-radius: var(--border-radius-full);
+  padding: var(--spacing-xs) var(--spacing-md);
+}
+
+/* Checkbox dentro de la tarjeta */
+.cardCheckboxWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--spacing-xs);
+}
+
+.cardCheckboxLabel {
+  display: flex;
+  align-items: center;
+}
+
+.cardCheckboxLabel input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-600);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Responsive barra de selección */
+@media (max-width: 768px) {
+  .selectionBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

@@ -90,6 +90,11 @@
   gap: var(--spacing-md);
 }
 
+/* Estilos para campos que ocupan todo el ancho */
+.formField.fullWidth {
+  grid-column: 1 / -1;
+}
+
 .formField {
   display: flex;
   flex-direction: column;
@@ -100,8 +105,18 @@
   font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--gray-700);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
+.required {
+  color: var(--error-500);
+  font-size: var(--font-size-xs);
+  margin-left: 2px;
+}
+
+/* Estilos para inputs */
 .formField input {
   padding: var(--spacing-sm);
   border-radius: var(--border-radius);
@@ -111,7 +126,9 @@
   box-sizing: border-box;
   background-color: var(--white);
   color: var(--gray-700);
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .formField input:focus {
@@ -126,62 +143,148 @@
   color: var(--gray-500);
 }
 
-/* Responsive Styles */
-@media (max-width: 1024px) {
-  .formGrid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  }
-  
-  .componentHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
-  }
-  
-  .removeButton,
-  .addButton {
-    width: 100%;
-    justify-content: center;
-  }
+/* Estilos para selects */
+.formField select {
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--gray-300);
+  font-size: var(--font-size-sm);
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--white);
+  color: var(--gray-700);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-sm) center;
+  background-size: 16px;
+  padding-right: 32px;
 }
 
-@media (max-width: 768px) {
-  .formGrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .componentSection {
-    padding: var(--spacing-sm);
-  }
-  
-  .componentActions {
-    flex-direction: column;
-  }
-  
-  .addButton,
-  .removeButton {
-    width: 100%;
-  }
+.formField select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 2px var(--primary-100);
 }
 
-@media (max-width: 480px) {
-  .componentHeader h5 {
-    font-size: var(--font-size-xs);
-  }
-  
-  .formField input {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-xs);
-  }
-  
-  .removeButton,
-  .addButton {
-    font-size: var(--font-size-xxs);
-    padding: var(--spacing-xs);
-  }
+.formField select:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+  color: var(--gray-500);
 }
 
-/* Clases adicionales para mejor organización */
+/* Select wrapper para mejor control */
+.selectWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.selectArrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-600);
+  pointer-events: none;
+  font-size: 12px;
+  display: none; /* Oculto porque usamos background-image */
+}
+
+/* Estados de error */
+.formField input.fieldError,
+.formField select.fieldError {
+  border-color: var(--error-500);
+  background-color: var(--error-50);
+}
+
+.formField input.fieldError:focus,
+.formField select.fieldError:focus {
+  border-color: var(--error-600);
+  box-shadow: 0 0 0 2px var(--error-100);
+}
+
+.errorMessage {
+  font-size: var(--font-size-xs);
+  color: var(--error-600);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--error-50);
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  border-left: 3px solid var(--error-500);
+  animation: slideIn 0.2s ease;
+}
+
+.errorIcon {
+  font-size: 12px;
+  color: var(--error-500);
+}
+
+.helperText {
+  font-size: var(--font-size-xs);
+  color: var(--gray-500);
+  margin-top: 2px;
+  display: block;
+}
+
+/* Tipo info */
+.typeInfo {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--primary-700);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.typeInfo small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Sección de motores */
+.motorsSection {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 2px solid var(--gray-200);
+}
+
+.motorsSection h6 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.motorItem {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  position: relative;
+}
+
+.motorItem:last-child {
+  margin-bottom: 0;
+}
+
+/* Componentes anidados */
 .componentNested {
   margin-top: var(--spacing-md);
   padding-left: var(--spacing-md);
@@ -200,4 +303,278 @@
   justify-content: flex-end;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-lg);
+}
+
+/* Tooltip styles */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+}
+
+.tooltip .tooltipText {
+  visibility: hidden;
+  width: 200px;
+  background-color: var(--gray-800);
+  color: var(--white);
+  text-align: center;
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-xs);
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: var(--font-size-xs);
+  pointer-events: none;
+}
+
+.tooltip:hover .tooltipText {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ===== ESTILOS ADICIONALES PARA EVAPORATOR EDIT FORM ===== */
+
+/* Footer del formulario */
+.formFooter {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.requiredHint {
+  font-size: var(--font-size-xs);
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Estilos específicos para el selector de tipo */
+.selectWrapper select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right var(--spacing-sm) center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+/* Mejora para campos requeridos */
+.required {
+  color: var(--error-500);
+  font-size: var(--font-size-xs);
+  margin-left: 2px;
+}
+
+/* Estilos para cuando el formulario está deshabilitado */
+.formField input:disabled,
+.formField select:disabled {
+  background-color: var(--gray-100);
+  cursor: not-allowed;
+  opacity: 0.7;
+  color: var(--gray-500);
+}
+
+/* Animación para mensajes de error */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .formGrid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .componentHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .removeButton,
+  .addButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .componentSection {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .componentActions {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .addButton,
+  .removeButton {
+    width: 100%;
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+
+  .formField input,
+  .formField select {
+    padding: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+  }
+
+  .motorsSection {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-sm);
+  }
+
+  .motorItem {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .componentNested {
+    padding-left: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+  }
+
+  .formFooter {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-sm);
+  }
+
+  .requiredHint {
+    font-size: calc(var(--font-size-xs) * 0.9);
+  }
+
+  .selectWrapper select {
+    padding-right: 28px;
+    background-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .componentSection {
+    padding: var(--spacing-xs);
+    border-radius: calc(var(--border-radius) * 0.8);
+  }
+
+  .componentHeader h5 {
+    font-size: var(--font-size-xs);
+  }
+
+  .formField label {
+    font-size: var(--font-size-xxs);
+  }
+
+  .formField input,
+  .formField select {
+    padding: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+  }
+
+  .removeButton,
+  .addButton {
+    font-size: var(--font-size-xxs);
+    padding: var(--spacing-xs);
+  }
+
+  .helperText,
+  .errorMessage {
+    font-size: calc(var(--font-size-xs) * 0.9);
+  }
+
+  .typeInfo {
+    padding: var(--spacing-xs);
+    font-size: calc(var(--font-size-xs) * 0.9);
+  }
+
+  .motorsSection h6 {
+    font-size: calc(var(--font-size-xs) * 0.9);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .motorItem {
+    padding: var(--spacing-xs);
+  }
+
+  .formFooter {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-xs);
+  }
+
+  .errorMessage {
+    font-size: calc(var(--font-size-xs) * 0.9);
+    padding: 2px 6px;
+  }
+
+  .selectWrapper select {
+    padding-right: 24px;
+    background-size: 12px;
+  }
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  .formField input,
+  .formField select,
+  .removeButton,
+  .addButton,
+  .errorMessage {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Soporte para pantallas táctiles */
+@media (hover: none) and (pointer: coarse) {
+  .formField input,
+  .formField select {
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+
+  .removeButton,
+  .addButton {
+    min-height: 44px; /* Tamaño mínimo para toque */
+  }
+
+  .selectWrapper select {
+    padding-right: 30px; /* Más espacio para toque */
+  }
+}
+
+/* Estilos para impresión */
+@media print {
+  .componentSection {
+    break-inside: avoid;
+    border: 1px solid #000;
+    background: none;
+  }
+
+  .removeButton,
+  .addButton,
+  .componentActions {
+    display: none;
+  }
 }

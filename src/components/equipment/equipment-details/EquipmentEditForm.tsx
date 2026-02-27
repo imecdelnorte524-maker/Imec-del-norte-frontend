@@ -1,3 +1,4 @@
+// src/components/equipment/equipment-details/EquipmentEditForm.tsx
 import type React from "react";
 import type {
   Equipment,
@@ -54,6 +55,7 @@ interface EquipmentEditFormProps {
   ) => void;
   onEvaporatorsChange: (evaporators: EvaporatorData[]) => void;
   onCondensersChange: (condensers: CondenserData[]) => void;
+  onEvaporatorTypeChange?: (index: number, typeId: number) => void; // 🔴 NUEVO
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
@@ -80,6 +82,7 @@ export default function EquipmentEditForm({
   onPlanMantenimientoChange,
   onEvaporatorsChange,
   onCondensersChange,
+  onEvaporatorTypeChange, // 🔴 NUEVO
   onSubmit,
   onCancel,
 }: EquipmentEditFormProps) {
@@ -195,9 +198,13 @@ export default function EquipmentEditForm({
             condensers={condensers}
             onEvaporatorsChange={onEvaporatorsChange}
             onCondensersChange={onCondensersChange}
+            airConditionerTypeName={equipment?.airConditionerType?.name}
+            airConditionerTypes={airConditionerTypes} // 🔴 PASAR LOS TIPOS
+            canHaveMultipleComponents={false} // Se calculará internamente con el nombre
+            onEvaporatorTypeChange={onEvaporatorTypeChange} // 🔴 PASAR EL HANDLER
           />
         )}
-        
+
         {/* PLAN DE MANTENIMIENTO */}
         <div className={styles.planSection}>
           <h4>Plan de Mantenimiento (Opcional)</h4>

@@ -506,14 +506,15 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
               <label htmlFor="maintenance_type_id">
                 Clase de Mantenimiento *
               </label>
-              {/* Si quieres permitir creación de tipos desde aquí, descomenta: */}
-              <button
-                type="button"
-                className={styles.addButton}
-                onClick={() => setShowNewMaintenanceModal(true)}
-              >
-                + Agregar nuevo
-              </button>
+              {!isCliente && (
+                <button
+                  type="button"
+                  className={styles.addButton}
+                  onClick={() => setShowNewMaintenanceModal(true)}
+                >
+                  + Agregar nuevo
+                </button>
+              )}
             </div>
             <select
               id="maintenance_type_id"
