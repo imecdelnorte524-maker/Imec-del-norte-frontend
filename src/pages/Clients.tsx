@@ -245,7 +245,7 @@ export default function ClientsPage() {
                             </td>
                             <td>
                               <code className={styles.nitCode}>
-                                {client.nit}
+                                {client.nit}-{client.verification_digit}
                               </code>
                             </td>
                             <td>
@@ -329,7 +329,7 @@ export default function ClientsPage() {
                             <h3 className={styles.clientNameMobile}>
                               {client.nombre}
                             </h3>
-                            <code className={styles.nitCode}>{client.nit}</code>
+                            <code className={styles.nitCode}>{client.nit}-{client.verification_digit}</code>
                           </div>
                         </div>
                         <div

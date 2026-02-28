@@ -48,6 +48,7 @@ export const mapClientFromBackend = (data: any): Client => {
     idCliente: data.idCliente,
     nombre: data.nombre,
     nit: data.nit,
+    verification_digit: data.verification_digit,
 
     // Dirección desglosada
     direccionBase: data.direccionBase,

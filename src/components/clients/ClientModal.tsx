@@ -65,6 +65,7 @@ export default function ClientModal({
   const [formData, setFormData] = useState<ClientFormData>({
     nombre: "",
     nit: "",
+    verification_digit: "", // string vacío
     direccionBase: "",
     barrio: "",
     ciudad: "",
@@ -150,6 +151,7 @@ export default function ClientModal({
     setFormData({
       nombre: "",
       nit: "",
+      verification_digit: "",
       direccionBase: "",
       barrio: "",
       ciudad: "",
@@ -195,6 +197,7 @@ export default function ClientModal({
       setFormData({
         nombre: editingClient.nombre,
         nit: editingClient.nit,
+        verification_digit: editingClient.verification_digit || "",
         direccionBase: editingClient.direccionBase || "",
         barrio: editingClient.barrio || "",
         ciudad: editingClient.ciudad || "",
@@ -327,7 +330,15 @@ export default function ClientModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Para el dígito de verificación, solo permitir números
+    if (name === "verification_digit") {
+      // Eliminar cualquier carácter que no sea número
+      const numericValue = value.replace(/\D/g, "");
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   // Selección de usuario contacto (múltiple, marcando uno como principal)
@@ -497,6 +508,7 @@ export default function ClientModal({
     const requiredFields: (keyof ClientFormData)[] = [
       "nombre",
       "nit",
+      "verification_digit",
       "direccionBase",
       "barrio",
       "ciudad",
@@ -509,6 +521,7 @@ export default function ClientModal({
     const fieldLabels: Partial<Record<keyof ClientFormData, string>> = {
       nombre: "Nombre de la Empresa",
       nit: "NIT",
+      verification_digit: "Dígito de Verificación",
       direccionBase: "Dirección Base",
       barrio: "Barrio",
       ciudad: "Ciudad",
@@ -524,6 +537,16 @@ export default function ClientModal({
         setError(
           `El campo ${fieldLabels[field] ?? String(field)} es requerido`,
         );
+        playErrorSound();
+        return false;
+      }
+    }
+
+    // Validación específica para el dígito de verificación
+    if (formData.verification_digit) {
+      // Verificar que sea un número de 1 o 2 dígitos
+      if (!/^\d{1,2}$/.test(formData.verification_digit)) {
+        setError("El dígito de verificación debe ser un número de 1 o 2 dígitos");
         playErrorSound();
         return false;
       }
@@ -653,9 +676,11 @@ export default function ClientModal({
       setLoading(true);
       setError(null);
 
+      // Enviar el dígito de verificación como string (el backend lo maneja como string)
       const clientData: CreateClientDto = {
         nombre: formData.nombre,
         nit: formData.nit,
+        verification_digit: formData.verification_digit || undefined,
         direccionBase: formData.direccionBase,
         barrio: formData.barrio,
         ciudad: formData.ciudad,
@@ -868,7 +893,7 @@ export default function ClientModal({
               </h3>
 
               <div className={styles.formGrid}>
-                {/* Nombre y NIT */}
+                {/* Nombre */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>
                     Nombre de la Empresa *
@@ -884,17 +909,49 @@ export default function ClientModal({
                   />
                 </div>
 
+                {/* NIT y Dígito de Verificación */}
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>NIT *</label>
-                  <input
-                    type="text"
-                    name="nit"
-                    value={formData.nit}
-                    onChange={handleInputChange}
-                    placeholder="Ej: 900123456-7"
-                    className={styles.formInput}
-                    disabled={loading}
-                  />
+                  <label className={styles.formLabel}>
+                    NIT y Dígito de Verificación *
+                  </label>
+                  <div className={styles.nitContainer}>
+                    <div className={styles.nitWrapper}>
+                      <input
+                        type="text"
+                        name="nit"
+                        value={formData.nit}
+                        onChange={handleInputChange}
+                        placeholder="NIT (ej: 900123456)"
+                        className={`${styles.formInput} ${styles.nitInput}`}
+                        disabled={loading}
+                      />
+                    </div>
+                    <span className={styles.nitSeparator}>-</span>
+                    <div className={styles.digitWrapper}>
+                      <input
+                        type="text"
+                        name="verification_digit"
+                        value={formData.verification_digit}
+                        onChange={handleInputChange}
+                        placeholder="Dígito"
+                        className={`${styles.formInput} ${styles.digitInput}`}
+                        disabled={loading}
+                        maxLength={2}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                      />
+                    </div>
+                  </div>
+                  {formData.nit && formData.verification_digit && (
+                    <div className={styles.nitPreview}>
+                      <span className={styles.nitPreviewLabel}>
+                        NIT completo:
+                      </span>
+                      <strong className={styles.nitPreviewValue}>
+                        {formData.nit}-{formData.verification_digit}
+                      </strong>
+                    </div>
+                  )}
                 </div>
 
                 {/* Logo */}
