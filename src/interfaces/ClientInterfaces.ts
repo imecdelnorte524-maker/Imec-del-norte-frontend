@@ -1,6 +1,6 @@
 // src/interfaces/ClientInterfaces.ts
-import type { Area, AreaFormData } from './AreaInterfaces';
-import type { Usuario as UserUsuario } from './UserInterfaces';
+import type { Area, AreaFormData } from "./AreaInterfaces";
+import type { Usuario as UserUsuario } from "./UserInterfaces";
 
 export interface UsuarioContacto {
   usuarioId: number;
@@ -27,6 +27,8 @@ export interface Client {
   idCliente: number;
   nombre: string;
   nit: string;
+ verification_digit?: string;
+
 
   // Dirección desglosada
   direccionBase: string;
@@ -57,6 +59,8 @@ export interface Client {
 export interface CreateClientDto {
   nombre: string;
   nit: string;
+ verification_digit?: string;
+
 
   // Campos obligatorios de dirección
   direccionBase: string;
@@ -81,6 +85,7 @@ export interface UpdateClientDto extends Partial<CreateClientDto> {}
 export interface ClientFormData {
   nombre: string;
   nit: string;
+ verification_digit?: string;
 
   direccionBase: string;
   barrio: string;
