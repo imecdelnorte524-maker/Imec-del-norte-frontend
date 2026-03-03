@@ -1,0 +1,248 @@
+/* src/styles/components/dashboard/ClientEquipmentStats.module.css */
+.container {
+  width: 100%;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.2s;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.statIconOperational {
+  width: 2rem;
+  height: 2rem;
+  color: #22c55e;
+}
+
+.statIconMaintenance {
+  width: 2rem;
+  height: 2rem;
+  color: #f59e0b;
+}
+
+.statIconOutOfService {
+  width: 2rem;
+  height: 2rem;
+  color: #ef4444;
+}
+
+.statInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.equipmentSection {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.equipmentTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 1rem 0;
+}
+
+.equipmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.equipmentItem {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.equipmentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.equipmentCode {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.equipmentCategory {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.equipmentLocation {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.equipmentStatus {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+}
+
+.statusOperational {
+  background: #22c55e20;
+  color: #22c55e;
+}
+
+.statusMaintenance {
+  background: #f59e0b20;
+  color: #f59e0b;
+}
+
+.statusOutOfService {
+  background: #ef444420;
+  color: #ef4444;
+}
+
+.emptyMessage {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+  padding: 2rem 0;
+}
+
+.viewAllButton {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #3b82f6;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewAllButton:hover {
+  background: #3b82f610;
+  border-color: #3b82f6;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.loadingSpinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.errorIcon {
+  width: 2rem;
+  height: 2rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+
+.errorContainer p {
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+
+.retryButton {
+  padding: 0.5rem 1rem;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retryButton:hover {
+  background: #dc2626;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .equipmentItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .equipmentStatus {
+    align-self: flex-start;
+  }
+}
+
+.statIconDecommissioned {
+  width: 2rem;
+  height: 2rem;
+  color: #6b7280;
+}
+
+.statusDecommissioned {
+  background: #6b728020;
+  color: #6b7280;
+}

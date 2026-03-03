@@ -672,7 +672,9 @@ export default function ClientDetailsPage() {
               </div>
               <div className={styles.clientHeaderInfo}>
                 <h1 className={styles.clientName}>{client.nombre}</h1>
-                <span className={styles.clientNit}>NIT: {client.nit}</span>
+                <span className={styles.clientNit}>
+                  NIT: {client.nit}-{client.verification_digit}
+                </span>
               </div>
             </div>
           </div>
@@ -925,7 +927,9 @@ export default function ClientDetailsPage() {
                 <div className={styles.infoGrid}>
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>NIT</span>
-                    <span className={styles.infoValueCode}>{client.nit}</span>
+                    <span className={styles.infoValueCode}>
+                      {client.nit}-{client.verification_digit}
+                    </span>
                   </div>
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>

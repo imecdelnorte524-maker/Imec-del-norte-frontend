@@ -1,7 +1,6 @@
+// src/pages/Dashboard.tsx
 import DashboardLayout from "../components/layout/DashboardLayout";
-import ServicesCard from "../components/ServicesCard";
 import type { Service } from "../interfaces/ServicesInterface";
-import Pagination from "../components/Pagination";
 import { useAuth } from "../hooks/useAuth";
 import {
   getServicesRequest,
@@ -12,19 +11,17 @@ import type { ServiceFromAPI } from "../interfaces/ServicesInterface";
 import styles from "../styles/pages/DashboardPage.module.css";
 
 import {
-  MagnifyingGlassIcon,
-  CalendarIcon,
-  FunnelIcon,
-  ChartBarIcon,
   ClipboardDocumentListIcon,
   ClockIcon,
   CheckCircleIcon,
-  UserIcon,
   ShieldCheckIcon,
   ExclamationTriangleIcon,
   BanknotesIcon,
   DocumentCheckIcon,
   UsersIcon,
+  ChartBarIcon,
+  BuildingOfficeIcon,
+  BriefcaseIcon,
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 
@@ -32,6 +29,9 @@ import { useEffect, useState } from "react";
 import sgSstService from "../api/sg-sst";
 import type { SgSstForm } from "../interfaces/SgSstInterface";
 import { playErrorSound } from "../utils/sounds";
+import TechnicianRanking from "../components/dashboard/TechnicianRanking";
+import { OrdersByStatusDrawer } from "../components/dashboard/OrdersByStatusDrawer";
+import ClientEquipmentStats from "../components/dashboard/ClientEquipmentStats";
 
 // Función para mapear orden de API a interface del componente
 const mapServiceFromAPI = (service: ServiceFromAPI): Service => ({
@@ -64,7 +64,7 @@ const mapServiceFromAPI = (service: ServiceFromAPI): Service => ({
   comentarios: service.comentarios || undefined,
 });
 
-// Función para ordenar Órdenes según el criterio especificado
+// Función para ordenar Órdenes
 const sortServices = (services: Service[]): Service[] => {
   const orderPriority: Record<string, number> = {
     "En Proceso": 1,
@@ -125,24 +125,29 @@ const getFormTypeLabel = (type: SgSstForm["formType"]): string => {
 export default function Dashboard() {
   const { user, isAdmin, isAuthenticated, loading: authLoading } = useAuth();
 
-  // Rol SGSST (ajustar el string "SGSST" si en tu backend se llama distinto)
   const isSgSst = user?.role?.nombreRol === "SGSST";
   const isClient = user?.role?.nombreRol === "Cliente";
   const isSecretaria = user?.role.nombreRol === "Secretaria";
+  const isTechnician = !isAdmin && !isSgSst && !isClient && !isSecretaria;
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("");
-  const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [searchTerm] = useState("");
+  const [startDate] = useState("");
+  const [endDate] = useState("");
+  const [selectedStatus] = useState("");
+  const [, setServices] = useState<Service[]>([]);
+  const [, setStatusOptions] = useState<string[]>([]);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const servicesPerPage = 8;
 
-  // Métricas extendidas
+  // Estado para el drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<{
+    title: string;
+    statusValue: string;
+    color: string;
+  } | null>(null);
+
+  // Métricas
   const [metrics, setMetrics] = useState({
     totalServices: 0,
     completedServices: 0,
@@ -174,12 +179,54 @@ export default function Dashboard() {
     }[],
   });
 
-  // ====== Estado SG-SST: formularios pendientes de firma por SG-SST ======
+  // Estado SG-SST
   const [sgSstForms, setSgSstForms] = useState<SgSstForm[]>([]);
   const [sgSstLoading, setSgSstLoading] = useState(false);
   const [sgSstError, setSgSstError] = useState<string | null>(null);
 
-  // Cargar datos del dashboard de Órdenes (solo si NO es SGSST)
+  // Datos para la gráfica de barras
+  const statusBarData = [
+    {
+      key: "unassigned",
+      label: "Sin asignar",
+      value: metrics.statusCounts.unassigned,
+      className: styles.barUnassigned,
+    },
+    {
+      key: "assigned",
+      label: "Asignadas",
+      value: metrics.statusCounts.assigned,
+      className: styles.barAssigned,
+    },
+    {
+      key: "inProgress",
+      label: "En Proceso",
+      value: metrics.statusCounts.inProgress,
+      className: styles.barInProgress,
+    },
+    {
+      key: "paused",
+      label: "En pausa",
+      value: metrics.statusCounts.paused,
+      className: styles.barPaused,
+    },
+    {
+      key: "completed",
+      label: "Completadas",
+      value: metrics.statusCounts.completed,
+      className: styles.barCompleted,
+    },
+    {
+      key: "canceled",
+      label: "Canceladas",
+      value: metrics.statusCounts.canceled,
+      className: styles.barCanceled,
+    },
+  ];
+
+  const maxStatusValue = Math.max(...statusBarData.map((d) => d.value), 0) || 1;
+
+  // Cargar datos
   useEffect(() => {
     if (!isAuthenticated || authLoading || isSgSst) return;
 
@@ -188,13 +235,11 @@ export default function Dashboard() {
       setError(null);
 
       try {
-        // Cargar métricas
         const metricsData = await getServicesMetricsRequest();
 
         let servicesData: ServiceFromAPI[];
 
-        // Cargar Órdenes según el rol
-        if (isAdmin) {
+        if (isAdmin || isSecretaria) {
           const response = await getServicesRequest({
             search: searchTerm || undefined,
             status: selectedStatus || undefined,
@@ -212,7 +257,6 @@ export default function Dashboard() {
           servicesData = response.services;
         }
 
-        // Actualizar métricas (extended)
         setMetrics({
           totalServices: metricsData.total,
           completedServices: metricsData.completados,
@@ -238,13 +282,10 @@ export default function Dashboard() {
           technicians: metricsData.technicians || [],
         });
 
-        // Mapear y ordenar Órdenes
         const mappedServices = servicesData.map(mapServiceFromAPI);
         const sortedServices = sortServices(mappedServices);
-
         setServices(sortedServices);
 
-        // Extraer estados únicos para el filtro
         const uniqueStatuses = Array.from(
           new Set(servicesData.map((service) => service.estado)),
         );
@@ -261,6 +302,7 @@ export default function Dashboard() {
     loadDashboardData();
   }, [
     isAdmin,
+    isSecretaria,
     isAuthenticated,
     authLoading,
     isSgSst,
@@ -270,7 +312,7 @@ export default function Dashboard() {
     endDate,
   ]);
 
-  // Cargar formularios SG-SST pendientes de firma por SG-SST (solo rol SGSST)
+  // Cargar SG-SST
   useEffect(() => {
     if (!isAuthenticated || authLoading || !isSgSst) return;
 
@@ -278,15 +320,11 @@ export default function Dashboard() {
       setSgSstLoading(true);
       setSgSstError(null);
       try {
-        // Formularios con estado PENDING_SST
         const response = await sgSstService.getFormsByStatus("PENDING_SST");
         const forms = response.data || [];
-
-        // Solo los que NO tienen firma SG-SST
         const unsignedBySst = forms.filter(
           (form: SgSstForm) => !form.sstSignatureDate,
         );
-
         setSgSstForms(unsignedBySst);
       } catch (err) {
         console.error("Error cargando formularios SG-SST:", err);
@@ -301,60 +339,13 @@ export default function Dashboard() {
     loadSgSstForms();
   }, [isAuthenticated, authLoading, isSgSst]);
 
-  // Filtro de Órdenes (solo tiene efecto cuando no es SGSST)
-  useEffect(() => {
-    const filtered = services.filter((service) => {
-      const clienteNombre = `${service.cliente.nombre} ${
-        service.cliente.apellido || ""
-      }`.toLowerCase();
-      const tecnicoNombre = service.tecnico
-        ? `${service.tecnico.nombre} ${
-            service.tecnico.apellido || ""
-          }`.toLowerCase()
-        : "";
-
-      const matchesSearch =
-        clienteNombre.includes(searchTerm.toLowerCase()) ||
-        service.servicio.nombre_servicio
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        tecnicoNombre.includes(searchTerm.toLowerCase()) ||
-        service.orden_id.toString().includes(searchTerm);
-
-      const matchesStatus =
-        selectedStatus === "" || service.estado === selectedStatus;
-
-      const serviceDate = service.fecha_inicio || service.fecha_solicitud;
-      const matchesStartDate = !startDate || serviceDate >= new Date(startDate);
-      const matchesEndDate = !endDate || serviceDate <= new Date(endDate);
-
-      return (
-        matchesSearch && matchesStatus && matchesStartDate && matchesEndDate
-      );
-    });
-
-    setFilteredServices(filtered);
-    setCurrentPage(1);
-  }, [services, searchTerm, selectedStatus, startDate, endDate]);
-
-  const totalPages = Math.ceil(filteredServices.length / servicesPerPage);
-  const indexOfLastService = currentPage * servicesPerPage;
-  const indexOfFirstService = indexOfLastService - servicesPerPage;
-  const currentServices = filteredServices.slice(
-    indexOfFirstService,
-    indexOfLastService,
-  );
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setStartDate("");
-    setEndDate("");
-    setSelectedStatus("");
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  const handleMetricClick = (metric: {
+    title: string;
+    statusValue: string;
+    color: string;
+  }) => {
+    setSelectedMetric(metric);
+    setDrawerOpen(true);
   };
 
   const getCompletionPercentage = () => {
@@ -363,48 +354,11 @@ export default function Dashboard() {
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   };
 
-  const statusBarData = [
-    {
-      key: "unassigned",
-      label: "Sin asignar",
-      value: metrics.statusCounts.unassigned,
-      className: styles.barUnassigned,
-    },
-    {
-      key: "assigned",
-      label: "Asignadas",
-      value: metrics.statusCounts.assigned,
-      className: styles.barAssigned,
-    },
-    {
-      key: "inProgress",
-      label: "En Proceso",
-      value: metrics.statusCounts.inProgress,
-      className: styles.barInProgress,
-    },
-    {
-      key: "paused",
-      label: "Pausadas",
-      value: metrics.statusCounts.paused,
-      className: styles.barPaused,
-    },
-    {
-      key: "completed",
-      label: "Completadas",
-      value: metrics.statusCounts.completed,
-      className: styles.barCompleted,
-    },
-    {
-      key: "canceled",
-      label: "Canceladas",
-      value: metrics.statusCounts.canceled,
-      className: styles.barCanceled,
-    },
-  ];
+  const getMonthlyProgress = () => {
+    return Math.min(Math.round((metrics.completedThisMonth / 10) * 100), 100);
+  };
 
-  const maxStatusValue = Math.max(...statusBarData.map((d) => d.value), 0) || 1;
-
-  // Mostrar loading mientras verifica autenticación
+  // Loading
   if (authLoading) {
     return (
       <DashboardLayout>
@@ -463,18 +417,18 @@ export default function Dashboard() {
             </h1>
             <p className={styles.pageSubtitle}>
               {isAdmin
-                ? "Resumen general y gestión de Órdenes técnicos"
+                ? "Resumen general y gestión de órdenes de servicio"
                 : isSgSst
                   ? "Reportes SG-SST pendientes de firma"
                   : isClient
-                    ? `Mis Órdenes - ${user?.nombre} ${user?.apellido || ""}`
-                    : `Mis Órdenes asignados - ${user?.nombre} ${
+                    ? `Mis órdenes - ${user?.nombre} ${user?.apellido || ""}`
+                    : `Mis órdenes asignadas - ${user?.nombre} ${
                         user?.apellido || ""
                       }`}
             </p>
           </div>
           <div className={styles.userInfo}>
-            {isAdmin && isSecretaria? (
+            {isAdmin && isSecretaria ? (
               <>
                 <ShieldCheckIcon className={styles.userIcon} />
                 <span className={styles.adminRole}>Secretaria</span>
@@ -484,27 +438,26 @@ export default function Dashboard() {
                 <ShieldCheckIcon className={styles.userIcon} />
                 <span className={styles.adminRole}>Administrador</span>
               </>
-            )
-             : isSgSst ? (
+            ) : isSgSst ? (
               <>
                 <ShieldCheckIcon className={styles.userIcon} />
                 <span className={styles.sgsstRole}>SG-SST</span>
               </>
             ) : isClient ? (
               <>
-                <UserIcon className={styles.userIcon} />
+                <BuildingOfficeIcon className={styles.userIcon} />
                 <span className={styles.userRole}>Cliente</span>
               </>
             ) : (
               <>
-                <UserIcon className={styles.userIcon} />
+                <BriefcaseIcon className={styles.userIcon} />
                 <span className={styles.userRole}>Técnico</span>
               </>
             )}
           </div>
         </div>
 
-        {/* ==== Sección SG-SST: Reportes pendientes de firma (solo rol SG-SST) ==== */}
+        {/* SG-SST Section - SOLO PARA SGSST */}
         {isSgSst && (
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
@@ -569,11 +522,12 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ==== TODO lo de Órdenes SOLO si NO es SGSST ==== */}
+        {/* DASHBOARD PRINCIPAL - PARA TODOS EXCEPTO SGSST */}
         {!isSgSst && (
           <>
-            {/* Métricas de Órdenes */}
+            {/* MÉTRICAS PRINCIPALES */}
             <div className={styles.metricsGrid}>
+              {/* Total/Mis Órdenes - Para TODOS */}
               <div className={styles.metricCard}>
                 <div className={styles.metricHeader}>
                   <div className={styles.metricTitle}>
@@ -586,44 +540,78 @@ export default function Dashboard() {
                 </div>
                 <div className={styles.metricDescription}>
                   {isAdmin
-                    ? "Órdenes activos"
+                    ? "Órdenes en el sistema"
                     : isClient
-                      ? "Mis Órdenes activas"
-                      : "Asignados a mí"}
+                      ? "Mis órdenes solicitadas"
+                      : "Órdenes asignadas a mí"}
                 </div>
               </div>
 
-              {isAdmin && (
-                <div className={styles.metricCard}>
-                  <div className={styles.metricHeader}>
-                    <div className={styles.metricTitle}>Sin Asignar</div>
-                    <ExclamationTriangleIcon className={styles.metricIcon} />
+              {/* MÉTRICAS ADMIN - Solo Admin y Secretaria */}
+              {(isAdmin || isSecretaria) && (
+                <>
+                  <div
+                    className={styles.metricCard}
+                    onClick={() =>
+                      handleMetricClick({
+                        title: "Sin Asignar",
+                        statusValue: "Solicitada sin asignar",
+                        color: "#fbbf24",
+                      })
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div className={styles.metricHeader}>
+                      <div className={styles.metricTitle}>Sin Asignar</div>
+                      <ExclamationTriangleIcon className={styles.metricIcon} />
+                    </div>
+                    <div className={styles.metricValue}>
+                      {metrics.unassignedServices}
+                    </div>
+                    <div className={styles.metricDescription}>
+                      Solicitadas sin técnico
+                    </div>
                   </div>
-                  <div className={styles.metricValue}>
-                    {metrics.unassignedServices}
+
+                  <div
+                    className={styles.metricCard}
+                    onClick={() =>
+                      handleMetricClick({
+                        title: "Asignadas",
+                        statusValue: "Solicitada asignada",
+                        color: "#a855f7",
+                      })
+                    }
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div className={styles.metricHeader}>
+                      <div className={styles.metricTitle}>Asignadas</div>
+                      <ClipboardDocumentListIcon
+                        className={styles.metricIcon}
+                      />
+                    </div>
+                    <div className={styles.metricValue}>
+                      {metrics.assignedPendingServices}
+                    </div>
+                    <div className={styles.metricDescription}>
+                      Con técnico asignado
+                    </div>
                   </div>
-                  <div className={styles.metricDescription}>
-                    Solicitadas sin asignar
-                  </div>
-                </div>
+                </>
               )}
 
-              {isAdmin && (
-                <div className={styles.metricCard}>
-                  <div className={styles.metricHeader}>
-                    <div className={styles.metricTitle}>Asignadas</div>
-                    <ClipboardDocumentListIcon className={styles.metricIcon} />
-                  </div>
-                  <div className={styles.metricValue}>
-                    {metrics.assignedPendingServices}
-                  </div>
-                  <div className={styles.metricDescription}>
-                    Solicitadas con técnico asignado
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.metricCard}>
+              {/* En Proceso - Para TODOS */}
+              <div
+                className={styles.metricCard}
+                onClick={() =>
+                  handleMetricClick({
+                    title: "En Proceso",
+                    statusValue: "En Proceso",
+                    color: "#60a5fa",
+                  })
+                }
+                style={{ cursor: "pointer" }}
+              >
                 <div className={styles.metricHeader}>
                   <div className={styles.metricTitle}>En Proceso</div>
                   <ClockIcon className={styles.metricIcon} />
@@ -631,10 +619,23 @@ export default function Dashboard() {
                 <div className={styles.metricValue}>
                   {metrics.inProgressServices}
                 </div>
-                <div className={styles.metricDescription}>Por completar</div>
+                <div className={styles.metricDescription}>
+                  {isAdmin ? "Órdenes en ejecución" : "Mis órdenes en curso"}
+                </div>
               </div>
-              
-              <div className={styles.metricCard}>
+
+              {/* En Pausa - Para TODOS */}
+              <div
+                className={styles.metricCard}
+                onClick={() =>
+                  handleMetricClick({
+                    title: "En Pausa",
+                    statusValue: "En pausa",
+                    color: "#06d99d",
+                  })
+                }
+                style={{ cursor: "pointer" }}
+              >
                 <div className={styles.metricHeader}>
                   <div className={styles.metricTitle}>En Pausa</div>
                   <ClockIcon className={styles.metricIcon} />
@@ -642,27 +643,65 @@ export default function Dashboard() {
                 <div className={styles.metricValue}>
                   {metrics.pausedServices}
                 </div>
-                <div className={styles.metricDescription}>Órdenes Pausadas</div>
+                <div className={styles.metricDescription}>
+                  {isAdmin ? "Órdenes pausadas" : "Mis órdenes en pausa"}
+                </div>
               </div>
 
-              {isAdmin && (
-                <div className={styles.metricCard}>
+              {/* Finalizados - Para TODOS */}
+              <div
+                className={styles.metricCard}
+                onClick={() =>
+                  handleMetricClick({
+                    title: "Finalizados",
+                    statusValue: "Completado",
+                    color: "#22c55e",
+                  })
+                }
+                style={{ cursor: "pointer" }}
+              >
+                <div className={styles.metricHeader}>
+                  <div className={styles.metricTitle}>Finalizados</div>
+                  <CheckCircleIcon className={styles.metricIcon} />
+                </div>
+                <div className={styles.metricValue}>
+                  {metrics.completedServices}
+                </div>
+                <div className={styles.metricDescription}>
+                  {getCompletionPercentage()}% completados ·{" "}
+                  {metrics.completedThisMonth} este mes
+                </div>
+              </div>
+
+              {/* MÉTRICAS TÉCNICO - Solo para técnicos */}
+              {isTechnician && (
+                <div
+                  className={styles.metricCard}
+                  onClick={() =>
+                    handleMetricClick({
+                      title: "Completadas este mes",
+                      statusValue: "Completado",
+                      color: "#22c55e",
+                    })
+                  }
+                  style={{ cursor: "pointer" }}
+                >
                   <div className={styles.metricHeader}>
-                    <div className={styles.metricTitle}>Finalizados</div>
+                    <div className={styles.metricTitle}>
+                      Completadas este mes
+                    </div>
                     <CheckCircleIcon className={styles.metricIcon} />
                   </div>
                   <div className={styles.metricValue}>
-                    {metrics.completedServices}
+                    {metrics.completedThisMonth}
                   </div>
                   <div className={styles.metricDescription}>
-                    {getCompletionPercentage()}%{" "}
-                    {isAdmin ? "del total" : "completados"} ·{" "}
-                    {metrics.completedThisMonth} este mes
+                    {new Date().toLocaleDateString("es-CO", { month: "long" })}
                   </div>
                 </div>
               )}
 
-              {/* Métricas de facturación / ingresos solo para Admin */}
+              {/* MÉTRICAS ADMIN - Facturación (solo admin) */}
               {isAdmin && (
                 <>
                   <div className={styles.metricCard}>
@@ -694,8 +733,8 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Gráfica de barras por estado - SOLO ADMIN */}
-            {isAdmin && (
+            {/* GRÁFICA DE BARRAS - Solo Admin y Secretaria */}
+            {(isAdmin || isSecretaria) && (
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitle}>
@@ -710,7 +749,40 @@ export default function Dashboard() {
                         (item.value / maxStatusValue) * 100,
                       );
                       return (
-                        <div className={styles.barChartRow} key={item.key}>
+                        <div
+                          className={styles.barChartRow}
+                          key={item.key}
+                          onClick={() =>
+                            handleMetricClick({
+                              title: item.label,
+                              statusValue:
+                                item.key === "unassigned"
+                                  ? "Solicitada sin asignar"
+                                  : item.key === "assigned"
+                                    ? "Solicitada asignada"
+                                    : item.key === "inProgress"
+                                      ? "En Proceso"
+                                      : item.key === "paused"
+                                        ? "En pausa"
+                                        : item.key === "completed"
+                                          ? "Completado"
+                                          : "Cancelado",
+                              color:
+                                item.key === "unassigned"
+                                  ? "#fbbf24"
+                                  : item.key === "assigned"
+                                    ? "#a855f7"
+                                    : item.key === "inProgress"
+                                      ? "#60a5fa"
+                                      : item.key === "paused"
+                                        ? "#06d99d"
+                                        : item.key === "completed"
+                                          ? "#22c55e"
+                                          : "#f97373",
+                            })
+                          }
+                          style={{ cursor: "pointer" }}
+                        >
                           <div className={styles.barLabel}>{item.label}</div>
                           <div className={styles.barTrack}>
                             <div
@@ -727,201 +799,143 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Métrica de técnicos (solo admin) */}
-            {isAdmin && (
+            {/* SECCIÓN CLIENTE - Equipos asociados (solo para clientes) */}
+            {isClient && (
               <div className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <div className={styles.sectionTitle}>
-                    <UsersIcon className={styles.sectionIcon} />
-                    Órdenes por técnico
+                    <BuildingOfficeIcon className={styles.sectionIcon} />
+                    Mis Equipos
                   </div>
                 </div>
                 <div className={styles.sectionContent}>
-                  {metrics.technicians.length > 0 ? (
-                    <div className={styles.techList}>
-                      {metrics.technicians.map((tech) => (
-                        <div key={tech.tecnico_id} className={styles.techItem}>
-                          <div className={styles.techName}>
-                            {tech.nombre} {tech.apellido || ""}
-                          </div>
-                          <div className={styles.techStats}>
-                            <span>
-                              Total: <strong>{tech.total_servicios}</strong>
-                            </span>
-                            <span>
-                              Completados: <strong>{tech.completados}</strong>
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className={styles.techEmpty}>
-                      No hay datos de técnicos aún.
-                    </p>
-                  )}
+                  <ClientEquipmentStats />
                 </div>
               </div>
             )}
 
-            {/* Filtros */}
-            <div className={styles.section}>
-              <div className={styles.sectionHeader}>
-                <div className={styles.sectionTitle}>
-                  <FunnelIcon className={styles.sectionIcon} />
-                  Filtros de Órdenes
-                </div>
-                <button
-                  className={styles.clearFiltersButton}
-                  onClick={clearFilters}
-                >
-                  Limpiar Filtros
-                </button>
-              </div>
-
-              <div className={styles.filtersContainer}>
-                <div className={styles.filtersGrid}>
-                  <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>
-                      <MagnifyingGlassIcon className={styles.filterIcon} />
-                      Buscar
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Cliente, orden, técnico o ID..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className={styles.searchInput}
-                    />
-                  </div>
-
-                  <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>
-                      <CalendarIcon className={styles.filterIcon} />
-                      Fecha Inicio
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className={styles.dateInput}
-                    />
-                  </div>
-
-                  <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>
-                      <CalendarIcon className={styles.filterIcon} />
-                      Fecha Fin
-                    </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className={styles.dateInput}
-                    />
-                  </div>
-
-                  <div className={styles.filterGroup}>
-                    <label className={styles.filterLabel}>
-                      <ChartBarIcon className={styles.filterIcon} />
-                      Estado
-                    </label>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value)}
-                      className={styles.selectInput}
-                    >
-                      <option value="">Todos los estados</option>
-                      {statusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
+            {/* SECCIÓN TÉCNICO - Rendimiento (solo técnico) */}
+            {isTechnician && (
+              <div className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <div className={styles.sectionTitle}>
+                    <ChartBarIcon className={styles.sectionIcon} />
+                    Mi rendimiento mensual
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Resumen resultados */}
-            <div className={styles.resultsSummary}>
-              <div className={styles.resultsCount}>
-                {filteredServices.length} Órdenes encontrados
-                {totalPages > 1 && ` - Página ${currentPage} de ${totalPages}`}
-              </div>
-              <div className={styles.activeFilters}>
-                {searchTerm && (
-                  <span className={styles.filterTag}>
-                    Búsqueda: "{searchTerm}"
-                  </span>
-                )}
-                {selectedStatus && (
-                  <span className={styles.filterTag}>
-                    Estado: {selectedStatus}
-                  </span>
-                )}
-                {(startDate || endDate) && (
-                  <span className={styles.filterTag}>
-                    Rango: {startDate || "Inicio"} - {endDate || "Fin"}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Lista de Órdenes */}
-            <div className={styles.section}>
-              <div className={styles.sectionHeader}>
-                <div className={styles.sectionTitle}>
-                  <ClipboardDocumentListIcon className={styles.sectionIcon} />
-                  {isAdmin ? "Órdenes Recientes" : "Mis Órdenes"}
-                  <span className={styles.orderInfo}></span>
-                </div>
-              </div>
-
-              <div className={styles.sectionContent}>
-                {loading ? (
-                  <div className={styles.loadingContainer}>
-                    <div className={styles.loadingSpinner}></div>
-                    <p>Cargando Órdenes...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className={styles.servicesGrid}>
-                      {currentServices.length > 0 ? (
-                        currentServices.map((service) => (
-                          <ServicesCard
-                            key={service.orden_id}
-                            service={service}
-                          />
-                        ))
-                      ) : (
-                        <div className={styles.noResults}>
-                          <div className={styles.noResultsIcon}>📭</div>
-                          <h3>No se encontraron Órdenes</h3>
-                          <p>Intenta ajustar los filtros de búsqueda</p>
-                          <button
-                            className={styles.clearFiltersButton}
-                            onClick={clearFilters}
-                          >
-                            Limpiar todos los filtros
-                          </button>
-                        </div>
-                      )}
+                <div className={styles.sectionContent}>
+                  <div className={styles.performanceStats}>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>
+                        Completadas este mes
+                      </span>
+                      <span className={styles.statValue}>
+                        {metrics.completedThisMonth}
+                      </span>
                     </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>En proceso</span>
+                      <span className={styles.statValue}>
+                        {metrics.inProgressServices}
+                      </span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>En pausa</span>
+                      <span className={styles.statValue}>
+                        {metrics.pausedServices}
+                      </span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span className={styles.statLabel}>
+                        Tasa de completados
+                      </span>
+                      <span className={styles.statValue}>
+                        {metrics.myServices > 0
+                          ? Math.round(
+                              (metrics.completedServices / metrics.myServices) *
+                                100,
+                            )
+                          : 0}
+                        %
+                      </span>
+                    </div>
+                  </div>
 
-                    {totalPages > 1 && (
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={handlePageChange}
+                  <div className={styles.monthlyProgress}>
+                    <div className={styles.progressLabel}>
+                      <span>Progreso mensual (meta: 10 órdenes)</span>
+                      <span>{getMonthlyProgress()}%</span>
+                    </div>
+                    <div className={styles.progressTrack}>
+                      <div
+                        className={styles.progressFill}
+                        style={{ width: `${getMonthlyProgress()}%` }}
                       />
-                    )}
-                  </>
-                )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* SECCIÓN ADMIN - Estadísticas de técnicos (solo admin) */}
+            {isAdmin && (
+              <>
+                <div className={styles.section}>
+                  <div className={styles.sectionHeader}>
+                    <div className={styles.sectionTitle}>
+                      <UsersIcon className={styles.sectionIcon} />
+                      Órdenes por técnico
+                    </div>
+                  </div>
+                  <div className={styles.sectionContent}>
+                    {metrics.technicians.length > 0 ? (
+                      <div className={styles.techList}>
+                        {metrics.technicians.map((tech) => (
+                          <div
+                            key={tech.tecnico_id}
+                            className={styles.techItem}
+                          >
+                            <div className={styles.techName}>
+                              {tech.nombre} {tech.apellido || ""}
+                            </div>
+                            <div className={styles.techStats}>
+                              <span>
+                                Total: <strong>{tech.total_servicios}</strong>
+                              </span>
+                              <span>
+                                Completados: <strong>{tech.completados}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={styles.techEmpty}>
+                        No hay datos de técnicos aún.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ranking de técnicos - solo admin */}
+                <div className={styles.section}>
+                  <TechnicianRanking
+                    limit={5}
+                    showStats={true}
+                    className={styles.rankingWidget}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
+
+        {/* DRAWER DE ÓRDENES POR ESTADO - Para todos */}
+        <OrdersByStatusDrawer
+          isOpen={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          statusConfig={selectedMetric}
+        />
       </div>
     </DashboardLayout>
   );

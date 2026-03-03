@@ -9,6 +9,7 @@ export interface ServiceFromAPI {
   fecha_inicio: string | null;
   fecha_finalizacion: string | null;
   estado:
+    | "En pausa"
     | "Pendiente"
     | "En Proceso"
     | "Completado"
@@ -97,6 +98,7 @@ export interface Service {
   fecha_inicio?: Date;
   fecha_finalizacion?: Date;
   estado:
+    | "En pausa"
     | "Pendiente"
     | "En Proceso"
     | "Completado"
