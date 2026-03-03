@@ -1,3 +1,4 @@
+/* src/styles/pages/DashboardPage.module.css */
 .container {
   padding: 0;
   max-width: 100%;
@@ -584,6 +585,65 @@
   padding: var(--spacing-sm) var(--spacing-md);
 }
 
+/* Estilos de rendimiento para técnico */
+.performanceStats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statItem {
+  text-align: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.statLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.statValue {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.monthlyProgress {
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-bottom: 0.5rem;
+}
+
+.progressTrack {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
 /* Responsive */
 @media (max-width: 767px) {
   .metricsGrid {
@@ -637,6 +697,20 @@
   .sgSstTable {
     min-width: 500px;
   }
+
+  /* Ajustes para móvil en rendimiento */
+  .performanceStats {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .statItem {
+    padding: 0.75rem;
+  }
+
+  .statValue {
+    font-size: 1.25rem;
+  }
 }
 
 @media (min-width: 768px) {
@@ -652,5 +726,12 @@
 
   .servicesGrid {
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  }
+}
+
+/* Ajustes específicos para tablets */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .performanceStats {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

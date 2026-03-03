@@ -3,6 +3,13 @@ import axios from "axios";
 import { playErrorSound } from "../utils/sounds";
 import { getSocketId } from "../lib/socket";
 
+// Event emitter para loading global (sin contexto)
+let activeRequests = 0;
+
+const setGlobalLoading = (loading: boolean) => {
+  window.dispatchEvent(new CustomEvent("globalLoading", { detail: loading }));
+};
+
 // Configuración base de axios
 const api = axios.create({
   baseURL:
@@ -15,12 +22,23 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Interceptor para agregar el token automáticamente
+// Interceptor para token y socket ID (combinado)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    const socketId = getSocketId();
+    if (socketId) {
+      config.headers["x-socket-id"] = socketId;
+    }
+
+    // Incrementar contador de peticiones activas
+    activeRequests++;
+    if (activeRequests === 1) {
+      setGlobalLoading(true);
     }
 
     return config;
@@ -31,23 +49,14 @@ api.interceptors.request.use(
   },
 );
 
-api.interceptors.request.use((config) => {
-  const socketId = getSocketId();
-  if (socketId) {
-    config.headers["x-socket-id"] = socketId;
-  }
-
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
-
 // Interceptor para manejar respuestas
 api.interceptors.response.use(
   (response) => {
+    // Decrementar contador de peticiones activas
+    activeRequests--;
+    if (activeRequests === 0) {
+      setGlobalLoading(false);
+    }
     return response;
   },
   (error) => {
@@ -56,15 +65,18 @@ api.interceptors.response.use(
 
     console.error("❌ Error en response:", status, error.response?.data);
 
+    // Decrementar contador de peticiones activas
+    activeRequests--;
+    if (activeRequests === 0) {
+      setGlobalLoading(false);
+    }
+
     if (status && status >= 400) {
       playErrorSound();
     }
 
-    // ============================
-    // 401 - NO redirigir en /auth/login
-    // ============================
+    // 401 - Manejo de sesión
     if (status === 401) {
-      // Endpoints de autenticación "públicos" donde NO queremos recargar la SPA
       const isLoginRequest = url.includes("/auth/login");
       const isRegisterRequest = url.includes("/auth/register");
       const isPasswordResetPublic =
@@ -75,12 +87,10 @@ api.interceptors.response.use(
         isLoginRequest || isRegisterRequest || isPasswordResetPublic;
 
       if (!isPublicAuthRequest) {
-        // Solo tratamos como sesión expirada si hay token guardado
         const hasToken = !!localStorage.getItem("authToken");
         if (hasToken) {
           localStorage.removeItem("authToken");
           localStorage.removeItem("user");
-          // Para sesión expirada en rutas protegidas
           window.location.href = "/";
         }
       }

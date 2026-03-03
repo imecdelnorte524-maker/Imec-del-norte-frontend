@@ -15,6 +15,7 @@ interface Props {
     | "pending"
     | "assigned"
     | "in_progress"
+    | "pausada"
     | "completed"
     | "cancelled";
   initialOrderId?: number;
@@ -76,7 +77,13 @@ export default function OrderList({
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState<
-    "all" | "pending" | "assigned" | "in_progress" | "completed" | "cancelled"
+    | "all"
+    | "pending"
+    | "assigned"
+    | "in_progress"
+    | "pausada"
+    | "completed"
+    | "cancelled"
   >(initialFilter);
 
   // Controla si ya se hizo el auto‑select para el ID actual
@@ -548,6 +555,7 @@ export default function OrderList({
                   <option value="pending">Pendientes de asignación</option>
                   <option value="assigned">Asignadas</option>
                   <option value="in_progress">En Proceso</option>
+                  <option value="pausada">Pausadas</option>
                   <option value="completed">Completadas</option>
                   <option value="cancelled">Canceladas</option>
                 </select>

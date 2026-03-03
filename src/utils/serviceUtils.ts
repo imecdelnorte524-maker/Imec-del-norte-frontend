@@ -37,6 +37,7 @@ export const sortServices = (services: Service[]): Service[] => {
   const orderPriority = {
     "En Proceso": 1,
     Pendiente: 2,
+    "En pausa": 3,
     Cancelado: 3,
     Cancelada: 3,
     Rechazada: 3,
