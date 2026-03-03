@@ -205,6 +205,7 @@ export const useOrders = (
     | "pending"
     | "assigned"
     | "in_progress"
+    | "pausada"
     | "completed"
     | "cancelled" = "all",
 ) => {
@@ -228,12 +229,13 @@ export const useOrders = (
       }
 
       const filterMap: Record<
-        "pending" | "assigned" | "in_progress" | "completed" | "cancelled",
+        "pending" | "assigned" | "in_progress"| "pausada" | "completed" | "cancelled",
         Order["estado"]
       > = {
         pending: "Pendiente",
         assigned: "Asignada",
         in_progress: "En Proceso",
+        pausada: "Pausada",
         completed: "Completado",
         cancelled: "Cancelada",
       };
