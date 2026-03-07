@@ -79,6 +79,7 @@ export default function EquipmentDocumentsModal({
   const { user } = useAuth();
 
   const isAdmin = user?.role.nombreRol === "Administrador";
+  const isClient = user?.role.nombreRol === "Cliente";
 
   const canUpload = useMemo(
     () => files.length > 0 && !uploading,
@@ -220,82 +221,84 @@ export default function EquipmentDocumentsModal({
           )}
 
           {/* Área de subida mejorada */}
-          <div className={styles.docsUploadCard}>
-            <form onSubmit={handleUpload}>
-              <div className={styles.uploadArea}>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  multiple
-                  onChange={(e) =>
-                    setFiles(e.target.files ? Array.from(e.target.files) : [])
-                  }
-                  disabled={uploading}
-                  id="pdf-upload"
-                  className={styles.fileInputHidden}
-                />
-                <label htmlFor="pdf-upload" className={styles.uploadLabel}>
-                  <svg viewBox="0 0 24 24" width="32" height="32">
-                    <path
-                      fill="currentColor"
-                      d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"
-                    />
-                  </svg>
-                  <span className={styles.uploadTitle}>
-                    Haz clic para seleccionar o arrastra archivos
-                  </span>
-                  <span className={styles.uploadHint}>
-                    PDFs únicamente (manuales, fichas técnicas, etc.)
-                  </span>
-                </label>
-              </div>
-
-              {files.length > 0 && (
-                <div className={styles.selectedFiles}>
-                  <div className={styles.selectedFilesHeader}>
-                    <span>Archivos seleccionados ({files.length})</span>
-                  </div>
-                  <div className={styles.selectedFilesList}>
-                    {files.map((f) => (
-                      <div
-                        key={`${f.name}-${f.size}`}
-                        className={styles.selectedFileItem}
-                      >
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                          <path
-                            fill="currentColor"
-                            d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .8-.7 1.5-1.5 1.5H8V9h2v2.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V4h2v5.5zM14 9h2V6h2v4h-4v6h-2V9z"
-                          />
-                        </svg>
-                        <span className={styles.selectedFileName}>
-                          {f.name}
-                        </span>
-                        <span className={styles.selectedFileSize}>
-                          {formatBytes(f.size)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className={styles.uploadActions}>
-                    <button
-                      type="submit"
-                      className={styles.primaryButton}
-                      disabled={!canUpload}
-                    >
-                      {uploading ? (
-                        <>
-                          <span className={styles.spinner}></span>
-                          Subiendo...
-                        </>
-                      ) : (
-                        "Subir PDFs"
-                      )}
-                    </button>
-                  </div>
+          {!isClient && (
+            <div className={styles.docsUploadCard}>
+              <form onSubmit={handleUpload}>
+                <div className={styles.uploadArea}>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    multiple
+                    onChange={(e) =>
+                      setFiles(e.target.files ? Array.from(e.target.files) : [])
+                    }
+                    disabled={uploading}
+                    id="pdf-upload"
+                    className={styles.fileInputHidden}
+                  />
+                  <label htmlFor="pdf-upload" className={styles.uploadLabel}>
+                    <svg viewBox="0 0 24 24" width="32" height="32">
+                      <path
+                        fill="currentColor"
+                        d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"
+                      />
+                    </svg>
+                    <span className={styles.uploadTitle}>
+                      Haz clic para seleccionar o arrastra archivos
+                    </span>
+                    <span className={styles.uploadHint}>
+                      PDFs únicamente (manuales, fichas técnicas, etc.)
+                    </span>
+                  </label>
                 </div>
-              )}
-            </form>
-          </div>
+
+                {files.length > 0 && (
+                  <div className={styles.selectedFiles}>
+                    <div className={styles.selectedFilesHeader}>
+                      <span>Archivos seleccionados ({files.length})</span>
+                    </div>
+                    <div className={styles.selectedFilesList}>
+                      {files.map((f) => (
+                        <div
+                          key={`${f.name}-${f.size}`}
+                          className={styles.selectedFileItem}
+                        >
+                          <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path
+                              fill="currentColor"
+                              d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .8-.7 1.5-1.5 1.5H8V9h2v2.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5V4h2v5.5zM14 9h2V6h2v4h-4v6h-2V9z"
+                            />
+                          </svg>
+                          <span className={styles.selectedFileName}>
+                            {f.name}
+                          </span>
+                          <span className={styles.selectedFileSize}>
+                            {formatBytes(f.size)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles.uploadActions}>
+                      <button
+                        type="submit"
+                        className={styles.primaryButton}
+                        disabled={!canUpload}
+                      >
+                        {uploading ? (
+                          <>
+                            <span className={styles.spinner}></span>
+                            Subiendo...
+                          </>
+                        ) : (
+                          "Subir PDFs"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </form>
+            </div>
+          )}
 
           {/* Lista de documentos */}
           <div className={styles.docsListContainer}>

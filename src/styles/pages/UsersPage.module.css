@@ -371,36 +371,8 @@
 }
 
 /* Colores para roles */
-.role.administrador {
-  background: #dc3545;
-  color: white;
-}
-.role.técnico {
-  background: #fd7e14;
-  color: white;
-}
-.role.cliente {
-  background: #20c997;
-  color: white;
-}
-.role.secretaria {
-  background: #6f42c1;
-  color: white;
-}
-.role.supervisor {
-  background: #0091ff;
-  color: white;
-}
-.role.sgsst {
-  background: #e64690;
-  color: white;
-}
-.role.marketing {
-  background: #79cf33;
-  color: white;
-}
-.role.gerente {
-  background: #6610f2;
+.role.colorRol {
+  background: var(--primary-500);
   color: white;
 }
 

@@ -1,4 +1,3 @@
-// src/components/sg-sst/sections/PermisosSection.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../hooks/useAuth";
 import AtsForm from "../forms/AtsForm";
@@ -128,14 +127,6 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
           <div className={styles.dashboardContent}>
             {/* Barra de acciones */}
             <div className={styles.actionsBar}>
-              {/* {isAdmin && (
-                <button
-                  className={styles.createButton}
-                  onClick={() => setCurrentForm("template")}
-                >
-                  + Crear Plantilla Preoperacional
-                </button>
-              )} */}
               <button className={styles.refreshButton} onClick={loadData}>
                 Actualizar
               </button>
@@ -264,11 +255,11 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
             loadData();
           }}
           canSignAsSST={
-            user?.role?.nombreRol?.toUpperCase().includes("SGSST") || false
+            // Aquí aseguramos que role exista para evitar errores
+            (user?.role?.nombreRol?.toUpperCase() || "").includes("SGSST") ||
+            (user?.role?.nombreRol?.toUpperCase() || "").includes("SG-SST")
           }
           currentUser={user}
-          onDownloadPdf={() => {}}
-          pdfLoading={false}
         />
       )}
     </div>

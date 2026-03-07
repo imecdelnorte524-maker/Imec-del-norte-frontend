@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import HierarchicalAreaSelector from "./HierarchicalAreaSelector";
 import { EvaporatorForm, CondenserForm } from "./forms";
 import styles from "../../../styles/components/equipment/equipment-list/CreateEquipmentModal.module.css";
@@ -123,11 +123,11 @@ export default function CreateEquipmentModal({
   planMantenimiento,
   onPlanMantenimientoChange,
   client,
-  ordersForClient,
-  loadingOrders,
-  ordersError,
-  selectedOrderIds,
-  onOrderSelectionChange,
+  // ordersForClient,
+  // loadingOrders,
+  // ordersError,
+  // selectedOrderIds,
+  // onOrderSelectionChange,
   onSubmit,
   onClose,
   onLoadOrders,
@@ -181,19 +181,19 @@ export default function CreateEquipmentModal({
   }, [isOpen, createForm.category, client, onLoadOrders]);
 
   // Recarga manual de órdenes
-  const handleManualReloadOrders = useCallback(() => {
-    if (client && createForm.category) {
-      previousCategoryRef.current = "";
-      previousClientRef.current = null;
+  // const handleManualReloadOrders = useCallback(() => {
+  //   if (client && createForm.category) {
+  //     previousCategoryRef.current = "";
+  //     previousClientRef.current = null;
 
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-      }
+  //     if (debounceTimerRef.current) {
+  //       clearTimeout(debounceTimerRef.current);
+  //       debounceTimerRef.current = null;
+  //     }
 
-      onLoadOrders(client.idCliente, createForm.category);
-    }
-  }, [client, createForm.category, onLoadOrders]);
+  //     onLoadOrders(client.idCliente, createForm.category);
+  //   }
+  // }, [client, createForm.category, onLoadOrders]);
 
   // --- MANEJADOR DE SUBMIT CON VALIDACIÓN DE ÁREA ---
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -465,7 +465,7 @@ export default function CreateEquipmentModal({
           </div>
 
           {/* ASOCIAR A ÓRDENES EXISTENTES */}
-          {createForm.category && client && (
+          {/* {createForm.category && client && (
             <div className={styles.formRow}>
               <div className={styles.ordersHeader}>
                 <label>
@@ -509,7 +509,6 @@ export default function CreateEquipmentModal({
                       type="button"
                       className={styles.continueButton}
                       onClick={() => {
-                        /* Continuar sin órdenes */
                       }}
                       disabled={loading}
                     >
@@ -611,7 +610,7 @@ export default function CreateEquipmentModal({
                 </div>
               )}
             </div>
-          )}
+          )} */}
 
           {!client && createForm.category && (
             <div className={styles.warningInfo}>

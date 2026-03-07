@@ -11,25 +11,13 @@ import type {
   SgSstStats,
   RejectFormPayload,
   PreopChecklistTemplatePayload,
+  SignerType,
 } from "../interfaces/SgSstInterface";
 
 export const sgSstService = {
   // ========== FORMULARIOS ATS ==========
   createAts: async (data: AtsFormData): Promise<ApiResponse> => {
     const response = await api.post("/sg-sst/ats", data);
-    return response.data;
-  },
-
-  // NUEVO ENDPOINT: Crear ATS con firma incluida
-  createAtsWithSignature: async (data: AtsFormData): Promise<ApiResponse> => {
-    const response = await api.post("/sg-sst/ats-with-signature", data);
-    return response.data;
-  },
-
-  createHeightWorkWithSignature: async (
-    data: HeightWorkFormData,
-  ): Promise<ApiResponse> => {
-    const response = await api.post("/sg-sst/height-work-with-signature", data);
     return response.data;
   },
 
@@ -44,16 +32,6 @@ export const sgSstService = {
     data: PreoperationalFormData,
   ): Promise<ApiResponse> => {
     const response = await api.post("/sg-sst/preoperational", data);
-    return response.data;
-  },
-
-  createPreoperationalWithSignature: async (
-    data: PreoperationalFormData,
-  ): Promise<ApiResponse> => {
-    const response = await api.post(
-      "/sg-sst/preoperational-with-signature",
-      data,
-    );
     return response.data;
   },
 
@@ -103,11 +81,6 @@ export const sgSstService = {
     const response = await api.get(`/sg-sst/forms/${formId}/can-edit`, {
       params: { userId },
     });
-    return response.data;
-  },
-
-  generatePdf: async (formId: number): Promise<ApiResponse> => {
-    const response = await api.post(`/sg-sst/forms/${formId}/generate-pdf`);
     return response.data;
   },
 
@@ -186,6 +159,18 @@ export const sgSstService = {
     const response = await api.put(
       `/sg-sst/preoperational-templates/${id}`,
       data,
+    );
+    return response.data;
+  },
+
+  // ========== OTP ==========
+  requestSignOtp: async (
+    formId: number,
+    signerType: SignerType,
+  ): Promise<ApiResponse> => {
+    const response = await api.post(
+      `/sg-sst/forms/${formId}/request-sign-otp`,
+      { signerType },
     );
     return response.data;
   },
