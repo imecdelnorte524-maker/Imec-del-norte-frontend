@@ -1,5 +1,9 @@
+// src/components/sg-sst/AtsForm.tsx
 import { useState, useEffect, useMemo } from "react";
-import type { AtsFormData } from "../../../interfaces/SgSstInterface";
+import type {
+  AtsFormData,
+  SignFormData,
+} from "../../../interfaces/SgSstInterface";
 import type { Usuario } from "../../../interfaces/UserInterfaces";
 import type { Rol } from "../../../interfaces/RolesInterfaces";
 import type { Client } from "../../../interfaces/ClientInterfaces";
@@ -15,6 +19,7 @@ import styles from "../../../styles/components/sg-sst/forms/AtsForm.module.css";
 import { useAuth } from "../../../hooks/useAuth";
 import { rolesApi } from "../../../api/roles";
 import { getMyAssignedOrdersRequest } from "../../../api/orders";
+import { useModal } from "../../../context/ModalContext";
 
 interface AtsFormProps {
   onSubmit: (data: AtsFormData) => void;
@@ -29,6 +34,7 @@ export default function AtsForm({
   userId,
   createdBy,
 }: AtsFormProps) {
+  const { showModal } = useModal();
   const { user } = useAuth();
 
   const isTechnician =
@@ -39,9 +45,7 @@ export default function AtsForm({
     new Date().toISOString().split("T")[0],
   );
 
-  const [formData, setFormData] = useState<
-    Omit<AtsFormData, "date" | "signatureData" | "signerType" | "userName">
-  >({
+  const [formData, setFormData] = useState<Omit<AtsFormData, "date">>({
     workerName: "",
     position: "",
     area: "",
@@ -66,6 +70,11 @@ export default function AtsForm({
   const [signatureData, setSignatureData] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+  // Estados para OTP y flujo de dos pasos
+  const [createdFormId, setCreatedFormId] = useState<number | null>(null);
+  const [otpCode, setOtpCode] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<Rol[]>([]);
@@ -259,7 +268,11 @@ export default function AtsForm({
       setRoles(rolesData);
     } catch (error) {
       console.error("Error cargando datos:", error);
-      alert("Error al cargar la lista de usuarios y roles");
+      showModal({
+        type: "error",
+        title: "Error",
+        message: "Error al cargar la lista de usuarios y roles",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -465,10 +478,7 @@ export default function AtsForm({
   };
 
   const handleInputChange = (
-    field: keyof Omit<
-      AtsFormData,
-      "date" | "signatureData" | "signerType" | "userName"
-    >,
+    field: keyof Omit<AtsFormData, "date">,
     value: string,
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -489,80 +499,150 @@ export default function AtsForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedOrder) {
-      alert("Debe seleccionar una orden de trabajo.");
+    // ----------------------------------------------------
+    // PASO 1: Crear Formulario y Solicitar OTP
+    // ----------------------------------------------------
+    if (!createdFormId) {
+      if (!selectedOrder) {
+        showModal({
+          type: "warning",
+          title: "Campo requerido",
+          message: "Debe seleccionar una orden de trabajo.",
+        });
+        return;
+      }
+
+      if (!isFormValid) {
+        const errors = getValidationErrors();
+        showModal({
+          type: "warning",
+          title: "Formulario incompleto",
+          message: (
+            <>
+              <p>Por favor complete los siguientes campos antes de enviar:</p>
+              <ul style={{ marginTop: "8px", paddingLeft: "20px" }}>
+                {errors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </>
+          ),
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      try {
+        const dateValue = dateString || new Date().toISOString().split("T")[0];
+
+        const clientEmpresa = selectedOrder.cliente_empresa;
+        const clientPersona = selectedOrder.cliente;
+
+        const clientId = clientEmpresa?.id_cliente;
+        const clientName =
+          clientEmpresa?.nombre ||
+          (clientPersona
+            ? `${clientPersona.nombre} ${clientPersona.apellido ?? ""}`.trim()
+            : "N/D");
+        const clientNit = clientEmpresa?.nit;
+
+        // Armamos datos para crear (SIN firma)
+        const atsData: AtsFormData = {
+          workerName: formData.workerName,
+          workerIdentification: userIdentification,
+          position: formData.position,
+          clientId,
+          clientName,
+          clientNit,
+          area: formData.area,
+          subArea: formData.subArea,
+          workToPerform: formData.workToPerform,
+          location: formData.location,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          date: dateValue,
+          observations: formData.observations,
+          selectedRisks: formData.selectedRisks || {},
+          requiredPpe: formData.requiredPpe || {},
+          userId: formData.userId,
+          createdBy: formData.createdBy,
+          workOrderId: selectedOrder.orden_id,
+        };
+
+        // 1. Crear ATS en estado DRAFT
+        const resp = await sgSstService.createAts(atsData as any);
+        const newFormId = resp?.data?.form?.id;
+
+        if (!newFormId) {
+          throw new Error("No se pudo obtener el ID del formulario ATS creado");
+        }
+
+        // 2. Solicitar OTP
+        await sgSstService.requestSignOtp(newFormId, "TECHNICIAN");
+
+        setCreatedFormId(newFormId);
+        setSuccessMessage(
+          "ATS guardado correctamente. Se ha enviado un código OTP a tu correo.",
+        );
+        showModal({
+          type: "success",
+          title: "ATS Guardado",
+          message:
+            "Revisa tu correo, ingresa el código OTP y haz clic en Firmar.",
+        });
+      } catch (error: any) {
+        console.error("❌ ERROR en el proceso:", error);
+        showModal({
+          type: "error",
+          title: "Error",
+          message: error.response?.data?.message || "Error al crear el ATS",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
-    if (!isFormValid) {
-      const errors = getValidationErrors();
-      alert(
-        `Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join(
-          "\n• ",
-        )}`,
-      );
+    // ----------------------------------------------------
+    // PASO 2: Firmar con OTP
+    // ----------------------------------------------------
+    if (!otpCode.trim()) {
+      showModal({
+        type: "warning",
+        title: "Código Requerido",
+        message: "Por favor ingresa el código OTP enviado a tu correo.",
+      });
       return;
     }
 
     setIsSubmitting(true);
-
     try {
-      const dateValue = dateString || new Date().toISOString().split("T")[0];
-
-      const clientEmpresa = selectedOrder.cliente_empresa;
-      const clientPersona = selectedOrder.cliente;
-
-      const clientId = clientEmpresa?.id_cliente;
-      const clientName =
-        clientEmpresa?.nombre ||
-        (clientPersona
-          ? `${clientPersona.nombre} ${clientPersona.apellido ?? ""}`.trim()
-          : "N/D");
-      const clientNit = clientEmpresa?.nit;
-
-      const atsData: AtsFormData = {
-        workerName: formData.workerName,
-        workerIdentification: userIdentification,
-        position: formData.position,
-        clientId,
-        clientName,
-        clientNit,
-        area: formData.area,
-        subArea: formData.subArea,
-        workToPerform: formData.workToPerform,
-        location: formData.location,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        date: dateValue,
-        observations: formData.observations,
-        selectedRisks: formData.selectedRisks || {},
-        requiredPpe: formData.requiredPpe || {},
-        userId: formData.userId,
-        createdBy: formData.createdBy,
-        workOrderId: selectedOrder.orden_id,
-        signatureData,
+      const signPayload: SignFormData = {
+        signerType: "TECHNICIAN",
+        signatureData, // Enviamos firma ahora
+        otpCode: otpCode.trim(),
       };
 
-      await sgSstService.createAts(atsData as any);
+      await sgSstService.signForm(createdFormId, signPayload);
+
+      showModal({
+        type: "success",
+        title: "¡Firmado!",
+        message: "ATS firmado exitosamente con OTP.",
+      });
 
       if (onSubmit) {
-        onSubmit(atsData);
+        onSubmit(formData as any);
       }
-
-      alert("ATS creado y firmado exitosamente");
       onCancel();
     } catch (error: any) {
-      console.error("❌ ERROR en el proceso:", error);
-      console.error("❌ RESPONSE DATA:", error.response?.data);
-
-      if (error.response?.data?.message) {
-        const errorMessages = Array.isArray(error.response.data.message)
-          ? error.response.data.message.join(", ")
-          : error.response.data.message;
-        alert(`Error: ${errorMessages}`);
-      } else {
-        alert("Error al crear el ATS");
-      }
+      console.error("Error firmando ATS:", error);
+      showModal({
+        type: "error",
+        title: "Error al firmar",
+        message: error.response?.data?.message || error.message,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -626,6 +706,8 @@ export default function AtsForm({
     return "N/D";
   };
 
+  const isOtpStep = createdFormId !== null;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -639,11 +721,25 @@ export default function AtsForm({
             isFormValid ? styles.valid : styles.invalid
           }`}
         >
-          {isFormValid ? "✓ Formulario completo" : "✗ Formulario incompleto"}
+          {isOtpStep
+            ? "Código OTP pendiente"
+            : isFormValid
+              ? "✓ Formulario completo"
+              : "✗ Formulario incompleto"}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
+        {successMessage && (
+          <div className={styles.successMessage}>
+            <div className={styles.successIcon}>✅</div>
+            <div className={styles.successText}>
+              <strong>¡Paso 1 completado!</strong>
+              <p>{successMessage}</p>
+            </div>
+          </div>
+        )}
+
         {/* SECCIÓN 1: INFORMACIÓN DEL TRABAJADOR */}
         <div
           className={`${styles.section} ${
@@ -777,7 +873,6 @@ export default function AtsForm({
           </div>
 
           <div className={styles.formGrid}>
-            {/* Selección de Orden */}
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Orden de trabajo *
@@ -804,9 +899,7 @@ export default function AtsForm({
                     const clientName =
                       o.cliente_empresa?.nombre ||
                       (personaClient
-                        ? `${personaClient.nombre} ${
-                            personaClient.apellido ?? ""
-                          }`.trim()
+                        ? `${personaClient.nombre} ${personaClient.apellido ?? ""}`.trim()
                         : "N/D");
 
                     return (
@@ -820,7 +913,6 @@ export default function AtsForm({
               )}
             </div>
 
-            {/* Info de cliente basada en la orden seleccionada */}
             <div className={styles.formGroup}>
               <label className={styles.label}>Cliente seleccionado</label>
               {selectedClient ? (
@@ -865,7 +957,6 @@ export default function AtsForm({
               )}
             </div>
 
-            {/* Área / Sub-área */}
             <div className={styles.formGroup}>
               <label className={styles.label}>
                 Área{" "}
@@ -1033,7 +1124,7 @@ export default function AtsForm({
           </div>
         </div>
 
-        {/* SECCIÓN 4: IDENTIFICACIÓN DE RIESGOS */}
+        {/* SECCIÓN 4: RIESGOS */}
         <div
           className={`${styles.section} ${
             !getSectionStatus(4) ? styles.sectionIncomplete : ""
@@ -1083,7 +1174,7 @@ export default function AtsForm({
           </div>
         </div>
 
-        {/* SECCIÓN 5: EPP Y HERRAMIENTAS REQUERIDAS */}
+        {/* SECCIÓN 5: EPP */}
         <div
           className={`${styles.section} ${
             !getSectionStatus(5) ? styles.sectionIncomplete : ""
@@ -1121,36 +1212,6 @@ export default function AtsForm({
               ))}
             </div>
           </div>
-
-          {/* <div className={styles.subsection}>
-            <h3 className={styles.subsectionTitle}>Herramientas</h3>
-            
-          </div> */}
-
-          {/* <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Otras herramientas o equipos (opcional)
-            </label>
-            <input
-              type="text"
-              className={styles.input}
-              placeholder="Escriba herramientas adicionales separadas por coma"
-              onChange={(e) => {
-                const tools = e.target.value
-                  .split(",")
-                  .map((t) => t.trim())
-                  .filter((t) => t);
-                const newTools = tools.reduce(
-                  (acc, tool) => ({ ...acc, [tool]: true }),
-                  {},
-                );
-                setFormData((prev) => ({
-                  ...prev,
-                  requiredPpe: { ...prev.requiredPpe, ...newTools },
-                }));
-              }}
-            />
-          </div> */}
         </div>
 
         {/* SECCIÓN 6: OBSERVACIONES */}
@@ -1166,7 +1227,7 @@ export default function AtsForm({
             value={formData.observations}
             onChange={(e) => handleInputChange("observations", e.target.value)}
             rows={4}
-            placeholder="Observaciones adicionales sobre el trabajo, condiciones especiales, recomendaciones, etc..."
+            placeholder="Observaciones adicionales sobre el trabajo..."
           />
         </div>
 
@@ -1205,9 +1266,37 @@ export default function AtsForm({
               />
             </div>
           )}
+
+          {/* INPUT PARA OTP */}
+          {isOtpStep && (
+            <div className={styles.otpSection}>
+              <label className={styles.label}>
+                Código OTP enviado a tu correo *
+              </label>
+              <input
+                type="text"
+                className={styles.input}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                maxLength={6}
+                placeholder="Ingresa los 6 dígitos"
+                style={{
+                  fontSize: "1.5rem",
+                  letterSpacing: "0.25rem",
+                  textAlign: "center",
+                  maxWidth: "250px",
+                  margin: "0 auto",
+                  display: "block",
+                }}
+              />
+              <p className={styles.otpHelpText} style={{ marginTop: "10px" }}>
+                Revisa tu bandeja de entrada.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* SECCIÓN 8: TÉRMINOS Y CONDICIONES */}
+        {/* SECCIÓN 8: TÉRMINOS */}
         <div
           className={`${styles.section} ${
             !getSectionStatus(7) ? styles.sectionIncomplete : ""
@@ -1263,25 +1352,29 @@ export default function AtsForm({
           <button
             type="submit"
             className={`${styles.submitButton} ${
-              !isFormValid ? styles.submitButtonDisabled : ""
+              !isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
             }`}
-            disabled={isSubmitting || !isFormValid}
+            disabled={
+              isSubmitting ||
+              (!isFormValid && !isOtpStep) ||
+              (isOtpStep && !otpCode.trim()) ||
+              (!!successMessage && !isOtpStep)
+            }
           >
             {isSubmitting
-              ? "Guardando..."
-              : isFormValid
-                ? "✅ Guardar ATS"
-                : "Completar formulario primero"}
+              ? "Procesando..."
+              : isOtpStep
+                ? "Firmar con OTP"
+                : "✅ Guardar y solicitar OTP"}
           </button>
         </div>
 
-        {/* Mensaje de validación */}
-        {!isFormValid && (
+        {!isFormValid && !isOtpStep && (
           <div className={styles.validationMessage}>
             <strong>⚠️ Complete los siguientes campos:</strong>
             <ul>
               {getValidationErrors().map((error, index) => (
-                <li key={index}> {error}</li>
+                <li key={index}>• {error}</li>
               ))}
             </ul>
           </div>

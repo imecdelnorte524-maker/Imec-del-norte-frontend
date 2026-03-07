@@ -604,6 +604,67 @@
   display: block;
 }
 
+/* =============================================
+   OTP SECTION (PREOP THEME)
+   ============================================= */
+.otpSection {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: #eef2ff; /* Very light blue/purple */
+  border: 2px dashed #4a6fa5;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.otpSection .label {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.otpSection input {
+  font-size: 1.75rem;
+  letter-spacing: 0.5rem;
+  text-align: center;
+  max-width: 240px;
+  padding: 0.75rem;
+  border: 2px solid #a5b4fc;
+  border-radius: 0.75rem;
+  background: white;
+  font-weight: 700;
+  color: #4a6fa5;
+  transition: all 0.2s ease;
+}
+
+.otpSection input:focus {
+  border-color: #4a6fa5;
+  box-shadow: 0 0 0 6px rgba(74, 111, 165, 0.15);
+  outline: none;
+  transform: scale(1.02);
+}
+
+.otpSection input::placeholder {
+  font-size: 1rem;
+  letter-spacing: normal;
+  opacity: 0.6;
+}
+
 /* TERMS */
 .termsBox {
   background: #f8f9fa;
@@ -833,126 +894,6 @@
   background: #f8f9fa;
   border-radius: 8px;
   line-height: 1.5;
-}
-
-/* RESPONSIVE ADJUSTMENTS */
-@media (max-width: 1024px) {
-  .container {
-    padding: 15px;
-  }
-
-  .section {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 768px) {
-  .container {
-    padding: 12px;
-  }
-
-  .header {
-    gap: 15px;
-  }
-
-  .formGrid {
-    gap: 20px;
-  }
-
-  .section {
-    padding: 18px;
-  }
-
-  .checklist {
-    gap: 15px;
-  }
-
-  .checkItem {
-    padding: 16px;
-  }
-}
-
-@media (max-width: 576px) {
-  .container {
-    padding: 10px;
-  }
-
-  .section {
-    padding: 15px;
-  }
-
-  .sectionHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .clientDetail {
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .detailLabel {
-    min-width: auto;
-  }
-
-  .equipmentHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .statusBadge {
-    align-self: flex-start;
-  }
-}
-
-@media (max-width: 360px) {
-  .container {
-    padding: 8px;
-  }
-
-  .section {
-    padding: 12px;
-  }
-
-  .valueOption {
-    padding: 6px 10px;
-  }
-
-  .formActions {
-    gap: 10px;
-  }
-
-  .cancelButton,
-  .submitButton {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
-}
-
-/* PRINT STYLES */
-@media print {
-  .backButton,
-  .formActions,
-  .refreshButton {
-    display: none;
-  }
-
-  .container {
-    padding: 0;
-    max-width: 100%;
-  }
-
-  .section {
-    box-shadow: none;
-    border: 1px solid #ddd;
-    page-break-inside: avoid;
-  }
-
-  .equipmentCard {
-    break-inside: avoid;
-  }
 }
 
 /* UTILITY CLASSES */

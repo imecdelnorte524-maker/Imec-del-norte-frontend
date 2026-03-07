@@ -35,20 +35,6 @@ export default function Users() {
     return usuario.role.nombreRol || usuario.role.nombreRol || "Sin nombre";
   };
 
-  // Función segura para obtener la clase CSS del rol
-  const getSafeRoleClass = (usuario: Usuario): string => {
-    const roleName = getSafeRoleName(usuario).toLowerCase();
-    // Validar que la clase CSS exista
-    const validRoles = [
-      "admin",
-      "técnico",
-      "cliente",
-      "secretaria",
-      "supervisor",
-    ];
-    return validRoles.includes(roleName) ? roleName : "default";
-  };
-
   // Filtrar usuarios según estado y búsqueda (con manejo seguro)
   const usuariosFiltrados = usuarios.filter((usuario) => {
     const coincideEstado =
@@ -211,7 +197,6 @@ export default function Users() {
                   <tbody>
                     {currentUsers.map((usuario) => {
                       const roleName = getSafeRoleName(usuario);
-                      const roleClass = getSafeRoleClass(usuario);
 
                       return (
                         <tr key={usuario.usuarioId}>
@@ -236,7 +221,7 @@ export default function Users() {
                           </td>
                           <td>
                             <span
-                              className={`${styles.role} ${styles[roleClass]}`}
+                              className={`${styles.role} ${styles.colorRol}`}
                               data-fullrole={roleName}
                               title={roleName}
                             >
@@ -291,7 +276,6 @@ export default function Users() {
             <div className={styles.mobileView}>
               {currentUsers.map((usuario) => {
                 const roleName = getSafeRoleName(usuario);
-                const roleClass = getSafeRoleClass(usuario);
 
                 return (
                   <div key={usuario.usuarioId} className={styles.mobileCard}>
@@ -363,7 +347,7 @@ export default function Users() {
                         <div className={styles.detailRow}>
                           <span className={styles.detailLabel}>Rol:</span>
                           <span
-                            className={`${styles.role} ${styles[roleClass]}`}
+                            className={`${styles.role} ${styles.colorRol}`}
                             data-fullrole={roleName}
                             tabIndex={0}
                           >

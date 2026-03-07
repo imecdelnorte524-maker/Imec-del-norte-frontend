@@ -1,13 +1,13 @@
-/* src/styles/components/sg-sst/FormListPage.module.css */
+/* src/styles/components/sg-sst/forms/FormsList.module.css */
 
 .container {
   width: 100%;
 }
 
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
 }
 
 .formItem {
@@ -19,16 +19,20 @@
   transition: all 0.2s;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .formItem:hover {
   border-color: #3b82f6;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .formItem::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -72,7 +76,7 @@
   padding: 0.25rem 0.75rem;
   border-radius: 1rem;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -80,12 +84,16 @@
 
 .formContent {
   margin-bottom: 1rem;
+  flex-grow: 1;
 }
 
 .tool {
   color: #6b7280;
   margin-bottom: 0.75rem;
   font-size: 0.875rem;
+  background: #f3f4f6;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
 }
 
 .formMeta {
@@ -127,21 +135,118 @@
   font-size: 1.125rem;
   opacity: 0.7;
   transition: opacity 0.2s;
+  background: #f0fdf4;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid #bbf7d0;
 }
 
 .signatureIndicator:hover {
   opacity: 1;
+  transform: scale(1.1);
+}
+
+/* ACTIONS */
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.iconButton {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+  color: #2563eb;
+}
+
+.iconButton:hover:not(:disabled) {
+  background-color: #2563eb;
+  color: white;
+  border-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
+.iconButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .viewButton {
   color: #3b82f6;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.875rem;
   transition: color 0.2s;
+  background: #f8fafc;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
 }
 
-.formItem:hover .viewButton {
+.viewButton:hover {
   color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.signButton {
+  background: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.signButton:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* Acceso Info */
+.accessInfo {
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.accessBadgeFull {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #bfdbfe;
+}
+
+.accessBadgeOwn {
+  background: #f0fdf4;
+  color: #166534;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #bbf7d0;
 }
 
 /* Estados de carga y vacío */
@@ -149,6 +254,9 @@
   text-align: center;
   padding: 3rem;
   color: #6b7280;
+  background: white;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
 }
 
 .spinner {
@@ -159,17 +267,35 @@
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
+  display: inline-block;
+}
+
+.miniSpinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #93c5fd;
+  border-top: 2px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .emptyState {
   text-align: center;
   padding: 3rem 2rem;
   color: #6b7280;
+  background: white;
+  border-radius: 1rem;
+  border: 1px dashed #d1d5db;
 }
 
 .emptyIcon {
@@ -194,67 +320,28 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .list {
+    grid-template-columns: 1fr;
+  }
+
   .formItem {
     padding: 1rem;
   }
-  
+
   .formHeader {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .formMeta {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .formFooter {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
     gap: 1rem;
   }
-}
-
-.signButton {
-  background: #10b981;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.viewButton {
-  color: #3b82f6;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.accessInfo {
-  margin-bottom: 16px;
-}
-
-.accessBadgeFull {
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.accessBadgeOwn {
-  background: #f0fdf4;
-  color: #166534;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }

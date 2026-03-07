@@ -140,6 +140,7 @@ export default function EquipmentDetailPage() {
 
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
+  const isClient = roleName === "Cliente";
 
   // Manejador para descargar PDF del historial
   const handleDownloadHistoryPdf = async () => {
@@ -233,15 +234,9 @@ export default function EquipmentDetailPage() {
         equipment.category,
       );
 
-      // Filtrar órdenes que no están ya asociadas
-      const currentOrderIds = workOrders.map((order) => order.workOrderId);
-      const filtered = orders.filter(
-        (order) => !currentOrderIds.includes(order.orden_id),
-      );
-
-      setAvailableOrders(filtered);
+      setAvailableOrders(orders);
     } catch (error) {
-      console.error("Error cargando órdenes disponibles:", error);
+      console.error("❌ Error cargando órdenes disponibles:", error);
       setOrdersError("Error cargando órdenes disponibles");
     } finally {
       setLoadingAvailableOrders(false);
@@ -285,13 +280,6 @@ export default function EquipmentDetailPage() {
       loadWorkOrders();
     }
   }, [equipment]);
-
-  // Cargar órdenes disponibles cuando se abre el modal
-  useEffect(() => {
-    if (showOrderModal && equipment) {
-      loadAvailableOrders();
-    }
-  }, [showOrderModal, equipment]);
 
   // Handlers de formulario básicos
   const handleEditChange = (
@@ -641,13 +629,15 @@ export default function EquipmentDetailPage() {
                 Historial
               </button>
 
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={() => setShowAddPhotoModal(true)}
-              >
-                + Agregar imagen
-              </button>
+              {!isClient && (
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={() => setShowAddPhotoModal(true)}
+                >
+                  + Agregar imagen
+                </button>
+              )}
 
               {canEdit && (
                 <button
@@ -727,7 +717,6 @@ export default function EquipmentDetailPage() {
             {!editing && (
               <div className={styles.section}>
                 <h3>Órdenes de Servicio Asociadas</h3>
-
                 {loadingWorkOrders ? (
                   <p className={styles.loading}>Cargando órdenes...</p>
                 ) : workOrders.length > 0 ? (
@@ -780,10 +769,20 @@ export default function EquipmentDetailPage() {
                     No hay órdenes asociadas a este equipo.
                   </p>
                 )}
-
                 {canEdit && (
                   <button
-                    onClick={() => setShowOrderModal(true)}
+                    onClick={async () => {
+                      setLoadingAvailableOrders(true);
+
+                      try {
+                        await loadAvailableOrders();
+                        setShowOrderModal(true);
+                      } catch (error) {
+                        console.error("Error cargando órdenes:", error);
+                      } finally {
+                        setLoadingAvailableOrders(false);
+                      }
+                    }}
                     className={styles.associateOrderButton}
                   >
                     + Asociar Nueva Orden
@@ -833,7 +832,7 @@ export default function EquipmentDetailPage() {
         )}
       </div>
 
-      {/* Botón flotante solo para documentos PDF (ELIMINADO EL BOTÓN DE HISTORIAL) */}
+      {/* Botón flotante solo para documentos PDF */}
       {equipment && !loading && (
         <>
           <button

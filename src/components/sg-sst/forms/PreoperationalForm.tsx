@@ -1,8 +1,10 @@
+// src/components/sg-sst/PreoperationalForm.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
   PreoperationalFormData,
   CheckValue,
+  SignFormData,
 } from "../../../interfaces/SgSstInterface";
 import type { Order } from "../../../interfaces/OrderInterfaces";
 import type { Client } from "../../../interfaces/ClientInterfaces";
@@ -19,6 +21,7 @@ import {
   ToolType,
   ToolStatus,
 } from "../../../interfaces/ToolsInterfaces";
+import { useModal } from "../../../context/ModalContext";
 
 interface OrderWithTools extends Omit<Order, "toolDetails"> {
   toolDetails?: OrderToolDetail[];
@@ -47,6 +50,7 @@ export default function PreoperationalForm({
   createdBy,
   userName,
 }: PreoperationalFormProps) {
+  const { showModal } = useModal();
   const navigate = useNavigate();
 
   const [allTools, setAllTools] = useState<ToolWithDetail[]>([]);
@@ -61,7 +65,6 @@ export default function PreoperationalForm({
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  // Órdenes del técnico
   const [orders, setOrders] = useState<OrderWithTools[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
@@ -70,7 +73,6 @@ export default function PreoperationalForm({
   );
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  // Hook de checklist
   const {
     checklistItems,
     initializeChecklist,
@@ -83,9 +85,14 @@ export default function PreoperationalForm({
     checklistError,
   } = useChecklistForm();
 
-  const [formData, setFormData] = useState<
-    Omit<PreoperationalFormData, "signatureData" | "signerType" | "userName">
-  >({
+  // 🔹 Datos internos del formulario (incluye toolName para UI)
+  const [formData, setFormData] = useState<{
+    toolName?: string;
+    checks: { parameter: string; value?: CheckValue; observations?: string }[];
+    userId: number;
+    createdBy: number;
+    workOrderId: number;
+  }>({
     toolName: "",
     checks: [],
     userId,
@@ -93,13 +100,17 @@ export default function PreoperationalForm({
     workOrderId: 0,
   });
 
+  // 🔹 Estado para OTP
+  const [createdFormId, setCreatedFormId] = useState<number | null>(null);
+  const [otpCode, setOtpCode] = useState<string>("");
+
   const redirectToReportsList = () => {
     setTimeout(() => {
       navigate("/sg-sst");
     }, 2000);
   };
 
-  // Validación global del formulario
+  // Validación global (NO incluye OTP, OTP se valida aparte)
   const isFormValid = useMemo(() => {
     const hasSelectedOrder = !!selectedOrder;
     const hasSelectedTool = !!selectedTool;
@@ -133,12 +144,10 @@ export default function PreoperationalForm({
       errors.push("Checklist preoperacional");
     } else {
       const validation = validateCurrentChecklist();
-      if (!validation.isValid) {
-        if (validation.missingRequired.length > 0) {
-          errors.push(
-            `Complete los parámetros requeridos (${validation.missingRequired.length} pendientes)`,
-          );
-        }
+      if (!validation.isValid && validation.missingRequired.length > 0) {
+        errors.push(
+          `Complete los parámetros requeridos (${validation.missingRequired.length} pendientes)`,
+        );
       }
     }
 
@@ -165,7 +174,6 @@ export default function PreoperationalForm({
     }
   };
 
-  // Cargar herramientas y órdenes al montar
   useEffect(() => {
     loadAllTools();
     loadOrders();
@@ -182,6 +190,11 @@ export default function PreoperationalForm({
       console.error("Error cargando herramientas:", error);
       setError(error.message || "Error al cargar la lista de herramientas");
       playErrorSound();
+      showModal({
+        type: "error",
+        title: "Error",
+        message: error.message || "Error al cargar la lista de herramientas",
+      });
       setAllTools([]);
     } finally {
       setLoadingTools(false);
@@ -205,7 +218,6 @@ export default function PreoperationalForm({
     }
   };
 
-  // Helper: crear herramienta sintética a partir de un detalle de orden
   const createSyntheticToolFromDetail = (
     toolDetail: OrderToolDetail,
     index: number,
@@ -237,7 +249,6 @@ export default function PreoperationalForm({
     };
   };
 
-  // Convierte OrderToolDetail en herramientas sintéticas
   const convertToolDetailsToTools = (
     toolDetails: OrderToolDetail[],
   ): ToolWithDetail[] => {
@@ -246,7 +257,6 @@ export default function PreoperationalForm({
     );
   };
 
-  // Encuentra herramientas del inventario que coinciden con las de la orden
   const findMatchingInventoryTools = (
     toolDetails: OrderToolDetail[],
   ): ToolWithDetail[] => {
@@ -292,11 +302,9 @@ export default function PreoperationalForm({
       workOrderId: order ? order.orden_id : 0,
     }));
 
-    // Reset herramienta seleccionada cuando cambia la orden
     setSelectedTool(null);
     setToolsForSelectedOrder([]);
 
-    // Obtener herramientas específicas para esta orden desde toolDetails
     if (order && order.toolDetails && order.toolDetails.length > 0) {
       try {
         setLoadingTools(true);
@@ -375,57 +383,130 @@ export default function PreoperationalForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isFormValid) {
-      const errors = getValidationErrors();
-      alert(
-        `Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join(
-          "\n• ",
-        )}`,
-      );
+    // Paso 1: Crear Formulario y Solicitar OTP
+    if (!createdFormId) {
+      if (!isFormValid) {
+        const errors = getValidationErrors();
+        showModal({
+          type: "warning",
+          title: "Formulario incompleto",
+          message: (
+            <>
+              <p>Por favor complete los siguientes campos antes de enviar:</p>
+              <ul style={{ marginTop: "8px", paddingLeft: "20px" }}>
+                {errors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </>
+          ),
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+      setError("");
+      setSuccessMessage("");
+
+      try {
+        const submitDto = {
+          equipmentTool: formData.toolName || undefined,
+          checks: formData.checks.map((c) => ({
+            parameter: c.parameter,
+            value: c.value,
+            observations: c.observations,
+          })),
+          userId: formData.userId,
+          createdBy: formData.createdBy,
+          workOrderId: formData.workOrderId,
+        };
+
+        // 1) Crear formulario preoperacional
+        const resp = await sgSstService.createPreoperational(submitDto as any);
+        const newFormId = resp?.data?.form?.id;
+
+        if (!newFormId) {
+          throw new Error(
+            "No se pudo obtener el ID del formulario preoperacional creado",
+          );
+        }
+
+        // 2) Solicitar OTP
+        await sgSstService.requestSignOtp(newFormId, "TECHNICIAN");
+
+        setCreatedFormId(newFormId);
+        setSuccessMessage(
+          "Checklist guardado. Se envió un código OTP a tu correo para firmar el formulario.",
+        );
+        showModal({
+          type: "success",
+          title: "Guardado",
+          message:
+            "Revisa tu correo, ingresa el código OTP y haz clic en Firmar.",
+        });
+      } catch (error: any) {
+        console.error("Error creando checklist preoperacional:", error);
+        const errorMessage = error.response?.data?.message || error.message;
+        setError(`Error al guardar el checklist: ${errorMessage}`);
+        playErrorSound();
+        showModal({
+          type: "error",
+          title: "Error al guardar",
+          message: errorMessage,
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // Paso 2: Firmar con OTP
+    if (!otpCode.trim()) {
+      showModal({
+        type: "warning",
+        title: "Código Requerido",
+        message: "Por favor ingresa el código OTP enviado a tu correo.",
+      });
       return;
     }
 
     setIsSubmitting(true);
-    setError("");
-    setSuccessMessage("");
-
     try {
-      const submitDto = {
-        equipmentTool: formData.toolName || undefined,
-        checks: formData.checks.map((c) => ({
-          parameter: c.parameter,
-          value: c.value,
-          observations: c.observations,
-        })),
+      const signPayload: SignFormData = {
+        signerType: "TECHNICIAN",
+        signatureData,
+        otpCode: otpCode.trim(),
+      };
+
+      await sgSstService.signForm(createdFormId, signPayload);
+
+      showModal({
+        type: "success",
+        title: "¡Éxito!",
+        message: "¡Checklist preoperacional firmado exitosamente con OTP!",
+      });
+
+      const callbackData: PreoperationalFormData = {
+        equipmentTool: formData.toolName,
+        checks: formData.checks,
         userId: formData.userId,
         createdBy: formData.createdBy,
         workOrderId: formData.workOrderId,
-        signatureData,
-        signerType: "TECHNICIAN" as const,
-        userName,
-      };
-
-      await sgSstService.createPreoperationalWithSignature(submitDto as any);
-
-      setSuccessMessage(
-        "¡Checklist preoperacional guardado exitosamente! Redirigiendo al listado de reportes...",
-      );
-
-      const callbackData: PreoperationalFormData = {
-        ...formData,
-        signatureData,
-        signerType: "TECHNICIAN",
-        userName,
       };
 
       await onSubmit(callbackData);
 
       redirectToReportsList();
     } catch (error: any) {
-      console.error("Error enviando Checklist Preoperacional:", error);
+      console.error("Error firmando Checklist Preoperacional:", error);
       const errorMessage = error.response?.data?.message || error.message;
-      setError(`Error al guardar el checklist: ${errorMessage}`);
+      setError(`Error al firmar el checklist: ${errorMessage}`);
       playErrorSound();
+      showModal({
+        type: "error",
+        title: "Error al firmar",
+        message: errorMessage,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -498,6 +579,8 @@ export default function PreoperationalForm({
     }
   };
 
+  const isOtpStep = createdFormId !== null;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -511,7 +594,11 @@ export default function PreoperationalForm({
             isFormValid ? styles.valid : styles.invalid
           }`}
         >
-          {isFormValid ? "✓ Formulario completo" : "✗ Formulario incompleto"}
+          {isOtpStep
+            ? "Código OTP pendiente de ingreso"
+            : isFormValid
+              ? "✓ Formulario completo"
+              : "✗ Formulario incompleto"}
         </div>
       </div>
 
@@ -520,7 +607,7 @@ export default function PreoperationalForm({
           <div className={styles.successMessage}>
             <div className={styles.successIcon}>✓</div>
             <div className={styles.successText}>
-              <strong>¡Éxito!</strong>
+              <strong>¡Paso 1 completado!</strong>
               <p>{successMessage}</p>
             </div>
           </div>
@@ -955,6 +1042,36 @@ export default function PreoperationalForm({
                 />
               </div>
             )}
+
+            {isOtpStep && (
+              <div className={styles.otpSection} style={{ marginTop: "20px" }}>
+                <label className={styles.label}>
+                  Código OTP enviado a tu correo *
+                </label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  maxLength={6}
+                  placeholder="Ingresa los 6 dígitos"
+                  style={{
+                    fontSize: "1.5rem",
+                    letterSpacing: "0.25rem",
+                    textAlign: "center",
+                    maxWidth: "250px",
+                    margin: "0 auto",
+                    display: "block",
+                  }}
+                />
+                <p
+                  className={styles.otpHelpText}
+                  style={{ marginTop: "10px", textAlign: "center" }}
+                >
+                  Revisa tu bandeja de entrada.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1032,21 +1149,24 @@ export default function PreoperationalForm({
           <button
             type="submit"
             className={`${styles.submitButton} ${
-              !isFormValid ? styles.submitButtonDisabled : ""
+              !isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
             }`}
-            disabled={isSubmitting || !isFormValid || !!successMessage}
+            disabled={
+              isSubmitting ||
+              (!isFormValid && !isOtpStep) ||
+              (isOtpStep && !otpCode.trim()) ||
+              (!!successMessage && !isOtpStep)
+            }
           >
             {isSubmitting
-              ? "Guardando..."
-              : successMessage
-                ? "✅ Guardado"
-                : isFormValid
-                  ? `✅ Guardar Checklist ${selectedOrder ? `(Orden #${selectedOrder.orden_id})` : ""}`
-                  : "Completar formulario primero"}
+              ? "Procesando..."
+              : isOtpStep
+                ? "Firmar con OTP"
+                : "✅ Guardar y solicitar OTP"}
           </button>
         </div>
 
-        {!isFormValid && !successMessage && (
+        {!isFormValid && !successMessage && !isOtpStep && (
           <div className={styles.validationMessage}>
             <strong>⚠️ Complete los siguientes campos:</strong>
             <ul>

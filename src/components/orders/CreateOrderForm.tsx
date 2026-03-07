@@ -583,7 +583,6 @@ export default function CreateOrderForm({ onSuccess, onCancel }: Props) {
                           {equipment.area?.nombreArea}
                           {equipment.subArea &&
                             ` - ${equipment.subArea.nombreSubArea}`}
-                          {equipment.notes && ` (${equipment.notes})`}
                         </label>
                       </div>
                     ))

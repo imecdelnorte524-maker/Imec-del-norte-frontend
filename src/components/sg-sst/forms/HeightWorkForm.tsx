@@ -1,8 +1,10 @@
 // src/components/sg-sst/HeightWorkForm.tsx
-
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import type { HeightWorkFormData } from "../../../interfaces/SgSstInterface";
+import type {
+  HeightWorkFormData,
+  SignFormData,
+} from "../../../interfaces/SgSstInterface";
 import type { Usuario } from "../../../interfaces/UserInterfaces";
 import type { Rol } from "../../../interfaces/RolesInterfaces";
 import type { Client } from "../../../interfaces/ClientInterfaces";
@@ -14,6 +16,7 @@ import SignaturePad from "../SignaturePad";
 import styles from "../../../styles/components/sg-sst/forms/HeightWorkForm.module.css";
 import { useAuth } from "../../../hooks/useAuth";
 import { rolesApi } from "../../../api/roles";
+import { useModal } from "../../../context/ModalContext";
 
 interface HeightWorkFormProps {
   onSubmit: (data: HeightWorkFormData) => void;
@@ -28,12 +31,11 @@ export default function HeightWorkForm({
   userId,
   createdBy,
 }: HeightWorkFormProps) {
+  const { showModal } = useModal();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [formData, setFormData] = useState<
-    Omit<HeightWorkFormData, "signatureData" | "signerType" | "userName">
-  >({
+  const [formData, setFormData] = useState<HeightWorkFormData>({
     workerName: "",
     identification: "",
     position: "",
@@ -41,12 +43,11 @@ export default function HeightWorkForm({
     location: "",
     estimatedTime: "",
     protectionElements: {},
-
-    // 🔹 Verificaciones de seguridad (las llenará el técnico)
     physicalCondition: false,
     instructionsReceived: false,
     fitForHeightWork: false,
-
+    authorizerName: "",
+    authorizerIdentification: "",
     userId,
     createdBy,
     workOrderId: 0,
@@ -55,6 +56,10 @@ export default function HeightWorkForm({
   const [signatureData, setSignatureData] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+
+  // OTP states
+  const [createdFormId, setCreatedFormId] = useState<number | null>(null);
+  const [otpCode, setOtpCode] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -113,7 +118,11 @@ export default function HeightWorkForm({
       setRoles(rolesData || []);
     } catch (error) {
       console.error("Error cargando usuarios/roles:", error);
-      alert("Error al cargar la lista de usuarios y roles");
+      showModal({
+        type: "error",
+        title: "Error",
+        message: "Error al cargar la lista de usuarios y roles",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +168,6 @@ export default function HeightWorkForm({
       formData.protectionElements || {},
     ).some((value) => value === true);
 
-    // 🔹 Las tres verificaciones deben estar marcadas en true
     const safetyChecksOk =
       formData.physicalCondition &&
       formData.instructionsReceived &&
@@ -198,7 +206,9 @@ export default function HeightWorkForm({
     if (!formData.physicalCondition)
       errors.push("Confirmar condiciones físicas para trabajo en alturas");
     if (!formData.instructionsReceived)
-      errors.push("Confirmar que recibió instrucciones para trabajo en alturas");
+      errors.push(
+        "Confirmar que recibió instrucciones para trabajo en alturas",
+      );
     if (!formData.fitForHeightWork)
       errors.push("Confirmar que está apto para trabajo en alturas");
 
@@ -277,13 +287,7 @@ export default function HeightWorkForm({
     }));
   };
 
-  const handleInputChange = (
-    field: keyof Omit<
-      HeightWorkFormData,
-      "signatureData" | "signerType" | "userName"
-    >,
-    value: any, // 🔹 puede ser string o boolean
-  ) => {
+  const handleInputChange = (field: keyof HeightWorkFormData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -337,67 +341,6 @@ export default function HeightWorkForm({
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isFormValid) {
-      const errors = getValidationErrors();
-      alert(
-        `Por favor complete los siguientes campos antes de enviar:\n\n• ${errors.join(
-          "\n• ",
-        )}`,
-      );
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSuccessMessage("");
-
-    try {
-      const submitData: HeightWorkFormData = {
-        workerName: formData.workerName,
-        identification: formData.identification || "",
-        position: formData.position || "",
-        workDescription: formData.workDescription || "",
-        location: formData.location || "",
-        estimatedTime: formData.estimatedTime || "",
-        protectionElements: formData.protectionElements || {},
-
-        // 🔹 Enviamos las verificaciones al backend
-        physicalCondition: formData.physicalCondition,
-        instructionsReceived: formData.instructionsReceived,
-        fitForHeightWork: formData.fitForHeightWork,
-
-        userId: formData.userId,
-        createdBy: formData.createdBy,
-        workOrderId: formData.workOrderId,
-        signatureData,
-        signerType: "TECHNICIAN" as const,
-        userName: formData.workerName,
-      };
-
-      await sgSstService.createHeightWorkWithSignature(submitData as any);
-
-      setSuccessMessage(
-        "¡Trabajo en Alturas guardado exitosamente! Redirigiendo al listado...",
-      );
-
-      if (onSubmit) {
-        await onSubmit(submitData);
-      }
-
-      redirectToReportsList();
-    } catch (error: any) {
-      console.error("Error enviando Trabajo en Alturas:", error);
-      console.error("Detalles del error:", error.response?.data);
-
-      const errorMessage = error.response?.data?.message || error.message;
-      alert(`Error: ${errorMessage}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const getClientContactDisplay = () => {
     const empresaContact = (selectedClient as any)?.contacto as
       | string
@@ -421,6 +364,136 @@ export default function HeightWorkForm({
     return "N/D";
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // ----------------------------------------------------
+    // PASO 1: Crear Formulario y Solicitar OTP
+    // ----------------------------------------------------
+    if (!createdFormId) {
+      if (!isFormValid) {
+        const errors = getValidationErrors();
+        showModal({
+          type: "warning",
+          title: "Formulario incompleto",
+          message: (
+            <>
+              <p>Por favor complete los siguientes campos antes de enviar:</p>
+              <ul style={{ marginTop: "8px", paddingLeft: "20px" }}>
+                {errors.map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </>
+          ),
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+      setSuccessMessage("");
+
+      try {
+        const submitData: HeightWorkFormData = {
+          workerName: formData.workerName,
+          identification: formData.identification || "",
+          position: formData.position || "",
+          workDescription: formData.workDescription || "",
+          location: formData.location || "",
+          estimatedTime: formData.estimatedTime || "",
+          protectionElements: formData.protectionElements || {},
+          physicalCondition: formData.physicalCondition,
+          instructionsReceived: formData.instructionsReceived,
+          fitForHeightWork: formData.fitForHeightWork,
+          authorizerName: formData.authorizerName || "",
+          authorizerIdentification: formData.authorizerIdentification || "",
+          userId: formData.userId,
+          createdBy: formData.createdBy,
+          workOrderId: formData.workOrderId,
+        };
+
+        // 1. Crear HeightWork sin firma
+        const resp = await sgSstService.createHeightWork(submitData as any);
+        const newFormId = resp?.data?.form?.id;
+
+        if (!newFormId) {
+          throw new Error(
+            "No se pudo obtener el ID del formulario de trabajo en alturas creado",
+          );
+        }
+
+        // 2. Solicitar OTP
+        await sgSstService.requestSignOtp(newFormId, "TECHNICIAN");
+
+        setCreatedFormId(newFormId);
+        setSuccessMessage(
+          "Permiso guardado. Se envió un código OTP a tu correo para firmar.",
+        );
+        showModal({
+          type: "success",
+          title: "Guardado",
+          message:
+            "Se ha enviado un código OTP a tu correo. Ingrésalo para firmar el permiso.",
+        });
+      } catch (error: any) {
+        console.error("Error enviando Trabajo en Alturas:", error);
+        showModal({
+          type: "error",
+          title: "Error",
+          message: error.response?.data?.message || "Error al crear el permiso",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // ----------------------------------------------------
+    // PASO 2: Firmar con OTP
+    // ----------------------------------------------------
+    if (!otpCode.trim()) {
+      showModal({
+        type: "warning",
+        title: "Código Requerido",
+        message: "Por favor ingresa el código OTP enviado a tu correo.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const signPayload: SignFormData = {
+        signerType: "TECHNICIAN",
+        signatureData,
+        otpCode: otpCode.trim(),
+      };
+
+      await sgSstService.signForm(createdFormId, signPayload);
+
+      showModal({
+        type: "success",
+        title: "¡Éxito!",
+        message: "Permiso firmado exitosamente con OTP.",
+      });
+
+      if (onSubmit) {
+        onSubmit(formData);
+      }
+      redirectToReportsList();
+    } catch (error: any) {
+      console.error("Error firmando:", error);
+      showModal({
+        type: "error",
+        title: "Error al firmar",
+        message: error.response?.data?.message || error.message,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isOtpStep = createdFormId !== null;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -434,17 +507,20 @@ export default function HeightWorkForm({
             isFormValid ? styles.valid : styles.invalid
           }`}
         >
-          {isFormValid ? "✓ Formulario completo" : "✗ Formulario incompleto"}
+          {isOtpStep
+            ? "Código OTP pendiente"
+            : isFormValid
+              ? "✓ Formulario completo"
+              : "✗ Formulario incompleto"}
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* Mensaje de éxito */}
         {successMessage && (
           <div className={styles.successMessage}>
             <div className={styles.successIcon}>✅</div>
             <div className={styles.successText}>
-              <strong>¡Éxito!</strong>
+              <strong>¡Paso 1 completado!</strong>
               <p>{successMessage}</p>
             </div>
           </div>
@@ -452,9 +528,7 @@ export default function HeightWorkForm({
 
         {/* SECCIÓN 1: DATOS DEL TRABAJADOR */}
         <div
-          className={`${styles.section} ${
-            !getSectionStatus(1) ? styles.sectionIncomplete : ""
-          }`}
+          className={`${styles.section} ${!getSectionStatus(1) ? styles.sectionIncomplete : ""}`}
         >
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>1. Datos del Trabajador</h2>
@@ -462,21 +536,15 @@ export default function HeightWorkForm({
               <span className={styles.sectionStatus}>✓</span>
             )}
           </div>
-
+          {/* ... Inputs trabajador ... */}
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Nombre Completo *
-                {!formData.workerName?.trim() && (
-                  <span className={styles.requiredIndicator}> (Requerido)</span>
-                )}
-              </label>
+              <label className={styles.label}>Nombre Completo *</label>
+              {/* ... input ... */}
               <div className={styles.autocompleteContainer}>
                 <input
                   type="text"
-                  className={`${styles.input} ${
-                    !formData.workerName?.trim() ? styles.inputError : ""
-                  }`}
+                  className={styles.input}
                   value={formData.workerName}
                   onChange={(e) => handleWorkerNameChange(e.target.value)}
                   onBlur={() =>
@@ -866,6 +934,33 @@ export default function HeightWorkForm({
               />
             </div>
           )}
+
+          {isOtpStep && (
+            <div className={styles.otpSection} style={{ marginTop: "20px" }}>
+              <label className={styles.label}>
+                Código OTP enviado a tu correo *
+              </label>
+              <input
+                type="text"
+                className={styles.input}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value)}
+                maxLength={6}
+                placeholder="Ingresa los 6 dígitos"
+                style={{
+                  fontSize: "1.5rem",
+                  letterSpacing: "0.25rem",
+                  textAlign: "center",
+                  maxWidth: "250px",
+                  margin: "0 auto",
+                  display: "block",
+                }}
+              />
+              <p className={styles.otpHelpText} style={{ marginTop: "10px" }}>
+                Revisa tu bandeja de entrada.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* SECCIÓN 6: TÉRMINOS Y CONDICIONES */}
@@ -927,21 +1022,24 @@ export default function HeightWorkForm({
           <button
             type="submit"
             className={`${styles.submitButton} ${
-              !isFormValid ? styles.submitButtonDisabled : ""
+              !isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
             }`}
-            disabled={isSubmitting || !isFormValid || !!successMessage}
+            disabled={
+              isSubmitting ||
+              (!isFormValid && !isOtpStep) ||
+              (isOtpStep && !otpCode.trim()) ||
+              (!!successMessage && !isOtpStep)
+            }
           >
             {isSubmitting
-              ? "Guardando..."
-              : successMessage
-                ? "✅ Guardado"
-                : isFormValid
-                  ? "✅ Guardar Trabajo en Alturas"
-                  : "Completar formulario primero"}
+              ? "Procesando..."
+              : isOtpStep
+                ? "Firmar con OTP"
+                : "✅ Guardar y solicitar OTP"}
           </button>
         </div>
 
-        {!isFormValid && !successMessage && (
+        {!isFormValid && !isOtpStep && (
           <div className={styles.validationMessage}>
             <strong>⚠️ Complete los siguientes campos:</strong>
             <ul>

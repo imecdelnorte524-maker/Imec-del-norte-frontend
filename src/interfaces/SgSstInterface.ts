@@ -1,4 +1,5 @@
 // src/interfaces/SgSstInterface.ts
+
 export interface SgSstForm {
   id: number;
   formType: FormType;
@@ -23,6 +24,13 @@ export interface SgSstForm {
   rejectedByUserName?: string;
   rejectionReason?: string;
   rejectedAt?: string;
+
+  // Campos para PDF
+  pdfFileName?: string;
+  pdfFilePath?: string;
+  pdfFileSize?: number;
+  pdfHash?: string;
+  pdfGeneratedAt?: string;
 }
 
 export type PreopParamCategory =
@@ -43,7 +51,7 @@ export interface PreopChecklistParameterPayload {
 }
 
 export interface PreopChecklistTemplatePayload {
-  toolType: string; // se normaliza a MAYÚSCULAS en el backend
+  toolType: string;
   toolCategory: string;
   estimatedTime?: number;
   additionalInstructions?: string;
@@ -78,15 +86,8 @@ export interface AtsFormData {
   observations: string;
   selectedRisks: Record<string, string[]>;
   requiredPpe: Record<string, boolean>;
-
   userId: number;
   createdBy: number;
-
-  signatureData?: string;
-  signerType?: SignerType;
-  userName?: string;
-
-  // Orden de trabajo asociada
   workOrderId: number;
 }
 
@@ -126,11 +127,6 @@ export interface HeightWorkFormData {
 
   userId: number;
   createdBy: number;
-
-  signatureData: string;
-  signerType: SignerType;
-  userName: string;
-
   workOrderId: number;
 }
 
@@ -167,16 +163,10 @@ export interface PreoperationalCheck {
 }
 
 export interface PreoperationalFormData {
-  toolName?: string;
+  equipmentTool?: string;
   checks: Omit<PreoperationalCheck, "id" | "formId" | "createdAt">[];
-
   userId: number;
   createdBy: number;
-
-  signatureData: string;
-  signerType: SignerType;
-  userName: string;
-
   workOrderId: number;
 }
 
@@ -195,24 +185,16 @@ export interface Signature {
   userName: string;
   signatureData?: string;
   signedAt: string;
+  ip?: string;
+  userAgent?: string;
+  method?: string;
+  contactSnapshot?: string;
 }
 
 export interface SignFormData {
   signerType: SignerType;
-  userId: number;
-  userName: string;
   signatureData?: string;
-}
-
-// ====== PDFs generados ======
-
-export interface GeneratedPdf {
-  id: number;
-  formId: number;
-  fileName: string;
-  filePath?: string;
-  fileSize: number;
-  generatedAt: string;
+  otpCode: string;
 }
 
 // ====== Respuestas de API ======
@@ -238,7 +220,6 @@ export interface FormDetailResponse {
     heightWork?: HeightWork;
     preoperationalChecks?: PreoperationalCheck[];
     signatures?: Signature[];
-    generatedPdfs?: GeneratedPdf[];
   };
 }
 
