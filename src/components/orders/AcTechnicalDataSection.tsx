@@ -1,118 +1,94 @@
-// src/components/orders/AcTechnicalDataSection.tsx
-import { useState, useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import type {
   AcInspection,
   AssociatedEquipment,
   OrderEstado,
+  AcInspectionPhase,
 } from "../../interfaces/OrderInterfaces";
 import styles from "../../styles/components/orders/AcTechnicalDataSection.module.css";
 import { useAuth } from "../../hooks/useAuth";
+import { useModal } from "../../context/ModalContext";
 
 interface Props {
   acInspections?: AcInspection[];
   equipments: AssociatedEquipment[];
-  onEquipmentChange?: (equipmentId: number | null) => void;
-  onEditEquipmentInspection?: (equipment: AssociatedEquipment) => void;
+  activeEquipmentId: number | null;
+  onEquipmentChange: (equipmentId: number) => void;
+  onEditEquipmentInspection?: (
+    equipment: AssociatedEquipment,
+    phase: AcInspectionPhase,
+  ) => void;
   estadoOrden?: OrderEstado;
 }
 
 export default function AcTechnicalDataSection({
   acInspections,
   equipments,
+  activeEquipmentId,
   onEquipmentChange,
   onEditEquipmentInspection,
   estadoOrden,
 }: Props) {
-  // Si no hay inspecciones, no mostramos la sección
+  const { showModal } = useModal();
+
   if (!acInspections || acInspections.length === 0) return null;
 
-  const hasEquipments = Array.isArray(equipments) && equipments.length > 0;
-  const hasMultipleEquipments = hasEquipments && equipments.length > 1;
+  const hasMultipleEquipments = equipments.length > 1;
 
-  // Equipo inicial:
-  // - Si hay equipos: priorizar uno que tenga inspecciones.
-  // - Si no, usar el equipmentId de la primera inspección.
-  const computeInitialEqId = () => {
-    if (hasEquipments) {
-      const firstWithData = acInspections.find(
-        (insp) =>
-          insp.equipmentId != null &&
-          equipments.some((eq) => eq.equipmentId === insp.equipmentId),
-      );
-      if (firstWithData && firstWithData.equipmentId != null) {
-        return firstWithData.equipmentId;
-      }
-      return equipments[0].equipmentId;
-    }
-    return acInspections[0]?.equipmentId ?? null;
-  };
-
-  const [activeEqId, setActiveEqId] = useState<number | null>(
-    computeInitialEqId,
-  );
-
-  useEffect(() => {
-    setActiveEqId(computeInitialEqId());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipments, acInspections?.length]);
-
-  // Notificar al padre qué equipo está activo
-  useEffect(() => {
-    if (onEquipmentChange) {
-      onEquipmentChange(activeEqId);
-    }
-  }, [activeEqId, onEquipmentChange]);
-
-  const showWithoutFilter = !hasEquipments && activeEqId === null;
-
+  // Filtrar las inspecciones que pertenecen al equipo activo seleccionado en el Tab
   const currentInspections = useMemo(() => {
-    if (!acInspections) return [];
-
-    if (showWithoutFilter) {
-      return acInspections.slice().sort((a, b) => {
-        if (a.phase === b.phase) return 0;
-        return a.phase === "BEFORE" ? -1 : 1;
-      });
-    }
-
-    if (hasEquipments && !hasMultipleEquipments) {
-      return acInspections.slice().sort((a, b) => {
-        if (a.phase === b.phase) return 0;
-        return a.phase === "BEFORE" ? -1 : 1;
-      });
-    }
-
-    if (hasMultipleEquipments && activeEqId != null) {
-      return acInspections
-        .filter((insp) => insp.equipmentId === activeEqId)
-        .sort((a, b) => {
-          if (a.phase === b.phase) return 0;
-          return a.phase === "BEFORE" ? -1 : 1;
-        });
-    }
-
-    return [];
-  }, [
-    acInspections,
-    activeEqId,
-    hasEquipments,
-    hasMultipleEquipments,
-    showWithoutFilter,
-  ]);
-
-  const isEmptyForThisEquipment = currentInspections.length === 0;
+    if (!acInspections || activeEquipmentId == null) return [];
+    return acInspections
+      .filter((insp) => (insp.equipmentId ?? null) === activeEquipmentId)
+      .sort((a) => (a.phase === "BEFORE" ? -1 : 1));
+  }, [acInspections, activeEquipmentId]);
 
   const activeEquipment =
-    hasEquipments && activeEqId != null
-      ? equipments.find((e) => e.equipmentId === activeEqId) || equipments[0]
-      : hasEquipments
-        ? equipments[0]
-        : null;
+    equipments.find((e) => e.equipmentId === activeEquipmentId) ||
+    equipments[0];
 
   const { user } = useAuth();
-  const roleName = user?.role?.nombreRol || "";
-  const isClient = roleName === "Cliente";
-  const isOrderCompleted = estadoOrden !== "Completado";
+  const isClient = (user as any)?.role?.nombreRol === "Cliente";
+  const canEditParams =
+    estadoOrden !== "Completado" && estadoOrden !== "Cancelada";
+
+  const handleEditInspection = (phase: AcInspectionPhase) => {
+    if (!activeEquipment) {
+      showModal({
+        type: "warning",
+        title: "Seleccionar equipo",
+        message:
+          "Por favor, seleccione un equipo para registrar los parámetros.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
+      return;
+    }
+
+    const existingInspection = currentInspections.find(
+      (i) => i.phase === phase,
+    );
+
+    if (existingInspection) {
+      showModal({
+        type: "info",
+        title: "Editar registro",
+        message: `¿Desea editar el registro de ${phase === "BEFORE" ? "ANTES" : "DESPUÉS"}?`,
+        buttons: [
+          {
+            text: "Cancelar",
+            variant: "secondary",
+          },
+          {
+            text: "Editar",
+            variant: "primary",
+            onClick: () => onEditEquipmentInspection?.(activeEquipment, phase),
+          },
+        ],
+      });
+    } else {
+      onEditEquipmentInspection?.(activeEquipment, phase);
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -120,17 +96,17 @@ export default function AcTechnicalDataSection({
         Parámetros Técnicos de Funcionamiento
       </h3>
 
-      {/* TABS O TAG SEGÚN NÚMERO DE EQUIPOS */}
-      {hasEquipments && hasMultipleEquipments && (
+      {/* TABS DE EQUIPOS */}
+      {hasMultipleEquipments && (
         <div className={styles.tabsContainer}>
           {equipments.map((eq) => (
             <button
               key={eq.equipmentId}
               type="button"
               className={`${styles.tabButton} ${
-                activeEqId === eq.equipmentId ? styles.tabActive : ""
+                activeEquipmentId === eq.equipmentId ? styles.tabActive : ""
               }`}
-              onClick={() => setActiveEqId(eq.equipmentId)}
+              onClick={() => onEquipmentChange(eq.equipmentId)}
             >
               {eq.code || `Eq. ${eq.equipmentId}`}
             </button>
@@ -138,36 +114,42 @@ export default function AcTechnicalDataSection({
         </div>
       )}
 
-      {hasEquipments && !hasMultipleEquipments && activeEquipment && (
+      {!hasMultipleEquipments && activeEquipment && (
         <div className={styles.singleEquipmentTag}>
-          Equipo:&nbsp;
-          <strong>
-            {activeEquipment.code || `Eq. ${activeEquipment.equipmentId}`}
-          </strong>
+          Equipo: <strong>{activeEquipment.code}</strong>
         </div>
       )}
 
-      {/* Botón para abrir modal de inspección del equipo activo */}
-      {hasEquipments &&
-        activeEquipment &&
+      {/* BOTONES DE ACCIÓN */}
+      {activeEquipment &&
         onEditEquipmentInspection &&
         !isClient &&
-        isOrderCompleted && (
+        canEditParams && (
           <div className={styles.actionsRow}>
             <button
               type="button"
               className={styles.editInspectionButton}
-              onClick={() => onEditEquipmentInspection(activeEquipment)}
+              onClick={() => handleEditInspection("BEFORE")}
             >
-              Registrar / editar parámetros de este equipo
+              Registrar / editar ANTES
+            </button>
+            <button
+              type="button"
+              className={styles.editInspectionButton}
+              onClick={() => handleEditInspection("AFTER")}
+            >
+              Registrar / editar DESPUÉS
             </button>
           </div>
         )}
 
       <div className={styles.cardsWrapper}>
-        {isEmptyForThisEquipment ? (
+        {currentInspections.length === 0 ? (
           <div className={styles.noDataBox}>
-            <p>No hay registros técnicos para este equipo todavía.</p>
+            <p>
+              No hay registros técnicos para el equipo {activeEquipment?.code}{" "}
+              todavía.
+            </p>
           </div>
         ) : (
           currentInspections.map((insp) => (
@@ -182,11 +164,11 @@ export default function AcTechnicalDataSection({
                     ? "📊 PARÁMETROS ANTES DEL MANTENIMIENTO"
                     : "📊 PARÁMETROS DESPUÉS DEL MANTENIMIENTO"}
                 </span>
-                <small>{new Date(insp.createdAt).toLocaleDateString()}</small>
+                <small>{new Date(insp.createdAt).toLocaleString()}</small>
               </div>
 
               <div className={styles.technicalBody}>
-                {/* Evaporadora */}
+                {/* --- UNIDAD EVAPORADORA --- */}
                 <div className={styles.unitSection}>
                   <h5>🌬️ Unidad Evaporadora</h5>
                   <div className={styles.dataGrid}>
@@ -212,14 +194,14 @@ export default function AcTechnicalDataSection({
                     </div>
                     {insp.evapMicrofarads != null && (
                       <div className={styles.dataItem}>
-                        <span>Microfaradios (capacitor):</span>
+                        <span>Microfaradios:</span>
                         <strong>{insp.evapMicrofarads} µF</strong>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Condensadora */}
+                {/* --- UNIDAD CONDENSADORA --- */}
                 <div className={styles.unitSection}>
                   <h5>❄️ Unidad Condensadora</h5>
                   <div className={styles.dataGrid}>
@@ -253,13 +235,13 @@ export default function AcTechnicalDataSection({
                     </div>
                     {insp.condMicrofarads != null && (
                       <div className={styles.dataItem}>
-                        <span>Microfaradios (capacitor):</span>
+                        <span>Microfaradios:</span>
                         <strong>{insp.condMicrofarads} µF</strong>
                       </div>
                     )}
                     {insp.compressorOhmio != null && (
                       <div className={styles.dataItem}>
-                        <span>Ω Ohmio Comp.:</span>
+                        <span>Ω Ohmio Comp:</span>
                         <strong>{insp.compressorOhmio}</strong>
                       </div>
                     )}

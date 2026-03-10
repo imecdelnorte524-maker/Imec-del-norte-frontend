@@ -179,6 +179,10 @@ export const mapEquipmentFromBackend = (data: any): Equipment => ({
     ? data.condensers.map(mapCondenser)
     : [],
   planMantenimiento: mapPlanMantenimiento(data.planMantenimiento),
+  planMantenimientoAutomatico:
+    data.planMantenimientoAutomatico ??
+    data.plan_mantenimiento_automatico ??
+    false,
 });
 
 // ────────────────────────────────────────────────────────────────
@@ -265,7 +269,9 @@ export const prepareEquipmentForBackend = (
   if (data.installationDate !== undefined)
     payload.installationDate = data.installationDate;
   if (data.notes !== undefined) payload.notes = data.notes;
-
+  if (data.planMantenimientoAutomatico !== undefined) {
+    payload.planMantenimientoAutomatico = data.planMantenimientoAutomatico;
+  }
   if (data.evaporators !== undefined) {
     payload.evaporators =
       data.evaporators?.map(prepareEvaporatorForBackend) || [];

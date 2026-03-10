@@ -1,7 +1,6 @@
 // src/interfaces/EquipmentInterfaces.ts
 
 export const MULTIPLE_COMPONENT_TYPES = [
-  // Variantes de MultiSplit
   "multisplit",
   "multi split",
   "multi-split",
@@ -10,8 +9,6 @@ export const MULTIPLE_COMPONENT_TYPES = [
   "multi-split",
   "multi_split",
   "multi split",
-
-  // Variantes de VRF/VRV
   "vrf",
   "v r f",
   "v.r.f",
@@ -23,8 +20,6 @@ export const MULTIPLE_COMPONENT_TYPES = [
   "refrigerante variable",
   "caudal variable",
   "volumen variable",
-
-  // Variantes en español
   "multisplit",
   "multi-split",
   "multi_split",
@@ -34,8 +29,6 @@ export const MULTIPLE_COMPONENT_TYPES = [
   "sistema de multisplit",
   "equipo multisplit",
   "equipo multi split",
-
-  // Otras variantes comunes
   "inverter multi",
   "multi inverter",
   "multi zona",
@@ -45,8 +38,6 @@ export const MULTIPLE_COMPONENT_TYPES = [
   "multi zona",
   "sistema multizona",
   "sistema multi zona",
-
-  // Marcas comerciales comunes
   "city multi",
   "city-multi",
   "city_multi",
@@ -202,6 +193,7 @@ export interface Equipment {
   evaporators?: EvaporatorData[];
   condensers?: CondenserData[];
   planMantenimiento?: PlanMantenimientoData | null;
+  planMantenimientoAutomatico: boolean;
 }
 
 // ---------- Para crear/actualizar ----------
@@ -218,6 +210,7 @@ export interface CreateEquipmentData {
   evaporators?: EvaporatorData[];
   condensers?: CondenserData[];
   planMantenimiento?: PlanMantenimientoData | null;
+  planMantenimientoAutomatico?: boolean;
 }
 
 export type UpdateEquipmentData = Partial<CreateEquipmentData>;
@@ -232,6 +225,9 @@ export interface EquipmentFormValues {
   status?: string;
   installationDate?: string | null;
   notes?: string | null;
+
+  // ✅ NUEVO (si algún form lo usa)
+  planMantenimientoAutomatico?: boolean;
 }
 
 // ---------- Tipos para selects ----------

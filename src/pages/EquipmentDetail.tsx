@@ -69,7 +69,8 @@ export default function EquipmentDetailPage() {
   // Usamos el hook para manejar estado del equipo
   const { equipment, loading, saving, error, updateEquipment, reload } =
     useEquipmentDetail(idNum);
-
+  const [updatingAutoPlan, setUpdatingAutoPlan] = useState(false);
+  const [autoPlanValue, setAutoPlanValue] = useState(false);
   const [editing, setEditing] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
@@ -199,6 +200,38 @@ export default function EquipmentDetailPage() {
     }
   };
 
+  const handleAutoPlanToggle = async (checked: boolean) => {
+    if (!equipment) return;
+
+    // Optimistic UI
+    const prev = autoPlanValue;
+    setAutoPlanValue(checked);
+
+    try {
+      setUpdatingAutoPlan(true);
+      setLocalError(null);
+
+      const success = await updateEquipment({
+        planMantenimientoAutomatico: checked,
+      });
+
+      if (!success) {
+        setAutoPlanValue(prev);
+        setLocalError("No se pudo actualizar el mantenimiento automático.");
+        playErrorSound();
+      }
+    } catch (err: any) {
+      console.error(err);
+      setAutoPlanValue(prev);
+      setLocalError(
+        err.message || "Error al actualizar mantenimiento automático.",
+      );
+      playErrorSound();
+    } finally {
+      setUpdatingAutoPlan(false);
+    }
+  };
+
   const loadAirConditionerTypes = async () => {
     try {
       const res = await api.get("/air-conditioner-types");
@@ -278,6 +311,7 @@ export default function EquipmentDetailPage() {
       loadHierarchicalAreas(equipment);
       loadAirConditionerTypes();
       loadWorkOrders();
+      setAutoPlanValue(!!equipment.planMantenimientoAutomatico);
     }
   }, [equipment]);
 
@@ -648,6 +682,32 @@ export default function EquipmentDetailPage() {
                   Editar
                 </button>
               )}
+              <div className={styles.autoPlanToggleWrap}>
+                <div className={styles.autoPlanLabelBlock}>
+                  <span className={styles.autoPlanLabel}>
+                    Mantenimiento automático
+                  </span>
+                  <span
+                    className={
+                      autoPlanValue
+                        ? styles.autoPlanStatusActive
+                        : styles.autoPlanStatusInactive
+                    }
+                  >
+                    {autoPlanValue ? "Activo" : "Inactivo"}
+                  </span>
+                </div>
+
+                <label className={styles.switch}>
+                  <input
+                    type="checkbox"
+                    checked={autoPlanValue}
+                    onChange={(e) => handleAutoPlanToggle(e.target.checked)}
+                    disabled={!canEdit || updatingAutoPlan || saving}
+                  />
+                  <span className={styles.slider} />
+                </label>
+              </div>
             </div>
           )}
         </div>

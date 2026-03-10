@@ -28,6 +28,9 @@ interface CreateEquipmentModalProps {
     status?: string;
     installationDate?: string;
     notes?: string;
+
+    // ✅ NUEVO: toggle por equipo
+    planMantenimientoAutomatico?: boolean;
   };
   onCreateFormChange: (
     e: React.ChangeEvent<
@@ -180,21 +183,6 @@ export default function CreateEquipmentModal({
     };
   }, [isOpen, createForm.category, client, onLoadOrders]);
 
-  // Recarga manual de órdenes
-  // const handleManualReloadOrders = useCallback(() => {
-  //   if (client && createForm.category) {
-  //     previousCategoryRef.current = "";
-  //     previousClientRef.current = null;
-
-  //     if (debounceTimerRef.current) {
-  //       clearTimeout(debounceTimerRef.current);
-  //       debounceTimerRef.current = null;
-  //     }
-
-  //     onLoadOrders(client.idCliente, createForm.category);
-  //   }
-  // }, [client, createForm.category, onLoadOrders]);
-
   // --- MANEJADOR DE SUBMIT CON VALIDACIÓN DE ÁREA ---
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -206,11 +194,9 @@ export default function CreateEquipmentModal({
       errors.area = "Debes seleccionar un área para el equipo";
     }
 
-    // Si hay errores, mostrarlos y no enviar
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
 
-      // Hacer scroll al error
       setTimeout(() => {
         const errorElement = document.querySelector(`.${styles.errorMessage}`);
         if (errorElement) {
@@ -221,7 +207,6 @@ export default function CreateEquipmentModal({
       return;
     }
 
-    // Limpiar errores y enviar
     setValidationErrors({});
     onSubmit(e, photoFiles[0] || null);
   };
@@ -341,6 +326,47 @@ export default function CreateEquipmentModal({
             </select>
           </div>
 
+          {/* ✅ NUEVO: TOGGLE DE MANTENIMIENTO AUTOMÁTICO POR EQUIPO */}
+          <div className={styles.formRow}>
+            <label>Mantenimiento automático</label>
+
+            <div className={styles.toggleCard}>
+              <div className={styles.toggleInfo}>
+                <strong className={styles.toggleTitle}>
+                  Crear órdenes automáticas semanales
+                </strong>
+                <small className={styles.toggleDescription}>
+                  Para que el equipo genere orden automática, debe tener un Plan
+                  de Mantenimiento con fecha programada.
+                </small>
+              </div>
+
+              <label className={styles.switch}>
+                <input
+                  type="checkbox"
+                  name="planMantenimientoAutomatico"
+                  checked={!!createForm.planMantenimientoAutomatico}
+                  onChange={onCreateFormChange}
+                  disabled={loading}
+                />
+                <span className={styles.slider} />
+              </label>
+            </div>
+
+            <div className={styles.toggleStatus}>
+              Estado:{" "}
+              <strong
+                className={
+                  createForm.planMantenimientoAutomatico
+                    ? styles.statusActive
+                    : styles.statusInactive
+                }
+              >
+                {createForm.planMantenimientoAutomatico ? "Activo" : "Inactivo"}
+              </strong>
+            </div>
+          </div>
+
           {/* Tipo de aire acondicionado (solo para aires) */}
           {isAirConditioner && (
             <div className={styles.formRow}>
@@ -452,7 +478,6 @@ export default function CreateEquipmentModal({
               <small className={styles.helperText}>{photoError}</small>
             )}
 
-            {/* Preview de la foto seleccionada */}
             {photoPreview && (
               <div className={styles.photoPreviewContainer}>
                 <img
@@ -463,154 +488,6 @@ export default function CreateEquipmentModal({
               </div>
             )}
           </div>
-
-          {/* ASOCIAR A ÓRDENES EXISTENTES */}
-          {/* {createForm.category && client && (
-            <div className={styles.formRow}>
-              <div className={styles.ordersHeader}>
-                <label>
-                  Asociar a Órdenes de Servicio (Opcional)
-                  <span className={styles.helperInfo}>
-                    Solo se muestran órdenes pendientes/asignadas de la misma
-                    categoría
-                  </span>
-                </label>
-                <button
-                  type="button"
-                  className={styles.reloadOrdersButton}
-                  onClick={handleManualReloadOrders}
-                  disabled={loadingOrders || loading}
-                  title="Recargar órdenes"
-                >
-                  🔄
-                </button>
-              </div>
-
-              {loadingOrders ? (
-                <div className={styles.loadingOrders}>
-                  <div className={styles.spinner}></div>
-                  <small>
-                    Cargando órdenes disponibles para {createForm.category}...
-                  </small>
-                </div>
-              ) : ordersError ? (
-                <div className={styles.ordersError}>
-                  <small>⚠️ {ordersError}</small>
-                  <div className={styles.retryContainer}>
-                    <button
-                      type="button"
-                      className={styles.retryButton}
-                      onClick={handleManualReloadOrders}
-                      disabled={loading}
-                    >
-                      Reintentar
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.continueButton}
-                      onClick={() => {
-                      }}
-                      disabled={loading}
-                    >
-                      Continuar sin órdenes
-                    </button>
-                  </div>
-                </div>
-              ) : ordersForClient.length > 0 ? (
-                <>
-                  <div className={styles.multiSelectContainer}>
-                    {ordersForClient.map((order) => {
-                      const isSelected = selectedOrderIds.includes(
-                        order.orden_id,
-                      );
-                      return (
-                        <div
-                          key={order.orden_id}
-                          className={`${styles.orderOption} ${
-                            isSelected ? styles.selected : ""
-                          }`}
-                        >
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                onOrderSelectionChange(
-                                  order.orden_id,
-                                  e.target.checked,
-                                );
-                              }}
-                              disabled={loading}
-                            />
-                            <div className={styles.orderInfo}>
-                              <span className={styles.orderLabel}>
-                                <strong>Orden #{order.orden_id}</strong> -{" "}
-                                {order.servicio.nombre_servicio}
-                              </span>
-                              <div className={styles.orderMeta}>
-                                <small className={styles.orderDate}>
-                                  {new Date(
-                                    order.fecha_solicitud,
-                                  ).toLocaleDateString()}
-                                </small>
-                                <span
-                                  className={`${styles.orderStatus} ${
-                                    styles[
-                                      order.estado
-                                        .toLowerCase()
-                                        .replace(" ", "")
-                                    ]
-                                  }`}
-                                >
-                                  {order.estado}
-                                </span>
-                              </div>
-                              {order.comentarios && (
-                                <small className={styles.orderComments}>
-                                  {order.comentarios}
-                                </small>
-                              )}
-                            </div>
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className={styles.ordersSummary}>
-                    <span className={styles.helperText}>
-                      {selectedOrderIds.length > 0 ? (
-                        <>
-                          <span className={styles.selectedCount}>
-                            {selectedOrderIds.length} orden(es) seleccionada(s)
-                          </span>
-                          - Este equipo se asociará automáticamente a estas
-                          órdenes
-                        </>
-                      ) : (
-                        "Puedes crear el equipo sin asignarlo a órdenes existentes"
-                      )}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.noOrdersInfo}>
-                  <small>
-                    ℹ️ No hay órdenes pendientes/asignadas para la categoría "
-                    {createForm.category}". Puedes crear el equipo sin asignarlo
-                    a una orden.
-                  </small>
-                  <button
-                    type="button"
-                    className={styles.retryButton}
-                    onClick={handleManualReloadOrders}
-                    disabled={loading}
-                  >
-                    Verificar nuevamente
-                  </button>
-                </div>
-              )}
-            </div>
-          )} */}
 
           {!client && createForm.category && (
             <div className={styles.warningInfo}>
@@ -643,7 +520,6 @@ export default function CreateEquipmentModal({
                 {validationErrors.area}
               </div>
             )}
-            {/* Mostrar error del backend si está relacionado con área */}
             {error && error.toLowerCase().includes("área") && (
               <div className={styles.errorMessage}>
                 <span className={styles.errorIcon}>⚠️</span>
@@ -741,8 +617,7 @@ export default function CreateEquipmentModal({
                             },
                           } as React.ChangeEvent<HTMLInputElement>;
                           onEvaporatorChange(index, customEvent);
-                          setTimeout(() => {
-                          }, 100);
+                          setTimeout(() => {}, 100);
                         }}
                         disabled={loading}
                         loading={loading}

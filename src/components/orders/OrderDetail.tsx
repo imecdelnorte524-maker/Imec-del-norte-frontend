@@ -29,6 +29,7 @@ import styles from "../../styles/components/orders/OrderDetail.module.css";
 import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../../utils/sounds";
 import { useAuth } from "../../hooks/useAuth";
+import { useModal } from "../../context/ModalContext"; // Importar el hook del modal
 import OrderSignatureModal from "./OrderSignatureModal";
 import OrderEvidenceSection from "./OrderEvidenceSection";
 import OrderEditModal from "./OrderEditModal";
@@ -66,6 +67,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { showModal } = useModal(); // Solo usamos showModal, hideModal no es necesario
 
   const currentOrder = order;
 
@@ -138,7 +140,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const [selectedCostStatus, setSelectedCostStatus] = useState<CostEstado>("");
   const [billingError, setBillingError] = useState<string | null>(null);
 
-  const [confirmModal, setConfirmModal] = useState<ConfirmModalState>({
+  const [, setConfirmModal] = useState<ConfirmModalState>({
     isOpen: false,
     type: null,
     id: null,
@@ -174,15 +176,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const supplyDetails = currentOrder.supplyDetails ?? [];
   const toolDetails = currentOrder.toolDetails ?? [];
 
-  const [activeEquipmentId, setActiveEquipmentId] = useState<number | null>(
-    currentOrder.equipos?.[0]?.equipmentId ?? null,
-  );
-
   const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
-
-  useEffect(() => {
-    setActiveEquipmentId(currentOrder.equipos?.[0]?.equipmentId ?? null);
-  }, [currentOrder.orden_id, currentOrder.equipos?.length]);
+  const [activeEquipmentId, setActiveEquipmentId] = useState<number | null>(
+    order.acInspections?.[0]?.equipmentId ||
+      order.equipos?.[0]?.equipmentId ||
+      null,
+  );
 
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratings, setRatings] = useState<Record<number, number>>({});
@@ -193,31 +192,12 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const isSavingRatings = rateTechnicians.status === "pending";
 
-  const handleOpenAcInspectionForEquipment = (eq: AssociatedEquipment) => {
+  const handleOpenAcInspectionForEquipment = (
+    eq: AssociatedEquipment,
+    phase: "BEFORE" | "AFTER",
+  ) => {
     setSelectedEquipment(eq);
-
-    const hasBefore =
-      currentOrder.acInspections?.some(
-        (insp) =>
-          insp.equipmentId === eq.equipmentId && insp.phase === "BEFORE",
-      ) ?? false;
-
-    const hasAfter =
-      currentOrder.acInspections?.some(
-        (insp) => insp.equipmentId === eq.equipmentId && insp.phase === "AFTER",
-      ) ?? false;
-
-    let nextPhase: "BEFORE" | "AFTER" = "BEFORE";
-
-    if (!hasBefore) {
-      nextPhase = "BEFORE";
-    } else if (hasBefore && !hasAfter) {
-      nextPhase = "AFTER";
-    } else {
-      nextPhase = "BEFORE";
-    }
-
-    setAcPhase(nextPhase);
+    setAcPhase(phase);
     setShowAcInspectionModal(true);
   };
 
@@ -293,30 +273,173 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const handleCompleteOrderClick = () => {
     if (isAirConditioningOrder) {
-      const totalEq = currentOrder.equipos.length;
-      const completedInspections =
-        currentOrder.acInspections?.filter((i) => i.phase === "AFTER").length ||
-        0;
+      // 1. VALIDAR REGISTROS TÉCNICOS (PARÁMETROS)
 
-      if (completedInspections < totalEq) {
-        setAcPhase("AFTER");
+      // Buscar el primer equipo que no tenga registro de "ANTES"
+      const eqMissingBefore = currentOrder.equipos.find(
+        (eq) =>
+          !currentOrder.acInspections?.some(
+            (i) => i.equipmentId === eq.equipmentId && i.phase === "BEFORE",
+          ),
+      );
 
-        if (currentOrder.equipos.length === 1) {
-          setSelectedEquipment(currentOrder.equipos[0]);
-          setShowAcInspectionModal(true);
-        } else {
-          setShowEqSelector(true);
-        }
-      } else if (!hasReceiptSignature) {
-        setShowSignatureModal(true);
-      } else {
-        handleStatusUpdate(validStatuses.COMPLETADO);
+      if (eqMissingBefore) {
+        showModal({
+          type: "warning",
+          title: "Registro inicial incompleto",
+          message: `El equipo ${eqMissingBefore.code} no tiene registro inicial (ANTES). Por favor, complételo.`,
+          buttons: [
+            {
+              text: "Aceptar",
+              variant: "primary",
+              onClick: () => {
+                setSelectedEquipment(eqMissingBefore);
+                setAcPhase("BEFORE");
+                setShowAcInspectionModal(true);
+              },
+            },
+          ],
+        });
+        return;
       }
+
+      // Buscar el primer equipo que no tenga registro de "DESPUÉS"
+      const eqMissingAfter = currentOrder.equipos.find(
+        (eq) =>
+          !currentOrder.acInspections?.some(
+            (i) => i.equipmentId === eq.equipmentId && i.phase === "AFTER",
+          ),
+      );
+
+      if (eqMissingAfter) {
+        showModal({
+          type: "warning",
+          title: "Registro final incompleto",
+          message: `El equipo ${eqMissingAfter.code} no tiene registro final (DESPUÉS). Por favor, complételo.`,
+          buttons: [
+            {
+              text: "Aceptar",
+              variant: "primary",
+              onClick: () => {
+                setSelectedEquipment(eqMissingAfter);
+                setAcPhase("AFTER");
+                setShowAcInspectionModal(true);
+              },
+            },
+          ],
+        });
+        return;
+      }
+
+      // 2. VALIDAR EVIDENCIAS FOTOGRÁFICAS (3 FASES POR CADA EQUIPO)
+      const missingPhotos: string[] = [];
+      currentOrder.equipos.forEach((eq) => {
+        const eqId = eq.equipmentId;
+        // Función auxiliar para resolver equipo en fotos viejas o nuevas
+        const hasBefore = currentOrder.images?.some(
+          (img) =>
+            (img.equipmentId === eqId ||
+              img.observation?.includes(`[${eq.code}]`)) &&
+            img.evidencePhase === "BEFORE",
+        );
+        const hasDuring = currentOrder.images?.some(
+          (img) =>
+            (img.equipmentId === eqId ||
+              img.observation?.includes(`[${eq.code}]`)) &&
+            (img.evidencePhase === "DURING" || !img.evidencePhase),
+        );
+        const hasAfter = currentOrder.images?.some(
+          (img) =>
+            (img.equipmentId === eqId ||
+              img.observation?.includes(`[${eq.code}]`)) &&
+            img.evidencePhase === "AFTER",
+        );
+
+        if (!hasBefore)
+          missingPhotos.push(`- ${eq.code}: Faltan fotos de ANTES`);
+        if (!hasDuring)
+          missingPhotos.push(`- ${eq.code}: Faltan fotos de DURANTE`);
+        if (!hasAfter)
+          missingPhotos.push(`- ${eq.code}: Faltan fotos de DESPUÉS`);
+      });
+
+      if (missingPhotos.length > 0) {
+        showModal({
+          type: "warning",
+          title: "Faltan evidencias fotográficas",
+          message: (
+            <div>
+              <p>No se puede completar la orden. Faltan evidencias:</p>
+              <div style={{ marginTop: "12px" }}>
+                {missingPhotos.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      color: "#dc2626",
+                      fontSize: "14px",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {msg}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ),
+          buttons: [
+            {
+              text: "Entendido",
+              variant: "primary",
+            },
+          ],
+        });
+        return;
+      }
+
+      // 3. VALIDAR FIRMA DE RECIBIDO
+      if (!hasReceiptSignature) {
+        showModal({
+          type: "info",
+          title: "Firma requerida",
+          message: "Debe registrar la firma de recibido antes de finalizar.",
+          buttons: [
+            {
+              text: "Continuar",
+              variant: "primary",
+              onClick: () => setShowSignatureModal(true),
+            },
+            {
+              text: "Cancelar",
+              variant: "secondary",
+            },
+          ],
+        });
+        return;
+      }
+
+      // Si todo está OK, actualizar estado a Completado
+      handleStatusUpdate(validStatuses.COMPLETADO);
     } else {
+      // Lógica para órdenes que NO son de Aire Acondicionado
       if (hasReceiptSignature) {
         handleStatusUpdate(validStatuses.COMPLETADO);
       } else {
-        setShowSignatureModal(true);
+        showModal({
+          type: "info",
+          title: "Firma requerida",
+          message: "Debe registrar la firma de recibido antes de finalizar.",
+          buttons: [
+            {
+              text: "Continuar",
+              variant: "primary",
+              onClick: () => setShowSignatureModal(true),
+            },
+            {
+              text: "Cancelar",
+              variant: "secondary",
+            },
+          ],
+        });
       }
     }
   };
@@ -406,12 +529,22 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const confirmEmergencyOrder = async () => {
     if (selectedEmergencyTechnicians.length === 0) {
-      alert("Debe seleccionar al menos un técnico para la emergencia.");
+      showModal({
+        type: "warning",
+        title: "Selección requerida",
+        message: "Debe seleccionar al menos un técnico para la emergencia.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
       return;
     }
 
     if (selectedEmergencyEquipments.length === 0) {
-      alert("Debe seleccionar al menos un equipo para la emergencia.");
+      showModal({
+        type: "warning",
+        title: "Selección requerida",
+        message: "Debe seleccionar al menos un equipo para la emergencia.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
       return;
     }
 
@@ -444,8 +577,20 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       await refreshData();
       setShowEmergencyModal(false);
 
-      navigate("/orders", {
-        state: { initialOrderId: emergencyOrder.orden_id },
+      showModal({
+        type: "success",
+        title: "Emergencia creada",
+        message: `Se ha creado la orden de emergencia #${emergencyOrder.orden_id}`,
+        buttons: [
+          {
+            text: "Ver orden",
+            variant: "primary",
+            onClick: () =>
+              navigate("/orders", {
+                state: { initialOrderId: emergencyOrder.orden_id },
+              }),
+          },
+        ],
       });
     } catch (err: any) {
       setError(
@@ -520,6 +665,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       });
       await refreshData();
       setShowEditModal(false);
+
+      showModal({
+        type: "success",
+        title: "Orden actualizada",
+        message: "Los cambios se guardaron correctamente.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -552,6 +704,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       setShowAssignForm(false);
       setSelectedTechnicians([]);
       setLeaderTechnicianId(null);
+
+      showModal({
+        type: "success",
+        title: "Técnicos asignados",
+        message: "Los técnicos se han asignado correctamente.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -565,20 +724,44 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   };
 
   const handleUnassignTechnician = async (tecnicoId?: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await unassignTechnician.mutateAsync({
-        orderId: currentOrder.orden_id,
-        tecnicoId,
-      });
-      await refreshData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error quitando técnico");
-      playErrorSound();
-    } finally {
-      setLoading(false);
-    }
+    showModal({
+      type: "conflict",
+      title: "Confirmar acción",
+      message: "¿Está seguro de quitar este técnico de la orden?",
+      buttons: [
+        {
+          text: "Cancelar",
+          variant: "secondary",
+        },
+        {
+          text: "Sí, quitar",
+          variant: "danger",
+          onClick: async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              await unassignTechnician.mutateAsync({
+                orderId: currentOrder.orden_id,
+                tecnicoId,
+              });
+              await refreshData();
+
+              showModal({
+                type: "success",
+                title: "Técnico removido",
+                message: "El técnico ha sido removido de la orden.",
+                buttons: [{ text: "Aceptar", variant: "primary" }],
+              });
+            } catch (err: any) {
+              setError(err.response?.data?.message || "Error quitando técnico");
+              playErrorSound();
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    });
   };
 
   const handleRejectOrder = async () => {
@@ -599,19 +782,36 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   };
 
   const handleCancelOrder = async () => {
-    if (!window.confirm("¿Cancelar orden?")) return;
-    setLoading(true);
-    setError(null);
-    try {
-      await cancelOrder.mutateAsync(currentOrder.orden_id);
-      await refreshData();
-      onBack();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error cancelando orden");
-      playErrorSound();
-    } finally {
-      setLoading(false);
-    }
+    showModal({
+      type: "warning",
+      title: "Cancelar orden",
+      message:
+        "¿Está seguro de cancelar esta orden? Esta acción no se puede deshacer.",
+      buttons: [
+        {
+          text: "No, volver",
+          variant: "secondary",
+        },
+        {
+          text: "Sí, cancelar orden",
+          variant: "danger",
+          onClick: async () => {
+            setLoading(true);
+            setError(null);
+            try {
+              await cancelOrder.mutateAsync(currentOrder.orden_id);
+              await refreshData();
+              onBack();
+            } catch (err: any) {
+              setError(err.response?.data?.message || "Error cancelando orden");
+              playErrorSound();
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    });
   };
 
   const handleUploadInvoice = async (e: React.FormEvent) => {
@@ -641,6 +841,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       setShowInvoiceModal(false);
       setSelectedCostStatus("");
       setInvoiceFile(null);
+
+      showModal({
+        type: "success",
+        title: "Factura subida",
+        message: "La factura se ha subido correctamente.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       setInvoiceError(err.response?.data?.message || "Error subiendo factura");
     } finally {
@@ -715,6 +922,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         data: payload,
       });
       await refreshData();
+
+      showModal({
+        type: "success",
+        title: "Pago confirmado",
+        message: "La orden ha sido marcada como pagada.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       console.error("Error completo:", err);
       setError(err.response?.data?.message || "Error al marcar como pagado");
@@ -848,6 +1062,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       setShowInventoryModal(false);
       setSelectedInventoryIds([]);
       setSelectedQuantities({});
+
+      showModal({
+        type: "success",
+        title: "Inventario asignado",
+        message: "Los items se han asignado correctamente a la orden.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       setInventoryError(err.response?.data?.message || "Error asignando ítems");
     } finally {
@@ -871,6 +1092,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
       await refreshData();
       setShowBillingModal(false);
+
+      showModal({
+        type: "success",
+        title: "Estado actualizado",
+        message: "El estado de facturación se ha asignado correctamente.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       setBillingError(
         err.response?.data?.message ||
@@ -912,6 +1140,14 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         setShowInvoiceModal(true);
       }
       setPendingPostRatingAction(null);
+
+      showModal({
+        type: "success",
+        title: "Calificaciones guardadas",
+        message:
+          "Las calificaciones de los técnicos se han guardado correctamente.",
+        buttons: [{ text: "Aceptar", variant: "primary" }],
+      });
     } catch (err: any) {
       setRatingError(
         err.response?.data?.message ||
@@ -924,28 +1160,48 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const requestReturnTool = (id: number) =>
     setConfirmModal({ isOpen: true, type: "tool", id });
-  const requestRemoveSupply = (id: number) =>
-    setConfirmModal({ isOpen: true, type: "supply", id });
-  const closeConfirmModal = () =>
-    setConfirmModal({ isOpen: false, type: null, id: null });
 
-  const handleConfirmDelete = async () => {
-    const { type, id } = confirmModal;
-    if (!type || !id) return;
-    setLoading(true);
-    setConfirmModal({ isOpen: false, type: null, id: null });
-    try {
-      if (type === "tool")
-        await removeToolDetailRequest(currentOrder.orden_id, id);
-      else await removeSupplyDetailRequest(currentOrder.orden_id, id);
+  const handleConfirmDelete = async (type: "tool" | "supply", id: number) => {
+    showModal({
+      type: "warning",
+      title: "Confirmar eliminación",
+      message: "¿Está seguro de eliminar este elemento de la orden?",
+      buttons: [
+        {
+          text: "Cancelar",
+          variant: "secondary",
+        },
+        {
+          text: "Sí, eliminar",
+          variant: "danger",
+          onClick: async () => {
+            setLoading(true);
+            try {
+              if (type === "tool")
+                await removeToolDetailRequest(currentOrder.orden_id, id);
+              else await removeSupplyDetailRequest(currentOrder.orden_id, id);
 
-      await refreshData();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error eliminando elemento");
-      playErrorSound();
-    } finally {
-      setLoading(false);
-    }
+              await refreshData();
+
+              showModal({
+                type: "success",
+                title: "Elemento eliminado",
+                message:
+                  "El elemento se ha eliminado correctamente de la orden.",
+                buttons: [{ text: "Aceptar", variant: "primary" }],
+              });
+            } catch (err: any) {
+              setError(
+                err.response?.data?.message || "Error eliminando elemento",
+              );
+              playErrorSound();
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    });
   };
 
   const toggleTechnicianSelection = (techId: number) => {
@@ -1428,7 +1684,10 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                               <button
                                 className={styles.deleteIconButton}
                                 onClick={() =>
-                                  requestRemoveSupply(s.detalleInsumoId)
+                                  handleConfirmDelete(
+                                    "supply",
+                                    s.detalleInsumoId,
+                                  )
                                 }
                                 disabled={loading}
                                 title="Quitar"
@@ -1452,6 +1711,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         <AcTechnicalDataSection
           acInspections={currentOrder.acInspections}
           equipments={currentOrder.equipos}
+          activeEquipmentId={activeEquipmentId}
           onEquipmentChange={setActiveEquipmentId}
           onEditEquipmentInspection={handleOpenAcInspectionForEquipment}
           estadoOrden={currentOrder.estado}
@@ -1463,8 +1723,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           orderId={currentOrder.orden_id}
           canEdit={canEditEvidence}
           orderStatus={currentOrder.estado}
-          equipments={currentOrder.equipos}
           activeEquipmentId={activeEquipmentId}
+          equipments={currentOrder.equipos}
         />
       )}
 
@@ -2352,32 +2612,6 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
                 ) : (
                   "Sí, marcar como pagado"
                 )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL CONFIRMACIÓN BORRADO */}
-      {confirmModal.isOpen && (
-        <div className={styles.modal}>
-          <div className={styles.confirmationModalContent}>
-            <span className={styles.confirmationIcon}>⚠️</span>
-            <h3>¿Confirmar?</h3>
-            <p>Se eliminará el elemento.</p>
-            <div className={styles.confirmationActions}>
-              <button
-                className={styles.cancelDeleteButton}
-                onClick={closeConfirmModal}
-              >
-                Cancelar
-              </button>
-              <button
-                className={styles.confirmDeleteButton}
-                onClick={handleConfirmDelete}
-                disabled={loading}
-              >
-                Confirmar
               </button>
             </div>
           </div>

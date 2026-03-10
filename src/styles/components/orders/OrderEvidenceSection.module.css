@@ -805,3 +805,69 @@
     }
   }
 }
+/* === MINI MODAL SELECTOR DE FASE === */
+.phasePickerOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  padding: 1rem;
+}
+
+.phasePickerContent {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+.phasePickerTitle {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.phasePickerButtons {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.phasePickerButtons button {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  font-weight: 700;
+  color: #1e293b;
+  transition: all 0.15s;
+}
+
+.phasePickerButtons button:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.phasePickerFooter {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.phasePickerFooter button {
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+}

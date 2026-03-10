@@ -81,6 +81,7 @@ export interface UserInfo {
   telefono: string | null;
   cedula?: string;
 }
+
 export interface TechnicianAssignment {
   id: number;
   tecnicoId: number;
@@ -104,6 +105,17 @@ export interface PauseInfo {
   endTime?: string | null;
   observacion: string;
   user: UserInfo;
+}
+
+export interface WorkOrderImage {
+  id: number;
+  url: string;
+  public_id?: string;
+  folder?: string;
+  created_at: string;
+  evidencePhase?: WorkOrderEvidencePhase | null;
+  observation?: string | null;
+  equipmentId?: number | null;
 }
 
 export interface Order {
@@ -148,10 +160,8 @@ export interface Order {
     id_usuario_contacto?: number | null;
   } | null;
 
-  // ✅ CAMBIO IMPORTANTE: De tecnico singular a array de technicians
   technicians: TechnicianAssignment[];
 
-  // Para compatibilidad con código existente, mantenemos tecnico_id como el primer técnico
   tecnico_id: number | null;
   tecnico?: UserInfo | null;
 
@@ -164,10 +174,12 @@ export interface Order {
 
   costo_total_insumos: number;
   tiempo_total?: number;
+
   received_by_name?: string | null;
   received_by_position?: string | null;
   received_by_signature_data?: string | null;
   received_at?: string | null;
+
   acInspections?: AcInspection[];
   images?: WorkOrderImage[];
 }
@@ -177,7 +189,6 @@ export interface CreateOrderData {
   comentarios?: string;
   cliente_empresa_id?: number;
   cliente_id?: number;
-  // ✅ CAMBIO: Ahora podemos asignar múltiples técnicos
   technicians?: {
     tecnicoId: number;
     isLeader?: boolean;
@@ -212,16 +223,6 @@ export interface OrdersResponse {
   page?: number;
   limit?: number;
   totalPages?: number;
-}
-
-export interface WorkOrderImage {
-  id: number;
-  url: string;
-  public_id: string;
-  folder: string;
-  created_at: string;
-  evidencePhase?: WorkOrderEvidencePhase | null;
-  observation?: string | null;
 }
 
 export interface DownloadedFile {
