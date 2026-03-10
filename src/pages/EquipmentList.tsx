@@ -117,7 +117,7 @@ export default function EquipmentListPage() {
 
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [exportingPlan, setExportingPlan] = useState(false);
-  const [exportingInventory, setExportingInventory] = useState(false); // 👈 NUEVO ESTADO
+  const [exportingInventory, setExportingInventory] = useState(false);
 
   const [createForm, setCreateForm] = useState({
     clientId: selectedClientId,
@@ -127,6 +127,7 @@ export default function EquipmentListPage() {
     status: "Activo",
     installationDate: "",
     notes: "",
+    planMantenimientoAutomatico: false,
   });
 
   const roleName = user?.role?.nombreRol;
@@ -569,14 +570,18 @@ export default function EquipmentListPage() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value } = e.target;
+    const target = e.target as HTMLInputElement;
+    const { name, type } = target;
+
+    const finalValue = type === "checkbox" ? target.checked : target.value;
+
     setCreateForm((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: finalValue,
     }));
 
     if (name === "category" && showCreateForm && selectedClientId) {
-      loadOrdersForClient(selectedClientId, value);
+      loadOrdersForClient(selectedClientId, String(finalValue));
     }
   };
 
@@ -732,6 +737,7 @@ export default function EquipmentListPage() {
         condensers: condensers,
         planMantenimiento:
           Object.keys(planMantenimiento).length > 0 ? planMantenimiento : null,
+        planMantenimientoAutomatico: createForm.planMantenimientoAutomatico,
       };
 
       if (createForm.airConditionerTypeId) {
@@ -770,6 +776,7 @@ export default function EquipmentListPage() {
         status: "Activo",
         installationDate: "",
         notes: "",
+        planMantenimientoAutomatico: false,
       });
       setEvaporators([]);
       setCondensers([]);

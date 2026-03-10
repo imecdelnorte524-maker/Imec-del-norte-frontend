@@ -240,8 +240,11 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
         public_id: img.public_id || img.publicId,
         folder: img.folder,
         created_at: img.created_at || img.createdAt,
-        evidencePhase: img.evidencePhase ?? null,
+        evidencePhase: img.evidencePhase ?? img.evidence_phase ?? null,
         observation: img.observation ?? null,
+
+        // ✅ CLAVE para evidencias por equipo
+        equipmentId: img.equipmentId ?? img.equipment_id ?? null,
       }))
     : [];
 
@@ -274,9 +277,7 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
     estado_facturacion: mapBillingFromApi(
       apiOrder.estadoFacturacion ?? apiOrder.estado_facturacion,
     ),
-    estado_pago: mapCostFromApi(
-      apiOrder.estadoPago ?? apiOrder.estado_facturacion,
-    ),
+    estado_pago: mapCostFromApi(apiOrder.estadoPago ?? apiOrder.estado_pago),
     factura_pdf_url: apiOrder.facturaPdfUrl || apiOrder.factura_pdf_url || null,
     isEmergency: apiOrder.isEmergency || false,
     plan_mantenimiento_id:
@@ -861,22 +862,37 @@ export const getWorkOrderImagesRequest = async (
 ): Promise<WorkOrderImage[]> => {
   const response = await api.get(`/images/work-order/${orderId}`);
   const data = response.data?.data || [];
-  return data as WorkOrderImage[];
+
+  return (Array.isArray(data) ? data : []).map((img: any) => ({
+    id: img.id,
+    url: img.url,
+    public_id: img.public_id || img.publicId,
+    folder: img.folder,
+    created_at: img.created_at || img.createdAt,
+    evidencePhase: img.evidencePhase ?? img.evidence_phase ?? null,
+    observation: img.observation ?? null,
+    equipmentId: img.equipmentId ?? img.equipment_id ?? null,
+  }));
 };
 
 export const uploadWorkOrderImagesRequest = async (
   orderId: number,
   files: File[],
-  options?: { phase?: WorkOrderEvidencePhase; observation?: string },
+  options?: {
+    phase?: WorkOrderEvidencePhase;
+    equipmentId?: number;
+    observation?: string;
+  },
 ): Promise<WorkOrderImage[]> => {
   const formData = new FormData();
   files.forEach((file) => formData.append("files", file));
 
-  if (options?.phase) {
-    formData.append("phase", options.phase);
-  }
-  if (options?.observation) {
-    formData.append("observation", options.observation);
+  if (options?.phase) formData.append("phase", options.phase);
+  if (options?.observation) formData.append("observation", options.observation);
+
+  // ✅ NUEVO
+  if (options?.equipmentId != null) {
+    formData.append("equipmentId", String(options.equipmentId));
   }
 
   const response = await api.post(`/images/work-order/${orderId}`, formData, {
