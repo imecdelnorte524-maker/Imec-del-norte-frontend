@@ -8,12 +8,9 @@ import { queryClient } from "./api/queryClient";
 // import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { SocketProvider } from "./context/SocketContext";
 import "./styles/globals.css";
-import { connectSocket } from "./lib/socket";
 
 import { ModalProvider } from "./context/ModalContext";
 import { GlobalModal } from "./components/ui/GlobalModal/GlobalModal";
-
-connectSocket();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <AuthProvider>
