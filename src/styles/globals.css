@@ -1,6 +1,6 @@
 /* src/styles/globals.css */
 
-@import './variables.css';
+@import "./variables.css";
 
 * {
   box-sizing: border-box;
@@ -18,7 +18,7 @@ body {
   line-height: var(--line-height-base);
   color: var(--text-primary);
   background-color: var(--background);
-  
+
   /* Por defecto: permitimos scroll para mobile-first */
   overflow-y: auto;
   min-height: 100vh;
@@ -28,19 +28,19 @@ body {
 @media (min-width: 768px) {
   body {
     overflow: hidden; /* Elimina scroll en desktop */
-    height: 100vh;   /* Fija altura completa */
+    height: 100vh; /* Fija altura completa */
   }
-  
+
   /* Opcional: si necesitas scroll interno dentro de un contenedor */
   .scroll-container {
     height: 100vh;
     overflow-y: auto;
   }
-  
+
   .hidden-mobile {
     display: block;
   }
-  
+
   .hidden-desktop {
     display: none;
   }
@@ -50,7 +50,7 @@ body {
 @media (max-width: 767px) {
   body {
     overflow-y: auto; /* Aseguramos scroll en mobile */
-    height: auto;     /* Altura automática */
+    height: auto; /* Altura automática */
   }
 }
 
@@ -86,4 +86,19 @@ select {
 
 .mobile-scroll {
   overflow-y: auto !important;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  }
 }

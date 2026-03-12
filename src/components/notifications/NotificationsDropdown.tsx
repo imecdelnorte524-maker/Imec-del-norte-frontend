@@ -1,6 +1,6 @@
 // src/components/notifications/NotificationsDropdown.tsx
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom"; // 👈 IMPORTANTE
+import { useNavigate } from "react-router-dom";
 import styles from "../../styles/components/notifications/NotificationsDropdown.module.css";
 import {
   moduleConfig,
@@ -18,7 +18,6 @@ interface NotificationsDropdownProps {
   onMarkAsRead: (id: number) => void;
   onMarkAllAsRead: () => void;
   onClose: () => void;
-  // No necesitas onViewOrder ni nada, solo navigate
 }
 
 type FilterType = "all" | NotificationModule;
@@ -30,10 +29,40 @@ export function NotificationsDropdown({
   onMarkAllAsRead,
   onClose,
 }: NotificationsDropdownProps) {
-  const navigate = useNavigate(); // 👈 USA ESTO
+  const navigate = useNavigate();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("all");
   const [expandedModule, setExpandedModule] =
     useState<NotificationModule | null>(null);
+
+  // Función segura para formatear fechas
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        // Intentar parsear formato diferente
+        const parsed = Date.parse(dateString);
+        if (!isNaN(parsed)) {
+          return new Date(parsed).toLocaleString("es-CO", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        }
+        return "Fecha no disponible";
+      }
+      return date.toLocaleString("es-CO", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Fecha no disponible";
+    }
+  };
 
   const groupedNotifications = useMemo(() => {
     const groups = new Map<NotificationModule, Notification[]>();
@@ -73,11 +102,10 @@ export function NotificationsDropdown({
       onMarkAsRead(notif.notificacionId);
     }
 
-    // 🔥 Navegación DIRECTA como en tu ejemplo
     if (notif.tipo.startsWith("WORK_ORDER")) {
       const id = notif.data?.workOrderId ?? notif.data?.ordenId;
       if (id) {
-        navigate(`/orders/?ordenId=${id}`); // 👏 IGUAL QUE EN TU EJEMPLO
+        navigate(`/orders/?ordenId=${id}`);
       } else {
         navigate("/orders");
       }
@@ -241,7 +269,7 @@ export function NotificationsDropdown({
                           </p>
                           <div className={styles.notificationFooter}>
                             <span className={styles.notificationTime}>
-                              {new Date(notif.fechaCreacion).toLocaleString()}
+                              {formatDate(notif.fechaCreacion)}
                             </span>
                             {!notif.leida && (
                               <button

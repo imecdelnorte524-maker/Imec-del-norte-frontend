@@ -13,7 +13,7 @@ const API_URL =
 const BASE_URL = API_URL.replace(/\/api\/?$/, "");
 
 // 🔥 CONSTRUCTOR DE LA URL DEL WEBSOCKET
-const WS_URL = import.meta.env.VITE_WS_URL || `${BASE_URL}/notifications`;
+const WS_URL = import.meta.env.VITE_WS_URL || `${BASE_URL}`;
 
 export function connectSocket(): Socket {
   if (!socket) {
