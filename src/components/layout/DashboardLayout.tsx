@@ -184,6 +184,23 @@ const determineModuleType = (module: ModuleInterface): ModuleCategory => {
 };
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  // Dentro de DashboardLayout.tsx, después de los otros useEffects
+  useEffect(() => {
+    // Activar audio con el PRIMER CLIC del usuario en cualquier parte
+    const handleFirstClick = () => {
+      import("../../utils/sounds").then(({ enableAudio }) => {
+        enableAudio();
+      });
+      window.removeEventListener("click", handleFirstClick);
+    };
+
+    window.addEventListener("click", handleFirstClick, { once: true });
+
+    return () => {
+      window.removeEventListener("click", handleFirstClick);
+    };
+  }, []);
+
   const { user, logout, token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

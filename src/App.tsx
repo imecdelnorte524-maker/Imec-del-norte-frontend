@@ -32,6 +32,7 @@ import HumanResources from "./pages/HumanResources";
 import { LoadingProvider } from "./context/LoadingContext";
 import Loading from "./components/Loading";
 import { useLoadingContext } from "./context/LoadingContext";
+import { useRealtime } from "./hooks/useRealtime";
 
 // Componente para manejar el loading global desde axios
 const GlobalLoadingHandler = () => {
@@ -82,6 +83,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
+
+  useRealtime();
   return (
     <Routes>
       <Route path="/" element={<Login />} />
