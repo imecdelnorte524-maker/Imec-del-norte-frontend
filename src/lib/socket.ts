@@ -19,8 +19,6 @@ export function connectSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem("authToken");
 
-    console.log(`🔌 Conectando a WebSocket: ${WS_URL}`);
-
     socket = io(WS_URL, {
       transports: ["websocket", "polling"],
       auth: {
@@ -36,13 +34,11 @@ export function connectSocket(): Socket {
     });
 
     socket.on("connect", () => {
-      console.log("✅ WebSocket conectado, ID:", socket?.id);
       localStorage.setItem("socketId", socket?.id || "");
       connectionAttempts = 0;
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("❌ WebSocket desconectado:", reason);
       localStorage.removeItem("socketId");
 
       if (reason === "io server disconnect") {
@@ -68,19 +64,8 @@ export function connectSocket(): Socket {
       }
     });
 
-    socket.on("connected", (data) => {
-      console.log("🎉 Confirmación de conexión:", data);
-    });
-
     socket.on("error", (error) => {
       console.error("⚠️ Error del servidor:", error);
-    });
-
-    // Para debug: mostrar todos los eventos
-    socket.onAny((event, ...args) => {
-      if (event !== "pong" && event !== "ping") {
-        console.log(`📡 Evento recibido: ${event}`, args);
-      }
     });
   }
 
@@ -97,7 +82,6 @@ export function getSocketId(): string | null {
 
 export function disconnectSocket() {
   if (socket) {
-    console.log("🔌 Desconectando WebSocket...");
     socket.disconnect();
     socket = null;
     localStorage.removeItem("socketId");

@@ -11,13 +11,14 @@ import type {
   AssociatedEquipment,
 } from "../../interfaces/OrderInterfaces";
 import { useModal } from "../../context/ModalContext";
+import { AxiosError } from "axios"; // Asegúrate de tener axios instalado
 
 interface Props {
   orderId: number;
   canEdit: boolean;
   orderStatus: string;
   activeEquipmentId: number | null;
-  equipments?: AssociatedEquipment[];
+  equipments?: AssociatedEquipment[]; // Asegúrate de que esto se pasa desde el padre
 }
 
 export default function OrderEvidenceSection({
@@ -25,6 +26,7 @@ export default function OrderEvidenceSection({
   canEdit,
   orderStatus,
   activeEquipmentId,
+  equipments = [], // Valor por defecto para evitar undefined
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showModal } = useModal();
@@ -45,8 +47,9 @@ export default function OrderEvidenceSection({
       setLoading(true);
       const imgs = await getWorkOrderImagesRequest(orderId);
       setImages(imgs);
-    } catch {
+    } catch (error) {
       setError("Error cargando fotos");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -56,12 +59,39 @@ export default function OrderEvidenceSection({
     loadImages();
   }, [orderId]);
 
+  // Función para obtener el código del equipo por su ID
+  const getEquipmentCode = (equipmentId: number | null): string | null => {
+    if (!equipmentId || !equipments.length) return null;
+    const equipment = equipments.find((e) => e.equipmentId === equipmentId);
+    return equipment?.code || null;
+  };
+
+  // Filtrar imágenes basado en el equipo activo
   const filteredImages = useMemo(() => {
-    if (activeEquipmentId == null) return [];
-    return images.filter(
-      (img) => (img.equipmentId ?? null) === activeEquipmentId,
+    // Si no hay equipo seleccionado, mostrar todas las imágenes
+    if (activeEquipmentId == null) return images;
+
+    // Opción 1: Si las imágenes tienen equipmentId (cuando el backend se actualice)
+    const imagesWithEquipmentId = images.filter(
+      (img) => img.equipmentId === activeEquipmentId,
     );
-  }, [images, activeEquipmentId]);
+
+    // Si encontramos imágenes con equipmentId, las retornamos
+    if (imagesWithEquipmentId.length > 0) {
+      return imagesWithEquipmentId;
+    }
+
+    // Opción 2: Si no, intentamos filtrar por el código en la observación
+    const equipmentCode = getEquipmentCode(activeEquipmentId);
+    if (equipmentCode) {
+      return images.filter((img) =>
+        img.observation?.includes(`[${equipmentCode}]`),
+      );
+    }
+
+    // Si no hay código, retornamos todas (o un array vacío según prefieras)
+    return images; // Cambia a [] si prefieres no mostrar nada
+  }, [images, activeEquipmentId, equipments]);
 
   const grouped = {
     BEFORE: filteredImages.filter((i) => i.evidencePhase === "BEFORE"),
@@ -79,12 +109,22 @@ export default function OrderEvidenceSection({
 
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length || !activeEquipmentId) return;
+
     try {
       setUploading(true);
+
+      // Opcional: Añadir el código del equipo a la observación
+      const equipmentCode = getEquipmentCode(activeEquipmentId);
+      const observation = equipmentCode
+        ? `[${equipmentCode}] Evidencia`
+        : undefined;
+
       await uploadWorkOrderImagesRequest(orderId, Array.from(e.target.files), {
         phase: selectedPhase,
         equipmentId: activeEquipmentId,
+        observation, // Si tu API soporta enviar observación
       });
+
       await loadImages();
       showModal({
         type: "success",
@@ -92,16 +132,28 @@ export default function OrderEvidenceSection({
         message: "Las imágenes se han subido correctamente.",
         buttons: [{ text: "Aceptar", variant: "primary" }],
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("Error al subir");
+
+      let errorMessage = "Error al subir las imágenes";
+      if (err instanceof AxiosError) {
+        errorMessage = err.response?.data?.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
       showModal({
         type: "error",
         title: "Error",
-        message: err.response?.data?.message || "Error al subir las imágenes",
+        message: errorMessage,
         buttons: [{ text: "Cerrar", variant: "primary" }],
       });
     } finally {
       setUploading(false);
+      // Limpiar el input file
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -128,12 +180,18 @@ export default function OrderEvidenceSection({
                 message: "La imagen se ha eliminado correctamente.",
                 buttons: [{ text: "Aceptar", variant: "primary" }],
               });
-            } catch (err: any) {
+            } catch (err: unknown) {
+              let errorMessage = "Error al eliminar la imagen";
+              if (err instanceof AxiosError) {
+                errorMessage = err.response?.data?.message || errorMessage;
+              } else if (err instanceof Error) {
+                errorMessage = err.message;
+              }
+
               showModal({
                 type: "error",
                 title: "Error",
-                message:
-                  err.response?.data?.message || "Error al eliminar la imagen",
+                message: errorMessage,
                 buttons: [{ text: "Cerrar", variant: "primary" }],
               });
             }
@@ -145,6 +203,7 @@ export default function OrderEvidenceSection({
 
   const renderGrid = (imgs: WorkOrderImage[], label: string) => {
     if (imgs.length === 0) return null;
+
     return (
       <div className={styles.evidenceGroup}>
         <h4 className={styles.evidenceGroupTitle}>📸 {label}</h4>
@@ -161,6 +220,10 @@ export default function OrderEvidenceSection({
                 }
                 className={styles.evidenceThumb}
                 alt="Evidencia"
+                onError={(e) => {
+                  console.error("Error loading image:", img.url);
+                  e.currentTarget.src = "/placeholder-image.png"; // Añade una imagen placeholder
+                }}
               />
               {canEdit && !isLocked && (
                 <button
@@ -194,10 +257,24 @@ export default function OrderEvidenceSection({
     setPhasePickerOpen(true);
   };
 
+  // Mensaje contextual según el estado
+  const getEmptyMessage = () => {
+    if (!activeEquipmentId) {
+      return "Seleccione un equipo para ver sus evidencias.";
+    }
+    if (!filteredImages.length) {
+      return "No hay fotos para este equipo.";
+    }
+    return null;
+  };
+
+  const emptyMessage = getEmptyMessage();
+
   return (
     <div className={styles.section}>
       <h3>Evidencias Fotográficas</h3>
       {error && <div className={styles.error}>{error}</div>}
+
       {loading ? (
         <p>Cargando...</p>
       ) : (
@@ -205,9 +282,8 @@ export default function OrderEvidenceSection({
           {renderGrid(grouped.BEFORE, "Antes")}
           {renderGrid(grouped.DURING, "Durante")}
           {renderGrid(grouped.AFTER, "Después")}
-          {!filteredImages.length && (
-            <p className={styles.helperText}>Sin fotos para este equipo.</p>
-          )}
+
+          {emptyMessage && <p className={styles.helperText}>{emptyMessage}</p>}
         </div>
       )}
 
@@ -217,6 +293,12 @@ export default function OrderEvidenceSection({
             className={styles.fileUploadLabel}
             onClick={handleUploadClick}
             role="button"
+            tabIndex={0}
+            onKeyPress={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                handleUploadClick();
+              }
+            }}
           >
             <span className={styles.uploadIcon}>📷</span>
             <span className={styles.uploadText}>
