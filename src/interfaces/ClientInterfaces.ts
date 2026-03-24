@@ -2,6 +2,8 @@
 import type { Area, AreaFormData } from "./AreaInterfaces";
 import type { Usuario as UserUsuario } from "./UserInterfaces";
 
+export type ClientType = "natural" | "juridica";
+
 export interface UsuarioContacto {
   usuarioId: number;
   nombre: string;
@@ -26,9 +28,9 @@ export interface ClientImage {
 export interface Client {
   idCliente: number;
   nombre: string;
+  tipoCliente?: ClientType; // Nuevo campo opcional para compatibilidad
   nit: string;
- verification_digit?: string;
-
+  verification_digit?: string;
 
   // Dirección desglosada
   direccionBase: string;
@@ -58,9 +60,9 @@ export interface Client {
 // DTOs para crear/actualizar (frontend → backend)
 export interface CreateClientDto {
   nombre: string;
+  tipoCliente?: ClientType; // Nuevo campo
   nit: string;
- verification_digit?: string;
-
+  verification_digit?: string;
 
   // Campos obligatorios de dirección
   direccionBase: string;
@@ -84,8 +86,9 @@ export interface UpdateClientDto extends Partial<CreateClientDto> {}
 // Para formularios paso a paso (solo UI)
 export interface ClientFormData {
   nombre: string;
+  tipoCliente: ClientType; // Nuevo campo UI
   nit: string;
- verification_digit?: string;
+  verification_digit?: string;
 
   direccionBase: string;
   barrio: string;

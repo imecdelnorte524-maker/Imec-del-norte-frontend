@@ -17,7 +17,7 @@
 }
 
 .modal {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-2xl);
   width: 100%;
@@ -146,7 +146,7 @@
 }
 
 .orderCard {
-  background: var(--white);
+  background: var(--primary-50);
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius);
   padding: var(--spacing-md);
@@ -264,7 +264,7 @@
 
 .typeBadge {
   background: #0284c7;
-  color: white;
+  color: var(--primary-50);
   padding: 2px 8px;
   border-radius: var(--border-radius-full);
   font-size: var(--font-size-xs);
@@ -280,7 +280,7 @@
 
 .associateButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--border-radius);

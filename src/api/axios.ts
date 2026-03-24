@@ -1,20 +1,31 @@
-// src/api/axios.ts
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 import { playErrorSound } from "../utils/sounds";
 import { getSocketId } from "../lib/socket";
 
-// Event emitter para loading global (sin contexto)
+// Contador interno (HTTP)
 let activeRequests = 0;
 
-const setGlobalLoading = (loading: boolean) => {
-  window.dispatchEvent(new CustomEvent("globalLoading", { detail: loading }));
+const emitGlobalLoading = (active: boolean, message?: string) => {
+  window.dispatchEvent(
+    new CustomEvent("globalLoading", {
+      detail: { active, source: "http", message },
+    }),
+  );
 };
 
-// Configuración base de axios
+type LoadingAwareConfig = InternalAxiosRequestConfig & {
+  __countedForGlobalLoading?: boolean;
+  /**
+   * Si es true, no dispara loader global para este request
+   * (útil para polling o background refresh).
+   */
+  skipGlobalLoading?: boolean;
+};
+
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
-    "https://imec-del-norte-backend.onrender.com/api",
+    "https://m3h6rtnz-4001.use.devtunnels.ms/api",
   timeout: 60000,
   headers: {
     "Content-Type": "application/json",
@@ -22,23 +33,27 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Interceptor para token y socket ID (combinado)
 api.interceptors.request.use(
-  (config) => {
+  (config: LoadingAwareConfig) => {
     const token = localStorage.getItem("authToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
 
     const socketId = getSocketId();
-    if (socketId) {
-      config.headers["x-socket-id"] = socketId;
-    }
+    if (socketId) config.headers["x-socket-id"] = socketId;
 
-    // Incrementar contador de peticiones activas
-    activeRequests++;
-    if (activeRequests === 1) {
-      setGlobalLoading(true);
+    // Permite saltar loader por request
+    const skip =
+      config.skipGlobalLoading === true ||
+      config.headers?.["x-skip-global-loading"] === "1";
+
+    if (!skip) {
+      config.__countedForGlobalLoading = true;
+      activeRequests += 1;
+      if (activeRequests === 1) {
+        emitGlobalLoading(true, "Cargando...");
+      }
+    } else {
+      config.__countedForGlobalLoading = false;
     }
 
     return config;
@@ -49,33 +64,33 @@ api.interceptors.request.use(
   },
 );
 
-// Interceptor para manejar respuestas
 api.interceptors.response.use(
   (response) => {
-    // Decrementar contador de peticiones activas
-    activeRequests--;
-    if (activeRequests === 0) {
-      setGlobalLoading(false);
+    const config = response.config as LoadingAwareConfig;
+
+    if (config.__countedForGlobalLoading) {
+      activeRequests = Math.max(0, activeRequests - 1);
+      if (activeRequests === 0) emitGlobalLoading(false);
     }
+
     return response;
   },
   (error) => {
     const status = error.response?.status;
     const url: string = error.config?.url || "";
+    const config = (error.config || {}) as LoadingAwareConfig;
 
     console.error("❌ Error en response:", status, error.response?.data);
 
-    // Decrementar contador de peticiones activas
-    activeRequests--;
-    if (activeRequests === 0) {
-      setGlobalLoading(false);
+    if (config.__countedForGlobalLoading) {
+      activeRequests = Math.max(0, activeRequests - 1);
+      if (activeRequests === 0) emitGlobalLoading(false);
     }
 
     if (status && status >= 400) {
       playErrorSound();
     }
 
-    // 401 - Manejo de sesión
     if (status === 401) {
       const isLoginRequest = url.includes("/auth/login");
       const isRegisterRequest = url.includes("/auth/register");

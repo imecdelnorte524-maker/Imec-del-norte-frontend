@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetail.tsx
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query"; // 👈 IMPORTAR useQuery
 import {
   rejectOrderRequest,
   uploadInvoiceRequest,
@@ -11,6 +11,7 @@ import {
   removeSupplyDetailRequest,
   createEmergencyOrderRequest,
   signOrderReceiptRequest,
+  getOrderByIdRequest, // 👈 IMPORTAR
 } from "../../api/orders";
 import { usersApi } from "../../api/users";
 import { inventory } from "../../api/inventory";
@@ -29,7 +30,7 @@ import styles from "../../styles/components/orders/OrderDetail.module.css";
 import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import { playErrorSound } from "../../utils/sounds";
 import { useAuth } from "../../hooks/useAuth";
-import { useModal } from "../../context/ModalContext"; // Importar el hook del modal
+import { useModal } from "../../context/ModalContext";
 import OrderSignatureModal from "./OrderSignatureModal";
 import OrderEvidenceSection from "./OrderEvidenceSection";
 import OrderEditModal from "./OrderEditModal";
@@ -38,7 +39,7 @@ import AcTechnicalDataSection from "./AcTechnicalDataSection";
 import EquipmentSelectionModal from "./EquipmentSelectionModal";
 
 interface Props {
-  order: Order;
+  order: Order; // Esta es la orden inicial (solo para primera carga)
   onBack: () => void;
   userRole: "cliente" | "tecnico" | "admin" | "secretaria";
 }
@@ -63,13 +64,25 @@ const normalizeUserRole = (role: string): string => {
 
 type PendingPostRatingAction = "openBillingModal" | "openInvoiceModal" | null;
 
-export default function OrderDetail({ order, onBack, userRole }: Props) {
+export default function OrderDetail({
+  order: initialOrder,
+  onBack,
+  userRole,
+}: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { showModal } = useModal(); // Solo usamos showModal, hideModal no es necesario
+  const { showModal } = useModal();
 
-  const currentOrder = order;
+  // 🔥 SOLUCIÓN: Usar React Query para tener datos actualizados
+  const { data: currentOrder } = useQuery({
+    queryKey: ["orderDetail", initialOrder.orden_id],
+    queryFn: () => getOrderByIdRequest(initialOrder.orden_id),
+    initialData: initialOrder, // Usar la prop como dato inicial
+    staleTime: 0, // Siempre considerar datos viejos
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+  });
 
   const {
     updateOrder,
@@ -103,7 +116,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   };
 
   const isAirConditioningOrder =
-    (currentOrder.servicio.categoria_servicio || "").toLowerCase().trim() ===
+    (currentOrder?.servicio.categoria_servicio || "").toLowerCase().trim() ===
     "aires acondicionados";
 
   const [loading, setLoading] = useState(false);
@@ -173,13 +186,13 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     useState<AssociatedEquipment | null>(null);
   const [acPhase, setAcPhase] = useState<"BEFORE" | "AFTER">("BEFORE");
 
-  const supplyDetails = currentOrder.supplyDetails ?? [];
-  const toolDetails = currentOrder.toolDetails ?? [];
+  const supplyDetails = currentOrder?.supplyDetails ?? [];
+  const toolDetails = currentOrder?.toolDetails ?? [];
 
   const [showPaymentConfirmModal, setShowPaymentConfirmModal] = useState(false);
   const [activeEquipmentId, setActiveEquipmentId] = useState<number | null>(
-    order.acInspections?.[0]?.equipmentId ||
-      order.equipos?.[0]?.equipmentId ||
+    currentOrder?.acInspections?.[0]?.equipmentId ||
+      currentOrder?.equipos?.[0]?.equipmentId ||
       null,
   );
 
@@ -238,24 +251,24 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
   const refreshData = async () => {
     await queryClient.invalidateQueries({
-      queryKey: ["orderDetail", currentOrder.orden_id],
+      queryKey: ["orderDetail", currentOrder?.orden_id],
     });
     await queryClient.refetchQueries({
-      queryKey: ["orderDetail", currentOrder.orden_id],
+      queryKey: ["orderDetail", currentOrder?.orden_id],
     });
   };
 
-  const hasBillingStatus = currentOrder.estado_facturacion !== "";
+  const hasBillingStatus = currentOrder?.estado_facturacion !== "";
 
   const canEditOrderDetails =
     isAdminOrSecretaria &&
-    currentOrder.estado !== validStatuses.COMPLETADO &&
+    currentOrder?.estado !== validStatuses.COMPLETADO &&
     !hasBillingStatus;
 
   const handleStartOrderClick = () => {
     if (isAirConditioningOrder) {
       setAcPhase("BEFORE");
-      if (currentOrder.equipos.length === 1) {
+      if (currentOrder?.equipos.length === 1) {
         setSelectedEquipment(currentOrder.equipos[0]);
         setShowAcInspectionModal(true);
       } else {
@@ -267,18 +280,18 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   };
 
   const hasReceiptSignature =
-    !!currentOrder.received_by_name &&
-    !!currentOrder.received_by_position &&
-    !!currentOrder.received_by_signature_data;
+    !!currentOrder?.received_by_name &&
+    !!currentOrder?.received_by_position &&
+    !!currentOrder?.received_by_signature_data;
 
   const handleCompleteOrderClick = () => {
     if (isAirConditioningOrder) {
       // 1. VALIDAR REGISTROS TÉCNICOS (PARÁMETROS)
 
       // Buscar el primer equipo que no tenga registro de "ANTES"
-      const eqMissingBefore = currentOrder.equipos.find(
+      const eqMissingBefore = currentOrder?.equipos.find(
         (eq) =>
-          !currentOrder.acInspections?.some(
+          !currentOrder?.acInspections?.some(
             (i) => i.equipmentId === eq.equipmentId && i.phase === "BEFORE",
           ),
       );
@@ -304,9 +317,9 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       }
 
       // Buscar el primer equipo que no tenga registro de "DESPUÉS"
-      const eqMissingAfter = currentOrder.equipos.find(
+      const eqMissingAfter = currentOrder?.equipos.find(
         (eq) =>
-          !currentOrder.acInspections?.some(
+          !currentOrder?.acInspections?.some(
             (i) => i.equipmentId === eq.equipmentId && i.phase === "AFTER",
           ),
       );
@@ -333,22 +346,22 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
       // 2. VALIDAR EVIDENCIAS FOTOGRÁFICAS (3 FASES POR CADA EQUIPO)
       const missingPhotos: string[] = [];
-      currentOrder.equipos.forEach((eq) => {
+      currentOrder?.equipos.forEach((eq) => {
         const eqId = eq.equipmentId;
         // Función auxiliar para resolver equipo en fotos viejas o nuevas
-        const hasBefore = currentOrder.images?.some(
+        const hasBefore = currentOrder?.images?.some(
           (img) =>
             (img.equipmentId === eqId ||
               img.observation?.includes(`[${eq.code}]`)) &&
             img.evidencePhase === "BEFORE",
         );
-        const hasDuring = currentOrder.images?.some(
+        const hasDuring = currentOrder?.images?.some(
           (img) =>
             (img.equipmentId === eqId ||
               img.observation?.includes(`[${eq.code}]`)) &&
             (img.evidencePhase === "DURING" || !img.evidencePhase),
         );
-        const hasAfter = currentOrder.images?.some(
+        const hasAfter = currentOrder?.images?.some(
           (img) =>
             (img.equipmentId === eqId ||
               img.observation?.includes(`[${eq.code}]`)) &&
@@ -456,8 +469,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
     if (
       acPhase === "BEFORE" &&
-      (currentOrder.estado === "Pendiente" ||
-        currentOrder.estado === "Asignada")
+      (currentOrder?.estado === "Pendiente" ||
+        currentOrder?.estado === "Asignada")
     ) {
       await handleStatusUpdate(validStatuses.EN_PROCESO);
     }
@@ -471,7 +484,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     setEmergencyLeaderId(null);
     setEmergencyComment("");
 
-    const currentTechs = currentOrder.technicians || [];
+    const currentTechs = currentOrder?.technicians || [];
     if (currentTechs.length === 1) {
       const onlyTechId = currentTechs[0].tecnicoId;
       setSelectedEmergencyTechnicians([onlyTechId]);
@@ -479,7 +492,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     }
 
     try {
-      if (currentOrder.cliente_empresa?.id_cliente) {
+      if (currentOrder?.cliente_empresa?.id_cliente) {
         const data = await getEquipmentByClientRequest(
           currentOrder.cliente_empresa.id_cliente,
         );
@@ -495,7 +508,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const handleOpenEditModal = async () => {
     setError(null);
     if (
-      currentOrder.cliente_empresa?.id_cliente &&
+      currentOrder?.cliente_empresa?.id_cliente &&
       clientEquipments.length === 0
     ) {
       try {
@@ -562,10 +575,10 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
       const commentToSend =
         emergencyComment.trim() ||
-        `Emergencia creada desde orden ${currentOrder.orden_id}`;
+        `Emergencia creada desde orden ${currentOrder?.orden_id}`;
 
       const emergencyOrder = await createEmergencyOrderRequest(
-        currentOrder.orden_id,
+        currentOrder!.orden_id,
         {
           technicianIds,
           leaderTechnicianId: leaderId,
@@ -623,7 +636,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       }
 
       await updateOrder.mutateAsync({
-        orderId: currentOrder.orden_id,
+        orderId: currentOrder!.orden_id,
         data: updateData,
       });
       await refreshData();
@@ -660,7 +673,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       }
 
       await updateOrder.mutateAsync({
-        orderId: currentOrder.orden_id,
+        orderId: currentOrder!.orden_id,
         data: dataToSend,
       });
       await refreshData();
@@ -697,7 +710,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         isLeader: id === (leaderTechnicianId || selectedTechnicians[0]),
       }));
       await assignTechnician.mutateAsync({
-        orderId: currentOrder.orden_id,
+        orderId: currentOrder!.orden_id,
         technicians: techniciansData,
       });
       await refreshData();
@@ -741,7 +754,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             setError(null);
             try {
               await unassignTechnician.mutateAsync({
-                orderId: currentOrder.orden_id,
+                orderId: currentOrder!.orden_id,
                 tecnicoId,
               });
               await refreshData();
@@ -769,7 +782,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await rejectOrderRequest(currentOrder.orden_id, rejectReason);
+      await rejectOrderRequest(currentOrder!.orden_id, rejectReason);
       await refreshData();
       setShowRejectForm(false);
       onBack();
@@ -799,7 +812,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             setLoading(true);
             setError(null);
             try {
-              await cancelOrder.mutateAsync(currentOrder.orden_id);
+              await cancelOrder.mutateAsync(currentOrder!.orden_id);
               await refreshData();
               onBack();
             } catch (err: any) {
@@ -832,7 +845,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       formData.append("file", invoiceFile);
 
       await uploadInvoiceRequest(
-        currentOrder.orden_id,
+        currentOrder!.orden_id,
         formData,
         selectedCostStatus,
       );
@@ -918,7 +931,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
     try {
       await updateOrder.mutateAsync({
-        orderId: currentOrder.orden_id,
+        orderId: currentOrder!.orden_id,
         data: payload,
       });
       await refreshData();
@@ -939,17 +952,17 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   };
 
   const hasTechnicians =
-    currentOrder.technicians && currentOrder.technicians.length > 0;
+    currentOrder?.technicians && currentOrder.technicians.length > 0;
 
   const hasUnratedTechnicians =
     !!hasTechnicians &&
-    currentOrder.technicians.some(
+    currentOrder?.technicians.some(
       (t) => t.rating === null || t.rating === undefined,
     );
 
   const needsRating =
     canRateTechnicians &&
-    currentOrder.estado === validStatuses.COMPLETADO &&
+    currentOrder?.estado === validStatuses.COMPLETADO &&
     hasUnratedTechnicians;
 
   useEffect(() => {
@@ -961,11 +974,11 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   }, [needsRating]);
 
   useEffect(() => {
-    setSelectedCostStatus(currentOrder.estado_pago || "");
-  }, [currentOrder.orden_id, currentOrder.estado_pago]);
+    setSelectedCostStatus(currentOrder?.estado_pago || "");
+  }, [currentOrder?.orden_id, currentOrder?.estado_pago]);
 
   const openRatingModal = (action: PendingPostRatingAction) => {
-    if (!currentOrder.technicians || currentOrder.technicians.length === 0)
+    if (!currentOrder?.technicians || currentOrder.technicians.length === 0)
       return;
     const initialRatings: Record<number, number> = {};
     currentOrder.technicians.forEach((t) => {
@@ -985,7 +998,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       return;
     }
 
-    setSelectedBillingStatus(currentOrder.estado_facturacion);
+    setSelectedBillingStatus(currentOrder?.estado_facturacion || "");
     setShowBillingModal(true);
   };
 
@@ -1045,14 +1058,14 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
           if (!item.supply) continue;
           const qty = selectedQuantities[invId] ?? 1;
 
-          await addSupplyDetailRequest(currentOrder.orden_id, {
+          await addSupplyDetailRequest(currentOrder!.orden_id, {
             insumoId: item.supply.insumoId,
             cantidadUsada: qty,
           });
         } else {
           // herramienta
           if (!item.tool) continue;
-          await addToolDetailRequest(currentOrder.orden_id, {
+          await addToolDetailRequest(currentOrder!.orden_id, {
             herramientaId: item.tool.herramientaId,
           });
         }
@@ -1084,7 +1097,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
     try {
       await updateOrder.mutateAsync({
-        orderId: currentOrder.orden_id,
+        orderId: currentOrder!.orden_id,
         data: {
           estado_facturacion: selectedBillingStatus,
         },
@@ -1114,7 +1127,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
   const handleSubmitRatings = async () => {
     setRatingError(null);
 
-    if (!currentOrder.technicians || currentOrder.technicians.length === 0) {
+    if (!currentOrder?.technicians || currentOrder.technicians.length === 0) {
       setShowRatingModal(false);
       return;
     }
@@ -1126,7 +1139,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
 
     try {
       await rateTechnicians.mutateAsync({
-        orderId: currentOrder.orden_id,
+        orderId: currentOrder!.orden_id,
         ratings: payload,
       });
 
@@ -1134,7 +1147,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
       setShowRatingModal(false);
 
       if (pendingPostRatingAction === "openBillingModal") {
-        setSelectedBillingStatus(currentOrder.estado_facturacion);
+        setSelectedBillingStatus(currentOrder?.estado_facturacion || "");
         setShowBillingModal(true);
       } else if (pendingPostRatingAction === "openInvoiceModal") {
         setShowInvoiceModal(true);
@@ -1178,8 +1191,8 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
             setLoading(true);
             try {
               if (type === "tool")
-                await removeToolDetailRequest(currentOrder.orden_id, id);
-              else await removeSupplyDetailRequest(currentOrder.orden_id, id);
+                await removeToolDetailRequest(currentOrder!.orden_id, id);
+              else await removeSupplyDetailRequest(currentOrder!.orden_id, id);
 
               await refreshData();
 
@@ -1222,7 +1235,7 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
     setSignatureLoading(true);
     setError(null);
     try {
-      await signOrderReceiptRequest(currentOrder.orden_id, {
+      await signOrderReceiptRequest(currentOrder!.orden_id, {
         name: data.name,
         position: data.position,
         signatureData: data.signatureData,
@@ -1289,69 +1302,75 @@ export default function OrderDetail({ order, onBack, userRole }: Props) {
         ? styles.billingWarranty
         : styles.billingNotBilled;
 
-  const isReadOnly = currentOrder.estado_facturacion === "Facturado";
+  const isReadOnly = currentOrder?.estado_facturacion === "Facturado";
 
   const canUploadInvoice =
     isAdminOrSecretaria &&
-    currentOrder.estado === validStatuses.COMPLETADO &&
-    !currentOrder.factura_pdf_url &&
-    !currentOrder.estado_pago;
+    currentOrder?.estado === validStatuses.COMPLETADO &&
+    !currentOrder?.factura_pdf_url &&
+    !currentOrder?.estado_pago;
 
   const canAssignInventory =
     (isAdminOrSecretaria || isTechnician) &&
     !isReadOnly &&
-    currentOrder.estado !== validStatuses.CANCELADA &&
-    currentOrder.estado !== validStatuses.RECHAZADA &&
-    currentOrder.estado !== validStatuses.COMPLETADO;
+    currentOrder?.estado !== validStatuses.CANCELADA &&
+    currentOrder?.estado !== validStatuses.RECHAZADA &&
+    currentOrder?.estado !== validStatuses.COMPLETADO;
 
   const canBillingStatus =
     isAdminOrSecretaria &&
     !isReadOnly &&
-    currentOrder.estado === validStatuses.COMPLETADO &&
-    currentOrder.estado_facturacion === "";
+    currentOrder?.estado === validStatuses.COMPLETADO &&
+    currentOrder?.estado_facturacion === "";
 
   const isTechnicianAssigned =
     user &&
-    currentOrder.technicians?.some((tech) => tech.tecnicoId === user.usuarioId);
+    currentOrder?.technicians?.some(
+      (tech) => tech.tecnicoId === user.usuarioId,
+    );
 
   const canTechnicianStartOrder =
     isTechnician &&
     !isReadOnly &&
     isTechnicianAssigned &&
-    currentOrder.estado === validStatuses.ASIGNADA;
+    currentOrder?.estado === validStatuses.ASIGNADA;
 
   const canTechnicianCompleteOrder =
     isTechnician &&
     !isReadOnly &&
     isTechnicianAssigned &&
-    currentOrder.estado === validStatuses.EN_PROCESO;
+    currentOrder?.estado === validStatuses.EN_PROCESO;
 
   const canPauseOrder =
     !isReadOnly &&
-    currentOrder.estado === validStatuses.EN_PROCESO &&
+    currentOrder?.estado === validStatuses.EN_PROCESO &&
     ((isTechnician && isTechnicianAssigned) || isAdminOrSecretaria);
 
   const canResumeOrder =
     !isReadOnly &&
-    currentOrder.estado === validStatuses.PAUSADA &&
+    currentOrder?.estado === validStatuses.PAUSADA &&
     ((isTechnician && isTechnicianAssigned) || isAdminOrSecretaria);
 
   const canCreateEmergency =
     !isClient &&
     !isReadOnly &&
-    (currentOrder.estado === validStatuses.ASIGNADA ||
-      currentOrder.estado === validStatuses.EN_PROCESO);
+    (currentOrder?.estado === validStatuses.ASIGNADA ||
+      currentOrder?.estado === validStatuses.EN_PROCESO);
 
   const canEditEvidence =
     !isReadOnly &&
     (isAdminOrSecretaria || (isTechnician && !!isTechnicianAssigned));
 
   const hasBeforeInspection =
-    currentOrder.acInspections?.some((i) => i.phase === "BEFORE") ?? false;
+    currentOrder?.acInspections?.some((i) => i.phase === "BEFORE") ?? false;
 
   const handleBackClick = () => {
     onBack();
   };
+
+  if (!currentOrder) {
+    return <div>Cargando orden...</div>;
+  }
 
   return (
     <div className={styles.container}>

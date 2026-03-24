@@ -47,7 +47,7 @@
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
   font-size: var(--font-size-sm);
-  background-color: var(--white);
+  background-color: var(--primary-50);
   transition: border-color 0.2s, box-shadow 0.2s;
   color: var(--gray-800);
 }
@@ -160,7 +160,7 @@
   padding: 0;
   border-radius: 999px;
   border: 1px solid var(--gray-300);
-  background-color: var(--white);
+  background-color: var(--primary-50);
   color: var(--gray-600);
   font-size: 16px;
   cursor: pointer;

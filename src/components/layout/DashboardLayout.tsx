@@ -43,6 +43,7 @@ import {
   BuildingStorefrontIcon,
 } from "@heroicons/react/24/outline";
 import { NotificationsDropdown } from "../notifications/NotificationsDropdown";
+import { enableAudio } from "../../utils/sounds";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -184,23 +185,6 @@ const determineModuleType = (module: ModuleInterface): ModuleCategory => {
 };
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  // Dentro de DashboardLayout.tsx, después de los otros useEffects
-  useEffect(() => {
-    // Activar audio con el PRIMER CLIC del usuario en cualquier parte
-    const handleFirstClick = () => {
-      import("../../utils/sounds").then(({ enableAudio }) => {
-        enableAudio();
-      });
-      window.removeEventListener("click", handleFirstClick);
-    };
-
-    window.addEventListener("click", handleFirstClick, { once: true });
-
-    return () => {
-      window.removeEventListener("click", handleFirstClick);
-    };
-  }, []);
-
   const { user, logout, token } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -212,7 +196,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   } = useModules();
 
   const httpBaseUrl =
-    (import.meta as any).env?.VITE_API_URL || "http://localhost:3000/api";
+    (import.meta as any).env?.VITE_API_URL || "https://m3h6rtnz-4001.use.devtunnels.ms/api";
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotifications({ token, httpBaseUrl });
@@ -271,6 +255,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return fields.every((v) => v && String(v).trim().length > 0);
   }, []);
 
+  useEffect(() => {
+    const handleFirstClick = () => {
+      enableAudio();
+    };
+
+    window.addEventListener("click", handleFirstClick, { once: true });
+
+    return () => {
+      window.removeEventListener("click", handleFirstClick);
+    };
+  }, []);
   // show reminder briefly (~17s)
   const showReminderOnce = useCallback(() => {
     setShowProfileReminder(true);

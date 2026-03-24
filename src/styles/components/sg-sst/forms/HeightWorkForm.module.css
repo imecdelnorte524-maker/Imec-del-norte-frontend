@@ -34,7 +34,7 @@
 
 .backButton {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
@@ -547,7 +547,7 @@ select.input:focus {
 
 .cancelButton {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.9rem 1.8rem;
   border-radius: 0.75rem;
@@ -564,7 +564,7 @@ select.input:focus {
 
 .submitButton {
   background: linear-gradient(135deg, #dc2626, #b91c1c);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.9rem 1.8rem;
   border-radius: 0.75rem;

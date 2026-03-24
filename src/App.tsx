@@ -1,4 +1,3 @@
-// src/App.tsx
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,62 +5,95 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import { useEffect } from "react";
+
+import { Suspense, useEffect } from "react";
+
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Orders from "./pages/Orders";
-import Requirements from "./pages/Requirements";
-import CostCenters from "./pages/CostCenters";
-import Areas from "./pages/Areas";
-import Reports from "./pages/Reports";
-import Inventory from "./pages/Inventory";
-import Users from "./pages/Users";
-import Settings from "./pages/Settings";
-import SGSST from "./pages/SgSst";
 import { useAuth } from "./hooks/useAuth";
-import Roles from "./pages/Roles";
-import Clients from "./pages/Clients";
-import EquipmentDetailPage from "./pages/EquipmentDetail";
-import EquipmentListPage from "./pages/EquipmentList";
-import UserProfilePage from "./pages/UserProfile";
-import RecoveryPage from "./pages/Recovey";
-import ResetPasswordPage from "./pages/ResetPassword";
-import RegistrationBoard from "./pages/RegistrationBoard";
-import ClientDetailsPage from "./pages/ClientDetails";
-import HumanResources from "./pages/HumanResources";
+
 import { LoadingProvider } from "./context/LoadingContext";
 import Loading from "./components/Loading";
-import { useLoadingContext } from "./context/LoadingContext";
-import { useRealtime } from "./hooks/useRealtime";
+import { useRealtime } from "./hooks/useEntityRealtime";
+import { lazyWithLoader } from "./utils/lazyWithLoader";
 
-// Componente para manejar el loading global desde axios
-const GlobalLoadingHandler = () => {
-  const { startLoading, stopLoading } = useLoadingContext();
+const Dashboard = lazyWithLoader(() => import("./pages/Dashboard"), {
+  message: "Cargando dashboard...",
+});
+const Orders = lazyWithLoader(() => import("./pages/Orders"), {
+  message: "Cargando órdenes...",
+});
+const Requirements = lazyWithLoader(() => import("./pages/Requirements"), {
+  message: "Cargando requerimientos...",
+});
+const CostCenters = lazyWithLoader(() => import("./pages/CostCenters"), {
+  message: "Cargando centros de costos...",
+});
+const Reports = lazyWithLoader(() => import("./pages/Reports"), {
+  message: "Cargando reportes...",
+});
+const Inventory = lazyWithLoader(() => import("./pages/Inventory"), {
+  message: "Cargando inventario...",
+});
+const Users = lazyWithLoader(() => import("./pages/Users"), {
+  message: "Cargando usuarios...",
+});
+const Settings = lazyWithLoader(() => import("./pages/Settings"), {
+  message: "Cargando configuración...",
+});
+const SGSST = lazyWithLoader(() => import("./pages/SgSst"), {
+  message: "Cargando SG-SST...",
+});
+const Roles = lazyWithLoader(() => import("./pages/Roles"), {
+  message: "Cargando roles...",
+});
+const Clients = lazyWithLoader(() => import("./pages/Clients"), {
+  message: "Cargando clientes...",
+});
+const EquipmentDetailPage = lazyWithLoader(
+  () => import("./pages/EquipmentDetail"),
+  { message: "Cargando equipo..." },
+);
+const EquipmentListPage = lazyWithLoader(
+  () => import("./pages/EquipmentList"),
+  { message: "Cargando equipos..." },
+);
+const UserProfilePage = lazyWithLoader(() => import("./pages/UserProfile"), {
+  message: "Cargando perfil...",
+});
+const RecoveryPage = lazyWithLoader(() => import("./pages/Recovey"), {
+  message: "Cargando recuperación...",
+});
+const ResetPasswordPage = lazyWithLoader(
+  () => import("./pages/ResetPassword"),
+  {
+    message: "Cargando...",
+  },
+);
+const RegistrationBoard = lazyWithLoader(
+  () => import("./pages/RegistrationBoard"),
+  { message: "Cargando tablero..." },
+);
+const ClientDetailsPage = lazyWithLoader(
+  () => import("./pages/ClientDetails"),
+  {
+    message: "Cargando cliente...",
+  },
+);
+const HumanResources = lazyWithLoader(() => import("./pages/HumanResources"), {
+  message: "Cargando recursos humanos...",
+});
+const NotFound = lazyWithLoader(() => import("./pages/NotFound"), {
+  message: "Cargando...",
+});
 
-  useEffect(() => {
-    const handleGlobalLoading = (event: CustomEvent) => {
-      if (event.detail) {
-        startLoading();
-      } else {
-        stopLoading();
-      }
-    };
+function RealtimeInitializer() {
+  const { isAuthenticated } = useAuth();
+  useRealtime();
 
-    window.addEventListener(
-      "globalLoading",
-      handleGlobalLoading as EventListener,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "globalLoading",
-        handleGlobalLoading as EventListener,
-      );
-    };
-  }, [startLoading, stopLoading]);
+  useEffect(() => {}, [isAuthenticated]);
 
   return null;
-};
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading, user } = useAuth();
@@ -82,13 +114,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AppContent() {
-
-  useRealtime();
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
 
+      {/* PROTECTED */}
       <Route
         path="/dashboard"
         element={
@@ -97,7 +128,126 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
+      <Route
+        path="/orders"
+        element={
+          <ProtectedRoute>
+            <Orders />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/requirements"
+        element={
+          <ProtectedRoute>
+            <Requirements />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cost-centers"
+        element={
+          <ProtectedRoute>
+            <CostCenters />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory"
+        element={
+          <ProtectedRoute>
+            <Inventory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <Users />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/roles"
+        element={
+          <ProtectedRoute>
+            <Roles />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clients"
+        element={
+          <ProtectedRoute>
+            <Clients />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clients/:id"
+        element={
+          <ProtectedRoute>
+            <ClientDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/equipment"
+        element={
+          <ProtectedRoute>
+            <EquipmentListPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/equipment/:equipmentId"
+        element={
+          <ProtectedRoute>
+            <EquipmentDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <UserProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/human-resources"
+        element={
+          <ProtectedRoute>
+            <HumanResources />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sg-sst"
+        element={
+          <ProtectedRoute>
+            <SGSST />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/registration-board"
         element={
@@ -107,154 +257,13 @@ function AppContent() {
         }
       />
 
-      <Route
-        path="/sg-sst"
-        element={
-          <ProtectedRoute>
-            <SGSST />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/orders"
-        element={
-          <ProtectedRoute>
-            <Orders />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/requirements"
-        element={
-          <ProtectedRoute>
-            <Requirements />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/cost-centers"
-        element={
-          <ProtectedRoute>
-            <CostCenters />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/areas"
-        element={
-          <ProtectedRoute>
-            <Areas />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute>
-            <Reports />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/inventory"
-        element={
-          <ProtectedRoute>
-            <Inventory />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/users"
-        element={
-          <ProtectedRoute>
-            <Users />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/roles"
-        element={
-          <ProtectedRoute>
-            <Roles />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/clients"
-        element={
-          <ProtectedRoute>
-            <Clients />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/clients/:id"
-        element={
-          <ProtectedRoute>
-            <ClientDetailsPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/equipment"
-        element={
-          <ProtectedRoute>
-            <EquipmentListPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/equipment/:equipmentId"
-        element={
-          <ProtectedRoute>
-            <EquipmentDetailPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <UserProfilePage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/human-resources"
-        element={
-          <ProtectedRoute>
-            <HumanResources />
-          </ProtectedRoute>
-        }
-      />
-
+      {/* PUBLIC */}
       <Route path="/recovery" element={<RecoveryPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* NOT FOUND */}
+      <Route path="/not-found" element={<NotFound />} />
+      <Route path="*" element={<Navigate to="/not-found" replace />} />
     </Routes>
   );
 }
@@ -263,8 +272,10 @@ function App() {
   return (
     <Router>
       <LoadingProvider>
-        <GlobalLoadingHandler />
-        <AppContent />
+        <RealtimeInitializer />
+        <Suspense fallback={null}>
+          <AppRoutes />
+        </Suspense>
       </LoadingProvider>
     </Router>
   );

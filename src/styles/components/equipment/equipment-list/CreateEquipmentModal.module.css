@@ -14,7 +14,7 @@
 }
 
 .modalContent {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-xl);
   max-width: 800px;
@@ -207,7 +207,7 @@
   padding: var(--spacing-md);
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
-  background: var(--white);
+  background: var(--primary-50);
 }
 
 .componentItem:last-child {
@@ -369,7 +369,7 @@
 
 .formActions button:last-child {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 .formActions button:last-child:hover:not(:disabled) {
@@ -555,7 +555,7 @@
   font-size: var(--font-size-sm);
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--white);
+  background-color: var(--primary-50);
 }
 
 .formRow select[name="workOrderId"]:focus {
@@ -811,7 +811,7 @@
   align-self: flex-start;
   padding: 6px 12px;
   background-color: #4299e1;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 4px;
   font-size: 14px;
@@ -833,7 +833,7 @@
   align-self: flex-start;
   padding: 6px 12px;
   background-color: #e53e3e;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 4px;
   font-size: 14px;
@@ -876,7 +876,7 @@
 /* Botones de acción específicos */
 .cancelButton {
   background-color: #6c757d;
-  color: white;
+  color: var(--primary-50);
 }
 
 .cancelButton:hover:not(:disabled) {
@@ -888,7 +888,7 @@
   align-items: center;
   gap: 8px;
   background-color: #28a745;
-  color: white;
+  color: var(--primary-50);
 }
 
 .submitButton:hover:not(:disabled) {
@@ -899,7 +899,7 @@
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+  border-top-color: var(--primary-50);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -1058,7 +1058,7 @@
   width: 22px;
   left: 4px;
   top: 4px;
-  background-color: white;
+  background-color: var(--primary-50);
   transition: 0.25s;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);

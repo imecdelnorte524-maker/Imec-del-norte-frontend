@@ -28,7 +28,7 @@
 
 .cancelButton {
   background: var(--gray-500);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--border-radius);
@@ -44,7 +44,7 @@
 }
 
 .form {
-  background: var(--white);
+  background: var(--primary-50);
   padding: var(--spacing-xl);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
@@ -87,7 +87,7 @@
   border-radius: var(--border-radius);
   font-size: var(--font-size-base);
   transition: all 0.2s;
-  background: var(--white);
+  background: var(--primary-50);
   box-sizing: border-box;
   font-family: inherit;
 }
@@ -120,7 +120,7 @@
   border-radius: var(--border-radius);
   font-size: var(--font-size-base);
   transition: all 0.2s;
-  background: var(--white);
+  background: var(--primary-50);
   box-sizing: border-box;
   font-family: inherit;
 }
@@ -150,7 +150,7 @@
 
 .primaryButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--border-radius);
@@ -271,7 +271,7 @@
 
 .addButton:hover {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 /* Modal para crear tipo de mantenimiento */
@@ -336,7 +336,7 @@
   border: 1px solid var(--gray-300);
   border-radius: var(--border-radius);
   padding: var(--spacing-sm);
-  background: var(--white);
+  background: var(--primary-50);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -345,7 +345,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--white);
+  background: var(--primary-50);
   padding-bottom: var(--spacing-xs);
   margin-bottom: var(--spacing-xs);
   border-bottom: 1px solid var(--gray-200);
@@ -358,7 +358,7 @@
   border: 1px solid var(--gray-300);
   font-size: var(--font-size-sm);
   box-sizing: border-box;
-  background: var(--white);
+  background: var(--primary-50);
 }
 
 .equipmentCheckbox {
@@ -410,7 +410,7 @@
   padding: var(--spacing-sm);
   max-height: 200px;
   overflow-y: auto;
-  background-color: var(--white);
+  background-color: var(--primary-50);
   margin-top: 4px;
   -webkit-overflow-scrolling: touch;
 }

@@ -12,7 +12,7 @@
 .paginationButton {
   padding: 8px 16px;
   border: 1px solid var(--gray-300);
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -38,7 +38,7 @@
   width: 40px;
   height: 40px;
   border: 1px solid var(--gray-300);
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
@@ -52,6 +52,6 @@
 
 .pageButton.active {
   background: var(--primary-500);
-  color: var(--white);
+  color: var(--primary-50);
   border-color: var(--primary-500);
 }

@@ -1,4 +1,6 @@
+// src/pages/Inventory.tsx
 import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { inventory as inventoryAPI } from "../api/inventory";
 import AddInventoryModal from "../components/inventory/AddInventoryModal";
@@ -17,14 +19,27 @@ type InventoryRow = InventoryItem & {
   fechaEliminacion?: string | null;
 };
 
+// Hook personalizado para inventario con React Query
+function useInventory() {
+  return useQuery({
+    queryKey: ["inventory"],
+    queryFn: async () => {
+      const data = await inventoryAPI.getAll();
+      return data as InventoryRow[];
+    },
+    staleTime: 0,
+  });
+}
+
 export default function Inventory() {
-  const [inventario, setInventario] = useState<InventoryRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Estados
   const [filtro, setFiltro] = useState<TipoFiltro>("todos");
   const [busqueda, setBusqueda] = useState("");
   const [showDeleted] = useState(false);
-  const [exporting, setExporting] = useState(false); // 👈 NUEVO ESTADO
+  const [exporting, setExporting] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -34,39 +49,43 @@ export default function Inventory() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryRow | null>(null);
 
+  // REACT QUERY para inventario
+  const {
+    data: inventario = [],
+    isLoading: loading,
+    error: queryError,
+    refetch: cargarInventario,
+  } = useInventory();
+
+  // 🔥 EFECTO PARA REFRESCAR CUANDO CAMBIAN SUPPLIES O TOOLS
   useEffect(() => {
-    cargarInventario();
-  }, [showDeleted]);
+    // Suscribirse a cambios en supplies y tools
+    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === "updated") {
+        const queryKey = event.query.queryKey;
+        // Si se actualizó supplies o tools, refrescar inventario
+        if (queryKey[0] === "supplies" || queryKey[0] === "tools") {
+          cargarInventario();
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [queryClient, cargarInventario]);
 
   const handleView = (item: InventoryRow) => {
     setSelectedItem(item);
     setShowViewModal(true);
   };
 
-  const cargarInventario = async () => {
-    try {
-      setLoading(true);
-      const data = await inventoryAPI.getAll();
-      setInventario(data as InventoryRow[]);
-      setError(null);
-    } catch (err: any) {
-      console.error("❌ Error en cargarInventario:", err);
-      setError("Error al cargar el inventario: " + (err.message || ""));
-      playErrorSound();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 👇 NUEVO MANEJADOR PARA EXPORTAR EXCEL
   const handleExportExcel = async () => {
     try {
       setExporting(true);
-      setError(null);
+      setLocalError(null);
       await inventoryAPI.exportToExcel();
     } catch (err: any) {
       console.error("❌ Error exportando inventario:", err);
-      setError("Error al exportar inventario: " + (err.message || ""));
+      setLocalError("Error al exportar inventario: " + (err.message || ""));
       playErrorSound();
     } finally {
       setExporting(false);
@@ -93,7 +112,10 @@ export default function Inventory() {
   };
 
   const handleSuccess = () => {
-    cargarInventario();
+    // Refrescar inventario después de cualquier operación
+    queryClient.invalidateQueries({ queryKey: ["inventory"] });
+    queryClient.invalidateQueries({ queryKey: ["supplies"] });
+    queryClient.invalidateQueries({ queryKey: ["tools"] });
     setShowAddModal(false);
     setShowEditModal(false);
     setShowDeleteModal(false);
@@ -160,7 +182,6 @@ export default function Inventory() {
           </div>
 
           <div className={styles.actionButtons}>
-            {/* 👇 NUEVO BOTÓN DE EXPORTAR EXCEL */}
             <button
               onClick={handleExportExcel}
               disabled={exporting || inventario.length === 0}
@@ -189,10 +210,13 @@ export default function Inventory() {
           </div>
         </div>
 
-        {error ? (
+        {queryError || localError ? (
           <div className={styles.errorMessage}>
-            {error}
-            <button onClick={cargarInventario} className={styles.btnRetry}>
+            {queryError instanceof Error ? queryError.message : localError}
+            <button
+              onClick={() => cargarInventario()}
+              className={styles.btnRetry}
+            >
               Reintentar
             </button>
           </div>

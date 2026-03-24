@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { inventory } from "../../api/inventory"; // ✅ Usamos el objeto inventory
+import { useQueryClient } from "@tanstack/react-query"; // 👈 IMPORTAR
+import { inventory } from "../../api/inventory";
 import type { InventoryItem } from "../../interfaces/InventoryInterfaces";
 import styles from "../../styles/components/inventory/DeleteInventoryModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
@@ -17,6 +18,7 @@ export default function DeleteConfirmationModal({
   onSuccess,
   item,
 }: DeleteConfirmationModalProps) {
+  const queryClient = useQueryClient(); // 👈 AÑADIR
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,8 +33,15 @@ export default function DeleteConfirmationModal({
       setLoading(true);
       setError(null);
 
-      // ✅ Usamos deleteComplete del objeto inventory
       await inventory.deleteComplete(item.inventarioId);
+
+      // 🔥 REFRESCAR CACHÉ
+      await queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      if (item.tipo === "herramienta") {
+        await queryClient.invalidateQueries({ queryKey: ["tools"] });
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["supplies"] });
+      }
 
       onSuccess();
       onClose();

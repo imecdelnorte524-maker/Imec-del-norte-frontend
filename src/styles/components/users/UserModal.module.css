@@ -43,7 +43,7 @@
   border-bottom: 1px solid #e5e7eb;
   background: var(--primary-600);
   border-radius: 12px 12px 0 0;
-  color: white;
+  color: var(--primary-50);
 }
 
 .modalHeader h2 {
@@ -57,7 +57,7 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: white;
+  color: var(--primary-50);
   padding: 0;
   width: 36px;
   height: 36px;
@@ -171,7 +171,7 @@
 
 .btnPrimary {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -196,7 +196,7 @@
 
 .btnSecondary {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;

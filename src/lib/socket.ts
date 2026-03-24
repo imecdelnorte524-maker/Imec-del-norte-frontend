@@ -6,33 +6,41 @@ let connectionAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://imec-del-norte-backend.onrender.com/api";
+  import.meta.env.VITE_API_URL || "https://m3h6rtnz-4001.use.devtunnels.ms/api";
 
 // Extraer la URL base (sin /api)
 const BASE_URL = API_URL.replace(/\/api\/?$/, "");
 
-// 🔥 CONSTRUCTOR DE LA URL DEL WEBSOCKET
-const WS_URL = import.meta.env.VITE_WS_URL || `${BASE_URL}`;
+// 🔥 CONSTRUCTOR DE LA URL DEL WEBSOCKET - CORREGIDO
+// IMPORTANTE: Socket.IO NO usa el path /api, usa /socket.io por defecto
+const WS_URL = import.meta.env.VITE_WS_URL || BASE_URL;
 
 export function connectSocket(): Socket {
   if (!socket) {
-    const token = localStorage.getItem("authToken");
+    // 🔥 CORRECCIÓN 1: Usar el token correcto
+    const token =
+      localStorage.getItem("accessToken") || localStorage.getItem("authToken");
 
     socket = io(WS_URL, {
+      // 🔥 CORRECCIÓN 2: Orden de transports - websocket primero, polling como fallback
       transports: ["websocket", "polling"],
       auth: {
         token: token || "",
       },
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 10000,
-      rememberUpgrade: true,
-      forceNew: true,
+      timeout: 20000,
+      // 🔥 CORRECCIÓN 3: NO usar forceNew a menos que sea necesario
+      forceNew: false,
+      // 🔥 CORRECCIÓN 4: Añadir withCredentials para CORS
+      withCredentials: true,
+      // 🔥 CORRECCIÓN 5: Path explícito (por defecto es /socket.io)
+      path: "/socket.io",
     });
 
+    // 🔥 CORRECCIÓN 6: Eventos con logs detallados
     socket.on("connect", () => {
       localStorage.setItem("socketId", socket?.id || "");
       connectionAttempts = 0;
@@ -42,7 +50,6 @@ export function connectSocket(): Socket {
       localStorage.removeItem("socketId");
 
       if (reason === "io server disconnect") {
-        // El servidor desconectó, intentar reconectar manualmente
         setTimeout(() => {
           if (socket) {
             socket.connect();
@@ -54,19 +61,23 @@ export function connectSocket(): Socket {
     socket.on("connect_error", (err) => {
       connectionAttempts++;
       console.error(
-        `🔴 Error de conexión WS (intento ${connectionAttempts}):`,
+        `🔴 Error de conexión WS (intento ${connectionAttempts}/${MAX_RECONNECT_ATTEMPTS}):`,
         err.message,
       );
+      console.error("📡 URL intentada:", WS_URL);
 
-      if (connectionAttempts > MAX_RECONNECT_ATTEMPTS) {
+      if (connectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
         console.error("🔴 Demasiados intentos fallidos, dejando de reconectar");
         socket?.disconnect();
+        socket = null;
       }
     });
 
     socket.on("error", (error) => {
       console.error("⚠️ Error del servidor:", error);
     });
+  } else if (!socket.connected) {
+    socket.connect();
   }
 
   return socket;
@@ -92,7 +103,7 @@ export function isSocketConnected(): boolean {
   return socket?.connected || false;
 }
 
-// Nueva función para verificar estado y reconectar si es necesario
+// 🔥 CORRECCIÓN 8: Mejorar ensureSocketConnection
 export function ensureSocketConnection(): Promise<boolean> {
   return new Promise((resolve) => {
     if (socket?.connected) {
@@ -104,17 +115,24 @@ export function ensureSocketConnection(): Promise<boolean> {
       connectSocket();
     }
 
+    let attempts = 0;
+    const maxAttempts = 30; // 3 segundos máximo (30 * 100ms)
+
     const checkInterval = setInterval(() => {
+      attempts++;
       if (socket?.connected) {
         clearInterval(checkInterval);
         resolve(true);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        resolve(false);
       }
     }, 100);
-
-    // Timeout después de 5 segundos
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      resolve(false);
-    }, 5000);
   });
+}
+
+// 🔥 NUEVA FUNCIÓN: Reconnect manual
+export function reconnectSocket(): Socket | null {
+  disconnectSocket();
+  return connectSocket();
 }

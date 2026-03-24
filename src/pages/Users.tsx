@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query"; // 👈 IMPORTAR
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useUsers } from "../hooks/useUsers";
 import UserModal from "../components/users/UserModal";
@@ -17,6 +18,7 @@ export default function Users() {
     updateUser,
     roles,
   } = useUsers();
+  const queryClient = useQueryClient(); // 👈 AÑADIR
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
@@ -96,7 +98,8 @@ export default function Users() {
   };
 
   const handleModalSuccess = () => {
-    // Puedes añadir lógica adicional después de crear/actualizar un usuario
+    // Refrescar usuarios después de crear/editar
+    queryClient.invalidateQueries({ queryKey: ["users"] });
   };
 
   const handleToggleStatus = async (usuario: Usuario) => {
@@ -107,6 +110,8 @@ export default function Users() {
     if (confirmacion) {
       try {
         await toggleUserStatus(usuario.usuarioId, usuario.activo);
+        // Refrescar usuarios después de cambiar estado
+        queryClient.invalidateQueries({ queryKey: ["users"] });
       } catch (err) {
         // El error ya se maneja en el hook
       }

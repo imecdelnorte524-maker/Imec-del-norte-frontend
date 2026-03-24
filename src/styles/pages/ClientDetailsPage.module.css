@@ -10,7 +10,7 @@
 .pageHeader {
   background: var(--primary-600);
   border-radius: 16px;
-  color: white;
+  color: var(--primary-50);
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
   margin-bottom: 24px;
@@ -28,7 +28,7 @@
 
 .backButton {
   background: rgba(255, 255, 255, 0.15);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 8px 14px;
   border-radius: 999px;
@@ -94,7 +94,7 @@
   align-items: center;
   justify-content: center;
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   font-size: 1.7rem;
   font-weight: 700;
   border: 2px solid rgba(255, 255, 255, 0.4);
@@ -179,7 +179,7 @@
 
 .uploadMenuItem {
   background: #4f46e5;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 8px 12px;
   border-radius: 6px;
@@ -359,13 +359,13 @@
 
 .tabButton:hover {
   background: rgba(255, 255, 255, 0.08);
-  color: white;
+  color: var(--primary-50);
 }
 
 .tabActive {
   background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border-bottom-color: white;
+  color: var(--primary-50);
+  border-bottom-color: var(--primary-50);
 }
 
 .tabIcon {
@@ -529,7 +529,7 @@
   align-items: center;
   gap: 6px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  color: var(--primary-50);
   padding: 8px 14px;
   border-radius: 999px;
   text-decoration: none;
@@ -562,7 +562,7 @@
   height: 42px;
   border-radius: 999px;
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -610,23 +610,23 @@
 
 .roleBadge.administrador {
   background: #dc3545;
-  color: white;
+  color: var(--primary-50);
 }
 .roleBadge.técnico {
   background: #fd7e14;
-  color: white;
+  color: var(--primary-50);
 }
 .roleBadge.cliente {
   background: #20c997;
-  color: white;
+  color: var(--primary-50);
 }
 .roleBadge.secretaria {
   background: #6f42c1;
-  color: white;
+  color: var(--primary-50);
 }
 .roleBadge.supervisor {
   background: #0091ff;
-  color: white;
+  color: var(--primary-50);
 }
 
 /* ===== AREAS SECTION ===== */
@@ -885,7 +885,7 @@
 
 .subareaEquipmentCount {
   background: #6c757d;
-  color: white;
+  color: var(--primary-50);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -989,7 +989,7 @@
 
 .uploadGalleryBtn {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 10px 16px;
   border-radius: 8px;
@@ -1042,7 +1042,7 @@
 
 .uploadGalleryEmptyBtn {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -1205,7 +1205,7 @@
   top: 4px;
   right: 4px;
   background: rgba(220, 38, 38, 0.9);
-  color: white;
+  color: var(--primary-50);
   border: none;
   width: 24px;
   height: 24px;
@@ -1311,7 +1311,7 @@
 }
 
 .lightboxCounter {
-  color: white;
+  color: var(--primary-50);
   font-size: 1rem;
   font-weight: 500;
 }
@@ -2026,4 +2026,29 @@
     font-size: 0.8rem;
     padding: 6px;
   }
+}
+
+.clientHeaderTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.clientTypeBadge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.clientTypeBadge.juridica {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.clientTypeBadge.natural {
+  background: #fef3c7;
+  color: #92400e;
 }

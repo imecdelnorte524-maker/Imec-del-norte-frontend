@@ -64,7 +64,7 @@
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
-  background-color: white;
+  background-color: var(--primary-50);
 }
 
 .formField input:focus,

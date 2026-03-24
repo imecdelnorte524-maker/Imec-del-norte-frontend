@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query"; // 👈 IMPORTAR
 import { useCatalogActions } from "../../hooks/useInventory";
 import { imagesApi } from "../../api/images";
 import { warehouses, type Warehouse } from "../../api/warehouses";
@@ -29,6 +30,7 @@ export default function AddInventoryModal({
   onClose,
   onSuccess,
 }: AddInventoryModalProps) {
+  const queryClient = useQueryClient(); // 👈 AÑADIR
   const [activeTab, setActiveTab] = useState<ModalTab>("herramientas");
   const {
     createHerramienta,
@@ -89,7 +91,7 @@ export default function AddInventoryModal({
     bodegaId: undefined,
   });
 
-  // Ubicación (queda solo en inventario, pero se envía en el create y el backend lo aplica al inventario)
+  // Ubicación
   const [ubicacionHerramienta, setUbicacionHerramienta] = useState("");
   const [ubicacionInsumo, setUbicacionInsumo] = useState("");
 
@@ -155,8 +157,7 @@ export default function AddInventoryModal({
         throw new Error("No se pudo crear la herramienta");
       }
 
-      // El backend ya creó el inventario con cantidadActual=1, bodega y ubicacion
-      // Subimos imágenes adicionales si hay más de una
+      // Subir imágenes adicionales
       if (toolImages.length > 1 && herramientaCreada.herramientaId) {
         try {
           const extraImages = toolImages.slice(1);
@@ -171,6 +172,11 @@ export default function AddInventoryModal({
           );
         }
       }
+
+      // 🔥 REFRESCAR CACHÉ
+      await queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      await queryClient.invalidateQueries({ queryKey: ["tools"] });
+      await queryClient.invalidateQueries({ queryKey: ["supplies"] });
 
       onSuccess();
       handleClose();
@@ -211,7 +217,7 @@ export default function AddInventoryModal({
         throw new Error("No se pudo crear el insumo");
       }
 
-      // El backend ya creó y actualizó inventario (cantidadInicial, bodega, ubicacion)
+      // Subir imágenes adicionales
       if (supplyImages.length > 1 && insumoCreado.insumoId) {
         try {
           const extraImages = supplyImages.slice(1);
@@ -226,6 +232,11 @@ export default function AddInventoryModal({
           );
         }
       }
+
+      // 🔥 REFRESCAR CACHÉ
+      await queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      await queryClient.invalidateQueries({ queryKey: ["supplies"] });
+      await queryClient.invalidateQueries({ queryKey: ["tools"] });
 
       onSuccess();
       handleClose();

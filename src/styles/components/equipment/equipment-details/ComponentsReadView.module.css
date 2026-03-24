@@ -1,5 +1,5 @@
 .section {
-  background: var(--white);
+  background: var(--primary-50);
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);

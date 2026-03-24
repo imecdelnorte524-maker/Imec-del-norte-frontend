@@ -124,7 +124,7 @@
 
 .btnExport {
   background: #059669;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.625rem 1.25rem;
   border-radius: 6px;
@@ -156,7 +156,7 @@
 
 .btnPrimary {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.625rem 1.25rem;
   border-radius: 6px;
@@ -182,7 +182,7 @@
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: white;
+  border-top-color: var(--primary-50);
   animation: spin 0.8s linear infinite;
   display: inline-block;
   margin-right: 4px;
@@ -497,7 +497,7 @@
 
 .btnRetry {
   background: #ef4444;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 8px 16px;
   border-radius: 4px;

@@ -431,7 +431,7 @@
 
 .questionNumber {
   background: #4a6fa5;
-  color: white;
+  color: var(--primary-50);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -461,7 +461,7 @@
 .criticalLabel {
   align-self: flex-start;
   background: #dc3545;
-  color: white;
+  color: var(--primary-50);
   padding: 3px 10px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -742,7 +742,7 @@
 .cancelButton {
   padding: 12px 30px;
   background: #6c757d;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 6px;
   font-size: 16px;
@@ -761,7 +761,7 @@
 .submitButton {
   padding: 12px 30px;
   background: #28a745;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 6px;
   font-size: 16px;
@@ -874,7 +874,7 @@
 .refreshButton {
   padding: 10px 25px;
   background: #4a6fa5;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 6px;
   font-size: 14px;

@@ -44,7 +44,8 @@ export default function ClientsPage() {
       const matchesSearch: boolean =
         searchTerm === "" ||
         client.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.nit.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (client.nit &&
+          client.nit.toLowerCase().includes(searchTerm.toLowerCase())) ||
         client.contacto.toLowerCase().includes(searchTerm.toLowerCase());
 
       const hasAreas: boolean = !!(client.areas && client.areas.length > 0);
@@ -189,7 +190,8 @@ export default function ClientsPage() {
                     <thead>
                       <tr>
                         <th>Cliente</th>
-                        <th>NIT</th>
+                        <th>Tipo</th>
+                        <th>NIT / Identificación</th>
                         <th>Usuario Contacto</th>
                         <th>Acciones</th>
                       </tr>
@@ -233,7 +235,9 @@ export default function ClientsPage() {
                                     </h2>
                                     <div className={styles.clientDetails}>
                                       <small>{client.telefono}</small>
-                                      <small>{client.email}</small>
+                                      {client.email && (
+                                        <small>{client.email}</small>
+                                      )}
                                       <small>
                                         {client.direccionCompleta ||
                                           "Dirección no disponible"}
@@ -244,9 +248,24 @@ export default function ClientsPage() {
                               </div>
                             </td>
                             <td>
-                              <code className={styles.nitCode}>
-                                {client.nit}-{client.verification_digit}
-                              </code>
+                              <span
+                                className={`${styles.clientType} ${styles[client.tipoCliente || "juridica"]}`}
+                              >
+                                {client.tipoCliente === "natural"
+                                  ? "👤 Natural"
+                                  : "🏢 Jurídica"}
+                              </span>
+                            </td>
+                            <td>
+                              {client.tipoCliente === "natural" ? (
+                                <span className={styles.noNit}>Sin NIT</span>
+                              ) : (
+                                <code className={styles.nitCode}>
+                                  {client.nit && client.verification_digit
+                                    ? `${client.nit}-${client.verification_digit}`
+                                    : client.nit || "N/A"}
+                                </code>
+                              )}
                             </td>
                             <td>
                               {principalContacto ? (
@@ -329,7 +348,21 @@ export default function ClientsPage() {
                             <h3 className={styles.clientNameMobile}>
                               {client.nombre}
                             </h3>
-                            <code className={styles.nitCode}>{client.nit}-{client.verification_digit}</code>
+                            <div className={styles.mobileTypeBadge}>
+                              <span
+                                className={`${styles.clientType} ${styles[client.tipoCliente || "juridica"]}`}
+                              >
+                                {client.tipoCliente === "natural"
+                                  ? "👤 Natural"
+                                  : "🏢 Jurídica"}
+                              </span>
+                            </div>
+                            {client.tipoCliente === "juridica" &&
+                              client.nit && (
+                                <code className={styles.nitCode}>
+                                  {client.nit}-{client.verification_digit}
+                                </code>
+                              )}
                           </div>
                         </div>
                         <div
@@ -367,6 +400,15 @@ export default function ClientsPage() {
                             {client.telefono}
                           </span>
                         </div>
+
+                        {client.email && (
+                          <div className={styles.cardRow}>
+                            <span className={styles.cardLabel}>Email:</span>
+                            <span className={styles.cardValue}>
+                              {client.email}
+                            </span>
+                          </div>
+                        )}
 
                         <div className={styles.cardRow}>
                           <span className={styles.cardLabel}>Áreas:</span>

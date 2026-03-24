@@ -27,7 +27,7 @@
   font-size: var(--font-size-sm);
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--white);
+  background-color: var(--primary-50);
   color: var(--gray-700);
   transition: border-color 0.2s;
 }
@@ -90,7 +90,7 @@
 
 .formActions button:last-child {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 .formActions button:last-child:hover:not(:disabled) {

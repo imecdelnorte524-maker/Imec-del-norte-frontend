@@ -1,5 +1,5 @@
-// src/components/inventory/EditInventoryModal.tsx
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query"; // 👈 IMPORTAR
 import { inventory } from "../../api/inventory";
 import { warehouses, type Warehouse } from "../../api/warehouses";
 import { toolsApi } from "../../api/tools";
@@ -42,6 +42,7 @@ export default function EditInventoryModal({
   onSuccess,
   item,
 }: EditInventoryModalProps) {
+  const queryClient = useQueryClient(); // 👈 AÑADIR
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<
@@ -304,15 +305,6 @@ export default function EditInventoryModal({
         if (toolData.valorUnitario !== item.tool.valorUnitario) {
           toolUpdateData.valorUnitario = toolData.valorUnitario;
         }
-        if (
-          toolData.caracteristicasTecnicas !== item.tool.caracteristicasTecnicas
-        ) {
-          toolUpdateData.caracteristicasTecnicas =
-            toolData.caracteristicasTecnicas;
-        }
-        if (toolData.observacion !== item.tool.observacion) {
-          toolUpdateData.observacion = toolData.observacion;
-        }
 
         if (Object.keys(toolUpdateData).length > 0) {
           await toolsApi.updateTool(herramientaId, toolUpdateData);
@@ -367,6 +359,14 @@ export default function EditInventoryModal({
         }
       }
 
+      // 🔥 REFRESCAR CACHÉ
+      await queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      if (item.tipo === "herramienta") {
+        await queryClient.invalidateQueries({ queryKey: ["tools"] });
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["supplies"] });
+      }
+
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -400,6 +400,10 @@ export default function EditInventoryModal({
       setError(null);
 
       await inventory.updateStock(item.inventarioId, supplyData.cantidadActual);
+
+      // 🔥 REFRESCAR CACHÉ
+      await queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      await queryClient.invalidateQueries({ queryKey: ["supplies"] });
 
       onSuccess();
       onClose();
@@ -579,10 +583,7 @@ export default function EditInventoryModal({
                       disabled={loading}
                     >
                       {Object.values(ToolType).map((type) => (
-                        <option
-                          key={String(type)} // ✅ cast a string
-                          value={type as string} // ya existía el cast
-                        >
+                        <option key={String(type)} value={type as string}>
                           {type}
                         </option>
                       ))}
@@ -647,10 +648,7 @@ export default function EditInventoryModal({
                       disabled={loading}
                     >
                       {Object.values(ToolStatus).map((status) => (
-                        <option
-                          key={String(status)} // ✅
-                          value={status as string}
-                        >
+                        <option key={String(status)} value={status as string}>
                           {status}
                         </option>
                       ))}
@@ -781,10 +779,7 @@ export default function EditInventoryModal({
                       disabled={loading}
                     >
                       {Object.values(SupplyCategory).map((cat) => (
-                        <option
-                          key={String(cat)} // ✅
-                          value={cat as string}
-                        >
+                        <option key={String(cat)} value={cat as string}>
                           {cat}
                         </option>
                       ))}
@@ -931,10 +926,7 @@ export default function EditInventoryModal({
                       disabled={loading}
                     >
                       {Object.values(SupplyStatus).map((status) => (
-                        <option
-                          key={String(status)} // ✅
-                          value={status as string}
-                        >
+                        <option key={String(status)} value={status as string}>
                           {status}
                         </option>
                       ))}

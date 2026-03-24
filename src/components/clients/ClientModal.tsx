@@ -11,6 +11,7 @@ import type {
   CreateClientDto,
   ClientFormData,
   Usuario,
+  ClientType,
 } from "../../interfaces/ClientInterfaces";
 import styles from "../../styles/components/clients/ClientModal.module.css";
 import { playErrorSound } from "../../utils/sounds";
@@ -62,7 +63,11 @@ export default function ClientModal({
   const [newSubareaName, setNewSubareaName] = useState("");
   const [isSubareaModalOpen, setIsSubareaModalOpen] = useState(false);
 
+  // Tipo de cliente
+  const [clientType, setClientType] = useState<ClientType>("juridica");
+
   const [formData, setFormData] = useState<ClientFormData>({
+    tipoCliente: "juridica",
     nombre: "",
     nit: "",
     verification_digit: "", // string vacío
@@ -80,6 +85,21 @@ export default function ClientModal({
     areas: [],
   });
 
+  // Función para manejar el cambio de tipo de cliente
+  const handleClientTypeChange = (type: ClientType) => {
+    setClientType(type);
+    setFormData((prev) => ({
+      ...prev,
+      tipoCliente: type,
+      // Limpiar campos que no son necesarios para persona natural
+      ...(type === "natural" && {
+        nit: "",
+        verification_digit: "",
+        fecha_creacion: "",
+      }),
+    }));
+  };
+
   // Generar URL de Google Maps
   const generateGoogleMapsURL = useCallback(
     (addressData: {
@@ -93,13 +113,22 @@ export default function ClientModal({
       const { nombre, direccionBase, barrio, ciudad, departamento, pais } =
         addressData;
 
-      if (!nombre || !direccionBase || !ciudad) {
-        return "";
+      // Para persona natural, no requerimos nombre para generar la URL
+      if (clientType === "natural") {
+        if (!direccionBase || !ciudad) {
+          return "";
+        }
+      } else {
+        // Para jurídica, requerimos nombre
+        if (!nombre || !direccionBase || !ciudad) {
+          return "";
+        }
       }
 
       const parts: string[] = [];
 
-      if (nombre.trim()) parts.push(nombre.trim());
+      // Solo incluir nombre si es jurídica y tiene valor
+      if (clientType === "juridica" && nombre.trim()) parts.push(nombre.trim());
       if (direccionBase.trim()) parts.push(direccionBase.trim());
       if (barrio.trim()) parts.push(barrio.trim());
       if (ciudad.trim()) parts.push(ciudad.trim());
@@ -117,27 +146,33 @@ export default function ClientModal({
       const encodedAddress = encodeURIComponent(fullAddress);
       return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
     },
-    [],
+    [clientType],
   );
 
   // Generar automáticamente la URL de Google Maps cuando cambian dirección o nombre
   useEffect(() => {
-    const url = generateGoogleMapsURL({
-      nombre: formData.nombre,
-      direccionBase: formData.direccionBase,
-      barrio: formData.barrio,
-      ciudad: formData.ciudad,
-      departamento: formData.departamento,
-      pais: formData.pais,
-    });
+    // Solo generar si tenemos los campos mínimos necesarios
+    const hasMinimumAddress = formData.direccionBase && formData.ciudad;
 
-    if (url) {
-      setFormData((prev) => ({
-        ...prev,
-        localizacion: url,
-      }));
+    if (hasMinimumAddress) {
+      const url = generateGoogleMapsURL({
+        nombre: formData.nombre,
+        direccionBase: formData.direccionBase,
+        barrio: formData.barrio,
+        ciudad: formData.ciudad,
+        departamento: formData.departamento,
+        pais: formData.pais,
+      });
+
+      if (url) {
+        setFormData((prev) => ({
+          ...prev,
+          localizacion: url,
+        }));
+      }
     }
   }, [
+    clientType,
     formData.nombre,
     formData.direccionBase,
     formData.barrio,
@@ -149,6 +184,7 @@ export default function ClientModal({
 
   const resetForm = () => {
     setFormData({
+      tipoCliente: "juridica",
       nombre: "",
       nit: "",
       verification_digit: "",
@@ -165,6 +201,7 @@ export default function ClientModal({
       idUsuarioContacto: null,
       areas: [],
     });
+    setClientType("juridica");
     setUserSearch("");
     setNewAreaName("");
     setNewSubareaName("");
@@ -194,9 +231,15 @@ export default function ClientModal({
     setError(null);
 
     if (editingClient) {
+      // Determinar si es natural o jurídica basado en si tiene NIT
+      const hasNIT = editingClient.nit && editingClient.nit.trim() !== "";
+      const tipo = hasNIT ? "juridica" : "natural";
+      setClientType(tipo);
+
       setFormData({
+        tipoCliente: tipo,
         nombre: editingClient.nombre,
-        nit: editingClient.nit,
+        nit: editingClient.nit || "",
         verification_digit: editingClient.verification_digit || "",
         direccionBase: editingClient.direccionBase || "",
         barrio: editingClient.barrio || "",
@@ -204,18 +247,9 @@ export default function ClientModal({
         departamento: editingClient.departamento || "",
         pais: editingClient.pais || "Colombia",
         contacto: editingClient.contacto,
-        email: editingClient.email,
+        email: editingClient.email || "",
         telefono: editingClient.telefono,
-        localizacion:
-          editingClient.localizacion ||
-          generateGoogleMapsURL({
-            nombre: editingClient.nombre || "",
-            direccionBase: editingClient.direccionBase || "",
-            barrio: editingClient.barrio || "",
-            ciudad: editingClient.ciudad || "",
-            departamento: editingClient.departamento || "",
-            pais: editingClient.pais || "Colombia",
-          }),
+        localizacion: editingClient.localizacion || "",
         fecha_creacion: editingClient.fechaCreacionEmpresa || "",
         idUsuarioContacto: null,
         areas:
@@ -305,7 +339,7 @@ export default function ClientModal({
     if (!isCliente) {
       loadUsers();
     }
-  }, [isOpen, editingClient, isCliente, user, generateGoogleMapsURL]);
+  }, [isOpen, editingClient, isCliente, user]);
 
   // Filtrar usuarios para el autocomplete
   useEffect(() => {
@@ -505,21 +539,32 @@ export default function ClientModal({
 
   // ========== VALIDACIONES ==========
   const validateStep1 = (): boolean => {
-    const requiredFields: (keyof ClientFormData)[] = [
+    // Campos base requeridos para ambos tipos
+    const baseRequiredFields: (keyof ClientFormData)[] = [
       "nombre",
-      "nit",
-      "verification_digit",
       "direccionBase",
-      "barrio",
       "ciudad",
-      "departamento",
-      "pais",
       "telefono",
-      "fecha_creacion",
     ];
 
+    // Campos adicionales según tipo
+    if (clientType === "juridica") {
+      baseRequiredFields.push(
+        "nit",
+        "verification_digit",
+        "fecha_creacion",
+        "barrio",
+        "departamento",
+        "pais",
+      );
+    } else {
+      // Para natural, barrio, departamento, pais son opcionales pero recomendados
+      // No los hacemos requeridos
+    }
+
     const fieldLabels: Partial<Record<keyof ClientFormData, string>> = {
-      nombre: "Nombre de la Empresa",
+      nombre:
+        clientType === "juridica" ? "Nombre de la Empresa" : "Nombre completo",
       nit: "NIT",
       verification_digit: "Dígito de Verificación",
       direccionBase: "Dirección Base",
@@ -528,10 +573,11 @@ export default function ClientModal({
       departamento: "Departamento",
       pais: "País",
       telefono: "Teléfono",
-      fecha_creacion: "Fecha de Creación",
+      fecha_creacion:
+        clientType === "juridica" ? "Fecha de Creación" : "Fecha de nacimiento",
     };
 
-    for (const field of requiredFields) {
+    for (const field of baseRequiredFields) {
       const value = formData[field];
       if (!value || (typeof value === "string" && value.trim() === "")) {
         setError(
@@ -542,36 +588,49 @@ export default function ClientModal({
       }
     }
 
-    // Validación específica para el dígito de verificación
-    if (formData.verification_digit) {
-      // Verificar que sea un número de 1 o 2 dígitos
-      if (!/^\d{1,2}$/.test(formData.verification_digit)) {
-        setError("El dígito de verificación debe ser un número de 1 o 2 dígitos");
-        playErrorSound();
-        return false;
+    // Validación específica para jurídica
+    if (clientType === "juridica") {
+      // Validación del dígito de verificación
+      if (formData.verification_digit) {
+        if (!/^\d{1,2}$/.test(formData.verification_digit)) {
+          setError(
+            "El dígito de verificación debe ser un número de 1 o 2 dígitos",
+          );
+          playErrorSound();
+          return false;
+        }
+      }
+
+      // Validación de fecha de creación
+      if (formData.fecha_creacion) {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(formData.fecha_creacion)) {
+          setError("Seleccione una fecha de creación válida");
+          playErrorSound();
+          return false;
+        }
       }
     }
 
+    // Validación de URL de Google Maps (solo si tenemos los campos mínimos)
+    const hasMinimumForUrl =
+      clientType === "juridica"
+        ? formData.nombre && formData.direccionBase && formData.ciudad
+        : formData.direccionBase && formData.ciudad;
+
     if (
-      !formData.localizacion ||
-      !formData.localizacion.startsWith("https://www.google.com/maps/")
+      hasMinimumForUrl &&
+      (!formData.localizacion ||
+        !formData.localizacion.startsWith("https://www.google.com/maps/"))
     ) {
       setError(
-        "Por favor, complete todos los campos de dirección para generar la ubicación",
+        "Error al generar la ubicación en Google Maps. Por favor, verifica los datos de dirección.",
       );
       playErrorSound();
       return false;
     }
 
-    if (formData.fecha_creacion) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(formData.fecha_creacion)) {
-        setError("Seleccione una fecha de creación válida");
-        playErrorSound();
-        return false;
-      }
-    }
-
+    // Validación de email (opcional para natural, pero si se ingresa debe ser válido)
     const emailTrimmed = formData.email.trim();
     if (emailTrimmed) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -582,6 +641,7 @@ export default function ClientModal({
       }
     }
 
+    // Validación de teléfono
     const phoneTrimmed = formData.telefono.trim();
     const phoneRegex = /^[\d\s\-\+\(\)]{7,}$/;
     if (!phoneRegex.test(phoneTrimmed.replace(/\s/g, ""))) {
@@ -676,11 +736,15 @@ export default function ClientModal({
       setLoading(true);
       setError(null);
 
-      // Enviar el dígito de verificación como string (el backend lo maneja como string)
+      // Preparar datos según tipo de cliente
       const clientData: CreateClientDto = {
+        tipoCliente: clientType,
         nombre: formData.nombre,
-        nit: formData.nit,
-        verification_digit: formData.verification_digit || undefined,
+        nit: clientType === "juridica" ? formData.nit : "", // Vacío para natural
+        verification_digit:
+          clientType === "juridica"
+            ? formData.verification_digit || undefined
+            : undefined,
         direccionBase: formData.direccionBase,
         barrio: formData.barrio,
         ciudad: formData.ciudad,
@@ -690,7 +754,8 @@ export default function ClientModal({
         email: formData.email,
         telefono: formData.telefono,
         localizacion: formData.localizacion,
-        fechaCreacionEmpresa: formData.fecha_creacion,
+        fechaCreacionEmpresa:
+          clientType === "juridica" ? formData.fecha_creacion : "", // Vacío para natural
       };
 
       if (selectedContactUserIds.length > 0) {
@@ -759,6 +824,7 @@ export default function ClientModal({
         savedClient = await clientsAPI.getClientById(newClient.idCliente);
       }
 
+      // Subir logo si existe (opcional para ambos tipos)
       if (logoFile && savedClient) {
         try {
           await imagesApi.uploadClientLogo(savedClient.idCliente, logoFile);
@@ -774,6 +840,7 @@ export default function ClientModal({
       resetForm();
       onClose();
     } catch (err: any) {
+      console.error("Error saving client:", err);
       setError(err.message || "Error al guardar el cliente");
       playErrorSound();
     } finally {
@@ -892,72 +959,116 @@ export default function ClientModal({
                 Información del Cliente
               </h3>
 
+              {/* Selector de Tipo de Cliente */}
+              <div className={styles.clientTypeSelector}>
+                <button
+                  type="button"
+                  className={`${styles.typeButton} ${clientType === "juridica" ? styles.activeType : ""}`}
+                  onClick={() => handleClientTypeChange("juridica")}
+                  disabled={loading}
+                >
+                  <span className={styles.typeIcon}>🏢</span>
+                  <div className={styles.typeContent}>
+                    <div className={styles.typeLabel}>Persona Jurídica</div>
+                    <div className={styles.typeDesc}>
+                      Empresa / Organización
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`${styles.typeButton} ${clientType === "natural" ? styles.activeType : ""}`}
+                  onClick={() => handleClientTypeChange("natural")}
+                  disabled={loading}
+                >
+                  <span className={styles.typeIcon}>👤</span>
+                  <div className={styles.typeContent}>
+                    <div className={styles.typeLabel}>Persona Natural</div>
+                    <div className={styles.typeDesc}>
+                      Individuo / Persona física
+                    </div>
+                  </div>
+                </button>
+              </div>
               <div className={styles.formGrid}>
                 {/* Nombre */}
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>
-                    Nombre de la Empresa *
+                    {clientType === "juridica"
+                      ? "Nombre de la Empresa"
+                      : "Nombre completo"}{" "}
+                    *
                   </label>
                   <input
                     type="text"
                     name="nombre"
                     value={formData.nombre}
                     onChange={handleInputChange}
-                    placeholder="Ej: Cerámica Italia S.A."
+                    placeholder={
+                      clientType === "juridica"
+                        ? "Ej: Cerámica Italia S.A."
+                        : "Ej: Juan Pérez"
+                    }
                     className={styles.formInput}
                     disabled={loading}
                   />
                 </div>
 
-                {/* NIT y Dígito de Verificación */}
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>
-                    NIT y Dígito de Verificación *
-                  </label>
-                  <div className={styles.nitContainer}>
-                    <div className={styles.nitWrapper}>
-                      <input
-                        type="text"
-                        name="nit"
-                        value={formData.nit}
-                        onChange={handleInputChange}
-                        placeholder="NIT (ej: 900123456)"
-                        className={`${styles.formInput} ${styles.nitInput}`}
-                        disabled={loading}
-                      />
+                {/* NIT y Dígito de Verificación - Solo para jurídica */}
+                {clientType === "juridica" && (
+                  <div className={styles.formGroup}>
+                    <label className={styles.formLabel}>
+                      NIT y Dígito de Verificación *
+                    </label>
+                    <div className={styles.nitContainer}>
+                      <div className={styles.nitWrapper}>
+                        <input
+                          type="text"
+                          name="nit"
+                          value={formData.nit}
+                          onChange={handleInputChange}
+                          placeholder="NIT (ej: 900123456)"
+                          className={`${styles.formInput} ${styles.nitInput}`}
+                          disabled={loading}
+                        />
+                      </div>
+                      <span className={styles.nitSeparator}>-</span>
+                      <div className={styles.digitWrapper}>
+                        <input
+                          type="text"
+                          name="verification_digit"
+                          value={formData.verification_digit}
+                          onChange={handleInputChange}
+                          placeholder="Dígito"
+                          className={`${styles.formInput} ${styles.digitInput}`}
+                          disabled={loading}
+                          maxLength={2}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                        />
+                      </div>
                     </div>
-                    <span className={styles.nitSeparator}>-</span>
-                    <div className={styles.digitWrapper}>
-                      <input
-                        type="text"
-                        name="verification_digit"
-                        value={formData.verification_digit}
-                        onChange={handleInputChange}
-                        placeholder="Dígito"
-                        className={`${styles.formInput} ${styles.digitInput}`}
-                        disabled={loading}
-                        maxLength={2}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                      />
-                    </div>
+                    {formData.nit && formData.verification_digit && (
+                      <div className={styles.nitPreview}>
+                        <span className={styles.nitPreviewLabel}>
+                          NIT completo:
+                        </span>
+                        <strong className={styles.nitPreviewValue}>
+                          {formData.nit}-{formData.verification_digit}
+                        </strong>
+                      </div>
+                    )}
                   </div>
-                  {formData.nit && formData.verification_digit && (
-                    <div className={styles.nitPreview}>
-                      <span className={styles.nitPreviewLabel}>
-                        NIT completo:
-                      </span>
-                      <strong className={styles.nitPreviewValue}>
-                        {formData.nit}-{formData.verification_digit}
-                      </strong>
-                    </div>
-                  )}
-                </div>
+                )}
 
-                {/* Logo */}
+                {/* Logo - Opcional para ambos, pero con nota para natural */}
                 <div className={`${styles.formGroup} ${styles.fullWidth}`}>
                   <label className={styles.formLabel}>
-                    Logo de la Empresa (Opcional)
+                    Logo{" "}
+                    {clientType === "natural" && (
+                      <span className={styles.optionalBadge}>Opcional</span>
+                    )}
                   </label>
                   <div className={styles.logoUploadContainer}>
                     {logoPreview ? (
@@ -978,7 +1089,9 @@ export default function ClientModal({
                       </div>
                     ) : (
                       <div className={styles.logoUploadPlaceholder}>
-                        <span className={styles.logoIcon}>🏢</span>
+                        <span className={styles.logoIcon}>
+                          {clientType === "juridica" ? "🏢" : "👤"}
+                        </span>
                         <span className={styles.logoText}>Subir logo</span>
                         <span className={styles.logoHint}>
                           Formatos: JPG, PNG, GIF, WebP
@@ -1015,13 +1128,22 @@ export default function ClientModal({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Email</label>
+                  <label className={styles.formLabel}>
+                    Email{" "}
+                    {clientType === "natural" && (
+                      <span className={styles.optionalBadge}>Opcional</span>
+                    )}
+                  </label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="Email corporativo"
+                    placeholder={
+                      clientType === "juridica"
+                        ? "Email corporativo"
+                        : "Email personal"
+                    }
                     className={styles.formInput}
                     disabled={loading}
                   />
@@ -1035,7 +1157,7 @@ export default function ClientModal({
                     name="telefono"
                     value={formData.telefono}
                     onChange={handleInputChange}
-                    placeholder="Teléfono de la empresa"
+                    placeholder="Teléfono de contacto"
                     className={styles.formInput}
                     disabled={loading}
                   />
@@ -1043,7 +1165,12 @@ export default function ClientModal({
 
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>
-                    Fecha de Creación *
+                    {clientType === "juridica"
+                      ? "Fecha de Creación *"
+                      : "Fecha de nacimiento"}
+                    {clientType === "natural" && (
+                      <span className={styles.optionalBadge}>Opcional</span>
+                    )}
                   </label>
                   <input
                     type="date"
@@ -1060,9 +1187,7 @@ export default function ClientModal({
                   className={`${styles.formGroup} ${styles.fullWidth}`}
                   style={{ gridColumn: "1 / -1" }}
                 >
-                  <label className={styles.formLabel}>
-                    Dirección de la Empresa *
-                  </label>
+                  <label className={styles.formLabel}>Dirección *</label>
                   <div
                     style={{
                       display: "grid",
@@ -1145,8 +1270,11 @@ export default function ClientModal({
                             className={`${styles.formInput} ${styles.readonlyInput}`}
                           />
                           <small className={styles.fieldNote}>
-                            Esta URL se guardará automáticamente con los datos
+                            Esta URL se generará automáticamente con los datos
                             de dirección
+                            {clientType === "juridica"
+                              ? " y nombre de la empresa"
+                              : ""}
                           </small>
                         </div>
                       </div>
@@ -1325,8 +1453,10 @@ export default function ClientModal({
 
               <div className={styles.stepDescription}>
                 <p>
-                  Agrega las áreas de la empresa y organiza las subáreas en
-                  niveles (subáreas dentro de subáreas).
+                  Agrega las áreas de la{" "}
+                  {clientType === "juridica" ? "empresa" : "organización"} y
+                  organiza las subáreas en niveles (subáreas dentro de
+                  subáreas).
                 </p>
                 <span className={styles.requiredText}>
                   * Debes agregar al menos 1 área

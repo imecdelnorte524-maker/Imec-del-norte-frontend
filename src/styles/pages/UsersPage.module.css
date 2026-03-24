@@ -136,7 +136,7 @@
 
 .btnPrimary {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -165,7 +165,7 @@
 
 .btnSecondary {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -293,7 +293,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: #1f2937;
-  color: white;
+  color: var(--primary-50);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -344,7 +344,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: #1f2937;
-  color: white;
+  color: var(--primary-50);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -373,7 +373,7 @@
 /* Colores para roles */
 .role.colorRol {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 /* Email y teléfono con truncado */
@@ -395,7 +395,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: #1f2937;
-  color: white;
+  color: var(--primary-50);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -541,7 +541,7 @@
   top: 100%;
   left: 0;
   background: #1f2937;
-  color: white;
+  color: var(--primary-50);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -573,7 +573,7 @@
   top: 100%;
   left: 0;
   background: #1f2937;
-  color: white;
+  color: var(--primary-50);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -650,7 +650,7 @@
   top: 100%;
   right: 0;
   background: #1f2937;
-  color: white;
+  color: var(--primary-50);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.85rem;

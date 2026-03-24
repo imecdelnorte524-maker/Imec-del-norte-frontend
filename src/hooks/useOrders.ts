@@ -32,7 +32,7 @@ import { useSocket } from "../context/SocketContext";
 import { useSocketEvent } from "./useSocketEvent";
 
 // ---------------------------------------------------------------------------
-// Helper global de tiempo real para órdenes
+// Helper global de tiempo real para órdenes - 🔥 CORREGIDO
 // ---------------------------------------------------------------------------
 function useWorkOrdersRealtime() {
   const socket = useSocket();
@@ -48,24 +48,44 @@ function useWorkOrdersRealtime() {
     queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.dashboardMetrics] });
   };
 
-  const invalidateDetails = () => {
-    queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orderDetail] });
+  const invalidateDetails = (orderId?: number) => {
+    if (orderId) {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, orderId],
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.orderDetail] });
+    }
   };
 
-  const onChange = () => {
-    invalidateLists();
-    invalidateMetrics();
-    invalidateDetails();
-  };
+  // 🔥 ESCUCHAR entity.updated (el evento que emite tu backend)
+  useSocketEvent<any>(socket, "entity.updated", (data) => {
+    const { entity, data: payload } = data;
 
-  useSocketEvent(socket, "workOrders.created", onChange);
-  useSocketEvent(socket, "workOrders.updated", onChange);
-  useSocketEvent(socket, "workOrders.deleted", onChange);
-  useSocketEvent(socket, "workOrders.statusUpdated", onChange);
-  useSocketEvent(socket, "workOrders.invoiceUpdated", onChange);
-  useSocketEvent(socket, "workOrders.assigned", onChange);
-  useSocketEvent(socket, "workOrders.emergencyCreated", onChange);
-  useSocketEvent(socket, "workOrders.techniciansRated", onChange);
+    if (entity === "workOrders") {
+      invalidateLists();
+      invalidateMetrics();
+
+      // Si hay ID específico, invalidar detalle
+      const orderId = payload?.ordenId || payload?.id;
+      if (orderId) {
+        invalidateDetails(orderId);
+      } else {
+        invalidateDetails();
+      }
+    }
+  });
+
+  // 🔥 ESCUCHAR entity.detail.updated (para detalles específicos)
+  useSocketEvent<any>(socket, "entity.detail.updated", (data) => {
+    const { entity, entityId } = data;
+
+    if (entity === "workOrders") {
+      queryClient.invalidateQueries({
+        queryKey: [QUERY_KEYS.orderDetail, entityId],
+      });
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +249,12 @@ export const useOrders = (
       }
 
       const filterMap: Record<
-        "pending" | "assigned" | "in_progress"| "pausada" | "completed" | "cancelled",
+        | "pending"
+        | "assigned"
+        | "in_progress"
+        | "pausada"
+        | "completed"
+        | "cancelled",
         Order["estado"]
       > = {
         pending: "Pendiente",

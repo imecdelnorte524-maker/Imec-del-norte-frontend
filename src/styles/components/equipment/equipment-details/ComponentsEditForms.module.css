@@ -5,7 +5,7 @@
   margin-top: var(--spacing-lg);
   padding: var(--spacing-lg);
   border-top: 1px solid var(--gray-200);
-  background-color: var(--white);
+  background-color: var(--primary-50);
 }
 
 .componentsSection h4 {
@@ -55,7 +55,7 @@
   margin: var(--spacing-md) 0 0 var(--spacing-lg);
   padding-left: var(--spacing-md);
   border-left: 3px solid var(--primary-200);
-  background-color: var(--white);
+  background-color: var(--primary-50);
   border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
@@ -179,7 +179,7 @@
   font-size: var(--font-size-sm);
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--white);
+  background-color: var(--primary-50);
   color: var(--gray-700);
   transition: all 0.2s;
 }

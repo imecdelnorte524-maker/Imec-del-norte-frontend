@@ -17,7 +17,7 @@
 /* MODAL */
 
 .modal {
-  background: #ffffff;
+  background: var(--primary-50);
   border-radius: clamp(8px, 2vw, 14px);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
   width: 100%;
@@ -36,7 +36,7 @@
   align-items: center;
   padding: clamp(14px, 2.5vw, 20px);
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #ffffff;
+  color: var(--primary-50);
   border-radius: clamp(8px, 2vw, 14px) clamp(8px, 2vw, 14px) 0 0;
 }
 
@@ -49,7 +49,7 @@
 .closeButton {
   background: rgba(255, 255, 255, 0.25);
   border: none;
-  color: white;
+  color: var(--primary-50);
   font-size: 1.4rem;
   width: clamp(32px, 7vw, 38px);
   height: clamp(32px, 7vw, 38px);
@@ -163,7 +163,7 @@
 
 .btnSecondary {
   background: #6b7280;
-  color: #ffffff;
+  color: var(--primary-50);
   transition:
     background-color 0.2s,
     transform 0.2s,
@@ -180,7 +180,7 @@
 
 .btnDanger {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #ffffff;
+  color: var(--primary-50);
   transition:
     background-color 0.2s,
     transform 0.2s,

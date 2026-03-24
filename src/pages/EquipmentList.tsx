@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import api from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
@@ -9,7 +10,7 @@ import {
   addEquipmentPhotoRequest,
   exportMaintenancePlanExcelRequest,
   getMyEquipmentRequest,
-  exportEquipmentInventoryExcelRequest, // 👈 NUEVO IMPORT
+  exportEquipmentInventoryExcelRequest,
 } from "../api/equipment";
 import {
   addEquipmentToOrderRequest,
@@ -42,6 +43,22 @@ const STORAGE_KEYS = {
   SEARCH_TERM: "equipmentList_searchTerm",
 };
 
+// Hook personalizado para equipos con React Query
+function useEquipmentList(selectedClientId: number | 0, isClient: boolean) {
+  return useQuery({
+    queryKey: ["equipment", selectedClientId],
+    queryFn: async () => {
+      if (isClient) {
+        return await getMyEquipmentRequest();
+      }
+      if (!selectedClientId || selectedClientId === 0) return [];
+      return await getEquipmentByClientRequest(selectedClientId);
+    },
+    enabled: isClient ? true : !!selectedClientId && selectedClientId !== 0,
+    staleTime: 0,
+  });
+}
+
 export default function EquipmentListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -58,9 +75,7 @@ export default function EquipmentListPage() {
 
   const [clients, setClients] = useState<ClientOption[]>([]);
 
-  // 🔹 Inicializar selectedClientId desde sessionStorage o ruta
   const [selectedClientId, setSelectedClientId] = useState<number | 0>(() => {
-    // Prioridad: 1. Ruta, 2. SessionStorage, 3. 0
     if (routeState.clientId) return routeState.clientId;
     const saved = sessionStorage.getItem(STORAGE_KEYS.SELECTED_CLIENT_ID);
     return saved ? parseInt(saved, 10) : 0;
@@ -70,21 +85,17 @@ export default function EquipmentListPage() {
     null,
   );
 
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
-  const [allEquipments, setAllEquipments] = useState<Equipment[]>([]);
-
-  // 🔹 Inicializar search desde sessionStorage
   const [search, setSearch] = useState(() => {
     const saved = sessionStorage.getItem(STORAGE_KEYS.SEARCH_TERM);
     return saved || "";
   });
 
-  const [loadingClients, setLoadingClients] = useState(true);
-  const [loadingEquipment, setLoadingEquipment] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [equipmentError, setEquipmentError] = useState<string | null>(null);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
 
-  // Crear equipo
+  const [loadingClients, setLoadingClients] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [, setEquipmentError] = useState<string | null>(null);
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -139,6 +150,19 @@ export default function EquipmentListPage() {
     roleName === "Técnico" ||
     roleName === "Cliente";
 
+  // 🔥 REACT QUERY para equipos
+  const {
+    data: equipmentList = [],
+    isLoading: loadingEquipment,
+    error: equipmentQueryError,
+    refetch: refetchEquipment,
+  } = useEquipmentList(selectedClientId, isClient);
+
+  // Sincronizar filteredEquipment cuando cambie equipmentList
+  useEffect(() => {
+    setFilteredEquipment(equipmentList);
+  }, [equipmentList]);
+
   const canCreate = roleName === "Administrador" || roleName === "Técnico";
 
   const canExport =
@@ -148,7 +172,7 @@ export default function EquipmentListPage() {
 
   const hasFixedClientFromRoute = !!routeState.clientId;
 
-  // 🔹 Guardar filtros en sessionStorage cuando cambian
+  // Guardar filtros en sessionStorage
   useEffect(() => {
     if (!isClient && !hasFixedClientFromRoute) {
       if (selectedClientId && selectedClientId !== 0) {
@@ -172,7 +196,6 @@ export default function EquipmentListPage() {
     }
   }, [search, isClient, hasFixedClientFromRoute]);
 
-  // 🔹 Limpiar storage cuando es cliente o ruta fija
   useEffect(() => {
     if (isClient || hasFixedClientFromRoute) {
       sessionStorage.removeItem(STORAGE_KEYS.SELECTED_CLIENT_ID);
@@ -198,7 +221,6 @@ export default function EquipmentListPage() {
       return;
     }
 
-    // Para CLIENTE: no necesitamos /clients global, lo derivamos de los equipos
     if (isClient) {
       setLoadingClients(false);
       return;
@@ -320,72 +342,16 @@ export default function EquipmentListPage() {
     }
   };
 
-  // Cargar equipos
-  useEffect(() => {
-    const loadEquipment = async () => {
-      if (!canView) return;
-
-      try {
-        setLoadingEquipment(true);
-        setEquipmentError(null);
-
-        let equipments: Equipment[] = [];
-
-        if (isClient) {
-          equipments = await getMyEquipmentRequest();
-
-          const clientMap = new Map<number, ClientOption>();
-          equipments.forEach((eq) => {
-            if (eq.client) {
-              clientMap.set(eq.client.idCliente, {
-                idCliente: eq.client.idCliente,
-                nombre: eq.client.nombre,
-                nit: eq.client.nit,
-              });
-            }
-          });
-          const derivedClients = Array.from(clientMap.values());
-          setClients(derivedClients);
-
-          if (derivedClients.length > 0 && !selectedClientId) {
-            setSelectedClientId(derivedClients[0].idCliente);
-            setSelectedClient(derivedClients[0]);
-          }
-        } else {
-          if (!selectedClientId) {
-            setAllEquipments([]);
-            setEquipmentList([]);
-            return;
-          }
-          equipments = await getEquipmentByClientRequest(selectedClientId);
-        }
-
-        setAllEquipments(equipments);
-        setEquipmentList(equipments);
-      } catch (err: any) {
-        console.error("Error cargando equipos:", err);
-        setEquipmentError(
-          err.response?.data?.error ||
-            "Error al cargar los equipos de la empresa.",
-        );
-      } finally {
-        setLoadingEquipment(false);
-      }
-    };
-
-    loadEquipment();
-  }, [selectedClientId, canView, isClient]);
-
-  // 🔹 Filtrar equipos por búsqueda (100% local, sobre los datos ya cargados)
+  // Filtrar equipos por búsqueda
   useEffect(() => {
     const term = search.trim().toLowerCase();
 
     if (!term) {
-      setEquipmentList(allEquipments);
+      setFilteredEquipment(equipmentList);
       return;
     }
 
-    const filtered = allEquipments.filter((eq) => {
+    const filtered = equipmentList.filter((eq) => {
       const code = eq.code?.toLocaleLowerCase() ?? "";
       const areaName = eq.area?.nombreArea.toLowerCase() ?? "";
       const subAreaName = eq.subArea?.nombreSubArea.toLowerCase() ?? "";
@@ -400,8 +366,8 @@ export default function EquipmentListPage() {
       );
     });
 
-    setEquipmentList(filtered);
-  }, [search, allEquipments]);
+    setFilteredEquipment(filtered);
+  }, [search, equipmentList]);
 
   const loadHierarchicalAreas = async () => {
     try {
@@ -481,6 +447,7 @@ export default function EquipmentListPage() {
 
     setSelectedClientId(newClientId);
     setSearch("");
+    refetchEquipment(); // Refrescar equipos
 
     const client = clients.find((c) => c.idCliente === newClientId);
     setSelectedClient(client || null);
@@ -517,7 +484,6 @@ export default function EquipmentListPage() {
     setCondensers(condensers.filter((_, i) => i !== index));
   };
 
-  // 🔥 ACTUALIZADO: Ahora acepta tanto input como select
   const handleEvaporatorChange = (
     index: number,
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -525,7 +491,6 @@ export default function EquipmentListPage() {
     const { name, value } = e.target;
     const newEvaporators = [...evaporators];
 
-    // Si es el campo de tipo, convertir a número
     if (name === "airConditionerTypeEvapId") {
       newEvaporators[index] = {
         ...newEvaporators[index],
@@ -762,9 +727,8 @@ export default function EquipmentListPage() {
         }
       }
 
-      const equipments = await getEquipmentByClientRequest(selectedClientId);
-      setAllEquipments(equipments);
-      setEquipmentList(equipments);
+      // Refrescar la lista de equipos
+      await refetchEquipment();
 
       setShowCreateForm(false);
       setSelectedOrderIds([]);
@@ -819,7 +783,6 @@ export default function EquipmentListPage() {
     }
   };
 
-  // 👇 NUEVO MANEJADOR PARA EXPORTAR INVENTARIO DE EQUIPOS
   const handleExportEquipmentInventory = async () => {
     if (!selectedClientId || selectedClientId === 0) {
       setEquipmentError(
@@ -863,8 +826,12 @@ export default function EquipmentListPage() {
         return <p className={styles.loading}>Cargando equipos...</p>;
       }
 
-      if (equipmentError) {
-        return <div className={styles.error}>{equipmentError}</div>;
+      if (equipmentQueryError) {
+        return (
+          <div className={styles.error}>
+            {(equipmentQueryError as Error).message}
+          </div>
+        );
       }
 
       if (equipmentList.length === 0 && !loadingEquipment) {
@@ -875,7 +842,7 @@ export default function EquipmentListPage() {
 
       return (
         <EquipmentGrid
-          equipmentList={equipmentList}
+          equipmentList={filteredEquipment}
           onOpenEquipment={handleOpenEquipment}
         />
       );
@@ -905,8 +872,12 @@ export default function EquipmentListPage() {
       return <p className={styles.loading}>Cargando equipos...</p>;
     }
 
-    if (equipmentError) {
-      return <div className={styles.error}>{equipmentError}</div>;
+    if (equipmentQueryError) {
+      return (
+        <div className={styles.error}>
+          {(equipmentQueryError as Error).message}
+        </div>
+      );
     }
 
     if (equipmentList.length === 0 && !loadingEquipment) {
@@ -919,7 +890,7 @@ export default function EquipmentListPage() {
 
     return (
       <EquipmentGrid
-        equipmentList={equipmentList}
+        equipmentList={filteredEquipment}
         onOpenEquipment={handleOpenEquipment}
       />
     );
@@ -946,7 +917,6 @@ export default function EquipmentListPage() {
                       : "Exportar plan mantenimiento"}
                   </button>
 
-                  {/* 👇 NUEVO BOTÓN PARA EXPORTAR INVENTARIO DE EQUIPOS */}
                   <button
                     type="button"
                     className={listStyles.exportInventoryButton}
