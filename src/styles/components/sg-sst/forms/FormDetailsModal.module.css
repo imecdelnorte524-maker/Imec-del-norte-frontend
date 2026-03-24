@@ -97,7 +97,7 @@
   border-bottom: 2px solid #e5e7eb;
   padding: 0 1.5rem;
   gap: 1.5rem;
-  background: #ffffff;
+  background: var(--primary-50);
   min-height: 56px; /* Altura fija para asegurar visibilidad */
   width: 100%;
   box-sizing: border-box;
@@ -756,7 +756,7 @@
 
 .otpRequestButton {
   background: #2563eb;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.875rem 1.5rem;
   border-radius: 0.75rem;
@@ -841,7 +841,7 @@
 
 .cancelButton {
   background: #64748b;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.875rem 2rem;
   border-radius: 0.75rem;
@@ -859,7 +859,7 @@
 
 .signButton {
   background: #059669;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.875rem 2rem;
   border-radius: 0.75rem;
@@ -970,7 +970,7 @@
 
 .cancelRejectButton {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -985,7 +985,7 @@
 
 .rejectButton {
   background: #dc2626;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -1012,7 +1012,7 @@
 /* BOTÓN DE DESCARGA PDF */
 .downloadButton {
   background: #2563eb;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.875rem 1.5rem;
   border-radius: 0.75rem;
@@ -1106,7 +1106,7 @@
   height: 1rem;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: white;
+  border-top-color: var(--primary-50);
   animation: spin 0.6s linear infinite;
 }
 

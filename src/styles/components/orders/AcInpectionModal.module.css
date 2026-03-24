@@ -216,7 +216,7 @@ form::-webkit-scrollbar-thumb {
   top: 5px;
   right: 5px;
   background: #ef4444;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 50%;
   width: 24px;
@@ -317,7 +317,7 @@ form::-webkit-scrollbar-thumb {
 
 .submitBtn {
   background: #2563eb;
-  color: white;
+  color: var(--primary-50);
 }
 
 .submitBtn:hover:not(:disabled) {

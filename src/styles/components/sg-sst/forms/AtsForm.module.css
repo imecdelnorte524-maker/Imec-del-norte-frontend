@@ -23,7 +23,7 @@
 
 .backButton {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
@@ -585,7 +585,7 @@
 
 .cancelButton {
   background: #6b7280;
-  color: white;
+  color: var(--primary-50);
 }
 
 .cancelButton:hover {
@@ -594,7 +594,7 @@
 
 .submitButton {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  color: var(--primary-50);
   box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
 }
 

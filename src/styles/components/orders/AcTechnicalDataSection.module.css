@@ -40,7 +40,7 @@
 .tabActive {
   background: #1d4ed8;
   border-color: #1d4ed8;
-  color: #ffffff;
+  color: var(--primary-50);
 }
 
 /* LISTA DE CARDS */
@@ -51,7 +51,7 @@
 }
 
 .inspectionCard {
-  background: #ffffff;
+  background: var(--primary-50);
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
@@ -63,7 +63,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: white;
+  color: var(--primary-50);
   font-weight: 700;
   font-size: 0.85rem;
   letter-spacing: 0.05em;

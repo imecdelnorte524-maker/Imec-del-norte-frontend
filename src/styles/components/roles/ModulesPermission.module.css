@@ -17,7 +17,7 @@
   width: 100%;
   max-width: 960px;
   max-height: 80vh;
-  background: #ffffff;
+  background: var(--primary-50);
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(16, 24, 40, 0.2);
   overflow: hidden;

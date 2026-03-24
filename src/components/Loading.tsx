@@ -1,4 +1,3 @@
-// src/components/Loading.tsx
 import React from "react";
 import styles from "../styles/components/Loading.module.css";
 
@@ -20,7 +19,6 @@ const Loading: React.FC<LoadingProps> = ({
   return (
     <div className={containerClass}>
       <div className={`${styles.loadingSpinner} ${styles[size]}`}>
-        {/* Aquí irá tu GIF */}
         <img
           src="/Assets/gifs/Loading.gif"
           alt="Cargando"

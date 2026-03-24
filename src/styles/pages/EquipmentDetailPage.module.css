@@ -74,7 +74,7 @@
 
 /* Botón secundario (Historial, Agregar imagen) */
 .secondaryButton {
-  background: var(--white);
+  background: var(--primary-50);
   color: var(--gray-700);
   border: 1px solid var(--gray-300);
 }
@@ -87,7 +87,7 @@
 
 /* Botón de PDF - usa el mismo estilo que secondaryButton pero con icono */
 .pdfHeaderButton {
-  background: var(--white);
+  background: var(--primary-50);
   color: var(--gray-700);
   border: 1px solid var(--gray-300);
 }
@@ -114,7 +114,7 @@
 /* Botón de edición (primary) */
 .editButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 .editButton:hover {
@@ -149,7 +149,7 @@
 
 /* SECCIONES GENERALES PARA COMPONENTES */
 .section {
-  background: var(--white);
+  background: var(--primary-50);
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
@@ -207,7 +207,7 @@
 
 /* EquipmentInfoSection */
 .infoSection {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
   padding: var(--spacing-lg);
@@ -225,7 +225,7 @@
 
 /* EquipmentEditForm */
 .editFormContainer {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
   padding: var(--spacing-lg);
@@ -280,7 +280,7 @@
   font-size: var(--font-size-sm);
   width: 100%;
   box-sizing: border-box;
-  background-color: var(--white);
+  background-color: var(--primary-50);
   color: var(--gray-700);
   transition: all 0.2s;
 }
@@ -336,7 +336,7 @@
 
 .saveButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 .saveButton:hover {
@@ -350,7 +350,7 @@
 
 /* ComponentsReadOnly */
 .componentsSection {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
   padding: var(--spacing-lg);
@@ -393,7 +393,7 @@
 
 /* LocationSection */
 .locationSection {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
   padding: var(--spacing-lg);
@@ -408,7 +408,7 @@
 
 /* DatesNotesSection */
 .datesNotesSection {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--gray-200);
   padding: var(--spacing-lg);
@@ -494,7 +494,7 @@
 
 /* AddPhotoModal */
 .addPhotoModal {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   width: 100%;
   max-width: 500px;
@@ -593,7 +593,7 @@
 
 /* PhotoViewModal */
 .photoViewModal {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   width: 100%;
   max-width: 800px;
@@ -648,7 +648,7 @@
 
 .deleteButton:hover {
   background: #dc2626;
-  color: white;
+  color: var(--primary-50);
 }
 
 /* =========================================
@@ -668,7 +668,7 @@
   padding: var(--spacing-md);
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius);
-  background: var(--white);
+  background: var(--primary-50);
   transition: all 0.2s;
   flex-wrap: wrap;
   gap: var(--spacing-md);
@@ -742,7 +742,7 @@
 
 .viewOrderButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--border-radius);
@@ -800,7 +800,7 @@
 
 .associateOrderButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--border-radius);
@@ -879,7 +879,7 @@
 
 /* ===== Documents Modal - Mejorado ===== */
 .docsModal {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   width: min(760px, 100%);
   max-height: 92vh;
@@ -902,7 +902,7 @@
 .uploadArea {
   text-align: center;
   padding: var(--spacing-xl);
-  background: var(--white);
+  background: var(--primary-50);
   border: 2px dashed var(--gray-300);
   border-radius: var(--border-radius-lg);
   transition: all 0.2s;
@@ -953,7 +953,7 @@
 /* Archivos seleccionados */
 .selectedFiles {
   margin-top: var(--spacing-lg);
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius);
   border: 1px solid var(--gray-200);
   overflow: hidden;
@@ -1013,7 +1013,7 @@
 
 .primaryButton {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 10px 20px;
   border-radius: var(--border-radius);
@@ -1081,7 +1081,7 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  background: var(--white);
+  background: var(--primary-50);
   border: 1px solid var(--gray-200);
   border-radius: var(--border-radius);
   transition: all 0.2s;
@@ -1386,7 +1386,7 @@
   padding: 0.4rem 0.6rem;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--primary-50);
 }
 
 .autoPlanLabelBlock {
@@ -1444,7 +1444,7 @@
   width: 22px;
   left: 4px;
   top: 4px;
-  background-color: white;
+  background-color: var(--primary-50);
   transition: 0.25s;
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);

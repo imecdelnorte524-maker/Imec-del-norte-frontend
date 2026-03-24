@@ -1,0 +1,54 @@
+.container {
+  height: 100vh;
+  width: 81vw;
+  position: static;
+  background-image: url("/Assets/images/not-found.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin: 0px 160px;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.5
+  ); /* Oscurece ligeramente el fondo para mejor contraste */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.button {
+  position: absolute;
+  bottom: 51px;
+  padding: 12px 24px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: var(--primary-50);
+  border: none;
+  border-radius: 6px;
+  font-size: 18px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button:hover {
+  background-color: #0056b3;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+}
+
+.button:active {
+  transform: scale(0.95);
+}

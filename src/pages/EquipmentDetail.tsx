@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import type React from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import {
+  getEquipmentByIdRequest,
   addEquipmentPhotoRequest,
   deleteEquipmentPhotoRequest,
   getEquipmentWorkOrdersRequest,
   downloadEquipmentHistoryPdfRequest,
+  updateEquipmentRequest,
 } from "../api/equipment";
 import {
   getOrdersByClientAndCategoryRequest,
@@ -39,7 +42,6 @@ import {
 import AssociateOrderModal from "../components/equipment/equipment-details/AssociateOrderModal";
 import styles from "../styles/pages/EquipmentDetailPage.module.css";
 import type { AreaSimple } from "../interfaces/AreaInterfaces";
-import { useEquipmentDetail } from "../hooks/useEquipmentDetail";
 import pdfIcon from "../../public/Assets/icons/document-pdf.svg";
 import EquipmentDocumentsModal from "../components/equipment/equipment-details/EquipmentDocumentsModal";
 
@@ -59,16 +61,36 @@ interface NewAcTypeFormState {
   hasCondenser: boolean;
 }
 
+// Hook personalizado para detalle de equipo
+function useEquipmentDetailQuery(id: number | null) {
+  return useQuery({
+    queryKey: ["equipment", id],
+    queryFn: async () => {
+      if (!id) throw new Error("ID no válido");
+      return await getEquipmentByIdRequest(id);
+    },
+    enabled: !!id,
+    staleTime: 0,
+  });
+}
+
 export default function EquipmentDetailPage() {
   const { equipmentId } = useParams<{ equipmentId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
 
   const idNum = equipmentId ? Number.parseInt(equipmentId, 10) : null;
 
-  // Usamos el hook para manejar estado del equipo
-  const { equipment, loading, saving, error, updateEquipment, reload } =
-    useEquipmentDetail(idNum);
+  // REACT QUERY para detalle de equipo
+  const {
+    data: equipment,
+    isLoading: loading,
+    error,
+    refetch: reload,
+  } = useEquipmentDetailQuery(idNum);
+
+  const [saving, setSaving] = useState(false);
   const [updatingAutoPlan, setUpdatingAutoPlan] = useState(false);
   const [autoPlanValue, setAutoPlanValue] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -142,6 +164,26 @@ export default function EquipmentDetailPage() {
   const roleName = user?.role?.nombreRol;
   const canEdit = roleName === "Administrador" || roleName === "Técnico";
   const isClient = roleName === "Cliente";
+
+  // Función para actualizar equipo
+  const updateEquipment = async (data: Partial<Equipment>) => {
+    if (!equipment) return false;
+
+    setSaving(true);
+    try {
+      await updateEquipmentRequest(equipment.equipmentId, data);
+      await queryClient.invalidateQueries({
+        queryKey: ["equipment", equipment.equipmentId],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["equipment"] });
+      return true;
+    } catch (err) {
+      console.error("Error actualizando equipo:", err);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Manejador para descargar PDF del historial
   const handleDownloadHistoryPdf = async () => {
@@ -292,7 +334,7 @@ export default function EquipmentDetailPage() {
       setEvaporators(equipment.evaporators || []);
       setCondensers(equipment.condensers || []);
 
-      // Tipo de aire: usar id plano o, si no viene, el id del objeto anidado
+      // Tipo de aire
       const acTypeIdFromEquipment =
         equipment.airConditionerTypeId ??
         equipment.airConditionerType?.id ??
@@ -303,7 +345,7 @@ export default function EquipmentDetailPage() {
       setSelectedAreaId(equipment.area?.idArea || null);
       setSelectedSubAreaId(equipment.subArea?.idSubArea || null);
 
-      // Plan de mantenimiento: copiar lo que venga del backend
+      // Plan de mantenimiento
       setPlanMantenimiento(
         equipment.planMantenimiento ? { ...equipment.planMantenimiento } : null,
       );
@@ -338,7 +380,7 @@ export default function EquipmentDetailPage() {
   const handleEditAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value ? Number(e.target.value) : null;
     setSelectedAreaId(value);
-    setSelectedSubAreaId(null); // Resetear subárea cuando cambia área
+    setSelectedSubAreaId(null);
   };
 
   const handleEditSubAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -421,7 +463,7 @@ export default function EquipmentDetailPage() {
     });
   };
 
-  // GUARDAR
+  // GUARDAR - 🔥 CORREGIDO: Convertir null a undefined
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!equipment) return;
@@ -474,17 +516,16 @@ export default function EquipmentDetailPage() {
       }
     }
 
-    const payload = {
-      code: editForm.code || null,
+    // 🔥 CORREGIDO: Convertir null a undefined para evitar errores de tipo
+    const payload: Partial<Equipment> = {
+      code: editForm.code || undefined,
       status: editForm.status,
-      installationDate: editForm.installationDate || null,
-      notes: editForm.notes || null,
-      areaId: selectedAreaId,
-      subAreaId: selectedSubAreaId,
-      airConditionerTypeId: selectedAcTypeId,
+      installationDate: editForm.installationDate || undefined,
+      notes: editForm.notes || undefined,
+      airConditionerTypeId: selectedAcTypeId ?? undefined,
       evaporators: evaporators,
       condensers: condensers,
-      planMantenimiento: planMantenimiento ?? null,
+      planMantenimiento: planMantenimiento ?? undefined,
     };
 
     const success = await updateEquipment(payload);
@@ -512,7 +553,6 @@ export default function EquipmentDetailPage() {
           addEquipmentPhotoRequest(equipment.equipmentId, f),
         ),
       );
-      // Recargar equipo desde el backend para ver fotos nuevas
       await reload();
       setShowAddPhotoModal(false);
       setPhotoFiles([]);
@@ -529,7 +569,6 @@ export default function EquipmentDetailPage() {
     setPhotoLoading(true);
     try {
       await deleteEquipmentPhotoRequest(photoId);
-      // Recargar equipo desde el backend
       await reload();
       setShowPhotoModal(false);
     } catch (err) {
@@ -546,9 +585,7 @@ export default function EquipmentDetailPage() {
 
     try {
       await addEquipmentToOrderRequest(orderId, equipment.equipmentId);
-      // Recargar órdenes asociadas
       await loadWorkOrders();
-      // Cerrar modal
       setShowOrderModal(false);
     } catch (error) {
       console.error("Error asociando orden:", error);
@@ -562,7 +599,6 @@ export default function EquipmentDetailPage() {
 
     try {
       await removeEquipmentFromOrderRequest(orderId, equipment.equipmentId);
-      // Recargar órdenes asociadas
       await loadWorkOrders();
     } catch (error) {
       console.error("Error desasociando orden:", error);
@@ -611,10 +647,8 @@ export default function EquipmentDetailPage() {
         throw new Error("Respuesta inesperada al crear tipo de aire.");
       }
 
-      // Actualizar lista local y seleccionar el nuevo tipo
       setAirConditionerTypes((prev) => [...prev, created]);
       setSelectedAcTypeId(created.id);
-
       setShowAcTypeModal(false);
     } catch (err) {
       console.error("Error creando tipo de aire:", err);
@@ -623,6 +657,14 @@ export default function EquipmentDetailPage() {
       setCreatingAcType(false);
     }
   };
+
+  if (!idNum) {
+    return (
+      <DashboardLayout>
+        <div className={styles.error}>ID de equipo no válido</div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -633,7 +675,6 @@ export default function EquipmentDetailPage() {
           </button>
           <h1>Detalle del Equipo</h1>
 
-          {/* 👇 BOTÓN DE PDF EN EL HEADER */}
           {equipment && !loading && (
             <div className={styles.headerActions}>
               <button
@@ -713,7 +754,9 @@ export default function EquipmentDetailPage() {
         </div>
 
         {loading && <p className={styles.loading}>Cargando equipo...</p>}
-        {error && !loading && <div className={styles.error}>{error}</div>}
+        {error && !loading && (
+          <div className={styles.error}>{(error as Error).message}</div>
+        )}
         {localError && !loading && (
           <div className={styles.error}>{localError}</div>
         )}

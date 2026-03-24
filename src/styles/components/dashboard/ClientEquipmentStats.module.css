@@ -207,7 +207,7 @@
 .retryButton {
   padding: 0.5rem 1rem;
   background: #ef4444;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 8px;
   font-size: 0.875rem;

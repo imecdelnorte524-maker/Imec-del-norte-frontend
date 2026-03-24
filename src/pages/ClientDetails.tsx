@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import type { JSX } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { clients as clientsAPI } from "../api/clients";
 import { imagesApi } from "../api/images";
@@ -14,7 +15,6 @@ import type {
   ClientImage,
   UsuarioContacto,
 } from "../interfaces/ClientInterfaces";
-import type { Equipment } from "../interfaces/EquipmentInterfaces";
 import styles from "../styles/pages/ClientDetailsPage.module.css";
 import type { SubArea } from "../interfaces/SubAreaInterfaces";
 
@@ -39,24 +39,66 @@ function getPrincipalContacto(client: Client): UsuarioContacto | null {
   return contactos[0];
 }
 
+// Helper para formatear NIT según tipo de cliente
+function formatNit(client: Client): string {
+  if (client.tipoCliente === "natural") {
+    return "N/A (Persona Natural)";
+  }
+  return client.nit && client.verification_digit
+    ? `${client.nit}-${client.verification_digit}`
+    : client.nit || "No registrado";
+}
+
+// Hook personalizado para cliente
+function useClientQuery(id: number | null) {
+  return useQuery({
+    queryKey: ["clients", id],
+    queryFn: async () => {
+      if (!id) throw new Error("ID no válido");
+      return await clientsAPI.getClientById(id);
+    },
+    enabled: !!id,
+    staleTime: 0,
+  });
+}
+
+// Hook para equipos del cliente
+function useClientEquipment(clientId: number | null) {
+  return useQuery({
+    queryKey: ["equipment", { clientId }],
+    queryFn: async () => {
+      if (!clientId) return [];
+      return await getEquipmentByClientRequest(clientId);
+    },
+    enabled: !!clientId,
+    staleTime: 0,
+  });
+}
+
 export default function ClientDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const logoFileInputRef = useRef<HTMLInputElement>(null);
-  const galleryFileInputRef = useRef<HTMLInputElement>(null);
-  const logoMenuRef = useRef<HTMLDivElement>(null);
 
-  const [client, setClient] = useState<Client | null>(null);
-  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const clientId = id ? parseInt(id, 10) : null;
+
+  // 🔥 REACT QUERY para cliente
+  const { data: client, isLoading: loading, error } = useClientQuery(clientId);
+
+  // 🔥 REACT QUERY para equipos del cliente
+  const {
+    data: equipmentList = [],
+    isLoading: equipmentLoading,
+    error: equipmentError,
+  } = useClientEquipment(clientId);
+
+  // 👇 ESTADO PARA ERRORES LOCALES
+  const [localError, setLocalError] = useState<string | null>(null);
+
   const [clientImages, setClientImages] = useState<ClientImage[]>([]);
   const [clientLogo, setClientLogo] = useState<ClientImage | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("info");
-  const [loading, setLoading] = useState(true);
-  const [equipmentLoading, setEquipmentLoading] = useState(false);
   const [imagesLoading, setImagesLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [equipmentError, setEquipmentError] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [logoHover, setLogoHover] = useState(false);
@@ -69,6 +111,10 @@ export default function ClientDetailsPage() {
   const [warehousesList, setWarehousesList] = useState<Warehouse[]>([]);
   const [warehousesLoading, setWarehousesLoading] = useState(false);
   const [showWarehouses, setShowWarehouses] = useState(false);
+
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
+  const logoMenuRef = useRef<HTMLDivElement>(null);
 
   // Determinar rol del usuario
   const roleName = user?.role?.nombreRol?.toLowerCase() || "";
@@ -92,29 +138,13 @@ export default function ClientDetailsPage() {
 
   // Cargar datos del cliente
   useEffect(() => {
+    if (!clientId) {
+      return;
+    }
+
     const loadClientData = async () => {
-      if (!id) {
-        setError("ID de cliente no proporcionado.");
-        setLoading(false);
-        return;
-      }
-
-      const clientId = parseInt(id, 10);
-      if (isNaN(clientId)) {
-        setError("ID de cliente inválido.");
-        setLoading(false);
-        return;
-      }
-
       try {
-        setLoading(true);
-        setError(null);
-
-        // 1. Cargar datos del cliente
-        const clientData = await clientsAPI.getClientById(clientId);
-        setClient(clientData);
-
-        // 2. Cargar logo del cliente
+        // 1. Cargar logo del cliente
         try {
           const logo = await imagesApi.getClientLogo(clientId);
           setClientLogo(logo);
@@ -123,7 +153,7 @@ export default function ClientDetailsPage() {
           setClientLogo(null);
         }
 
-        // 3. Cargar imágenes de galería
+        // 2. Cargar imágenes de galería
         try {
           setImagesLoading(true);
           const images = await imagesApi.getClientImages(clientId);
@@ -135,50 +165,31 @@ export default function ClientDetailsPage() {
           setImagesLoading(false);
         }
 
-        // 4. Cargar equipos
+        // 3. Cargar órdenes del cliente
         try {
-          setEquipmentLoading(true);
-          setEquipmentError(null);
-          const equipments = await getEquipmentByClientRequest(clientId);
-          setEquipmentList(equipments);
-        } catch (err: any) {
-          console.error("Error cargando equipos del cliente:", err);
-          setEquipmentError(
-            err.response?.data?.error ||
-              err.message ||
-              "Error al cargar los equipos del cliente.",
-          );
-          setEquipmentList([]);
-        } finally {
-          setEquipmentLoading(false);
-        }
-
-        // 5. Cargar órdenes del cliente
-        try {
-          const ordersResponse = await getAllOrdersRequest({
-            search: clientData.nombre,
-          });
-          const clientOrders = ordersResponse.services.filter(
-            (order) => order.cliente_empresa?.id_cliente === clientId,
-          );
-          setTotalOrders(clientOrders.length);
+          if (client) {
+            const ordersResponse = await getAllOrdersRequest({
+              search: client.nombre,
+            });
+            const clientOrders = ordersResponse.services.filter(
+              (order) => order.cliente_empresa?.id_cliente === clientId,
+            );
+            setTotalOrders(clientOrders.length);
+          }
         } catch (err) {
           console.error("Error cargando órdenes del cliente:", err);
           setTotalOrders(0);
         }
 
-        // 6. Cargar bodegas del cliente (SOLO después de tener clientData)
+        // 4. Cargar bodegas del cliente
         await loadWarehouses(clientId);
       } catch (err: any) {
-        console.error("Error cargando cliente:", err);
-        setError(err.message || "Error al cargar el cliente");
-      } finally {
-        setLoading(false);
+        console.error("Error cargando datos adicionales:", err);
       }
     };
 
     loadClientData();
-  }, [id]);
+  }, [clientId, client]);
 
   // Click outside para cerrar overlay del logo
   useEffect(() => {
@@ -252,16 +263,16 @@ export default function ClientDetailsPage() {
         "image/webp",
       ]);
       if (validationError) {
-        setError(validationError);
+        setLocalError(validationError);
         return;
       }
 
       const uploadedLogo = await imagesApi.uploadClientLogo(clientId, file);
       setClientLogo(uploadedLogo);
-      setError(null);
+      setLocalError(null);
     } catch (err: any) {
       console.error("Error subiendo logo:", err);
-      setError(err.message || "Error al subir el logo");
+      setLocalError(err.message || "Error al subir el logo");
     } finally {
       setUploadingLogo(false);
     }
@@ -282,7 +293,7 @@ export default function ClientDetailsPage() {
           "image/webp",
         ]);
         if (validationError) {
-          setError(validationError);
+          setLocalError(validationError);
           return;
         }
       }
@@ -293,10 +304,10 @@ export default function ClientDetailsPage() {
       );
 
       setClientImages((prev) => [...prev, ...uploadedImages]);
-      setError(null);
+      setLocalError(null);
     } catch (err: any) {
       console.error("Error subiendo imágenes:", err);
-      setError(err.message || "Error al subir las imágenes");
+      setLocalError(err.message || "Error al subir las imágenes");
     } finally {
       setUploadingGallery(false);
     }
@@ -331,10 +342,10 @@ export default function ClientDetailsPage() {
       await imagesApi.deleteImage(clientLogo.id);
       setClientLogo(null);
       setLogoHover(false);
-      setError(null);
+      setLocalError(null);
     } catch (err: any) {
       console.error("Error eliminando logo:", err);
-      setError(err.message || "Error al eliminar el logo");
+      setLocalError(err.message || "Error al eliminar el logo");
     }
   };
 
@@ -349,10 +360,10 @@ export default function ClientDetailsPage() {
       if (currentImageIndex >= clientImages.length - 1) {
         setCurrentImageIndex(Math.max(0, clientImages.length - 2));
       }
-      setError(null);
+      setLocalError(null);
     } catch (err: any) {
       console.error("Error eliminando imagen:", err);
-      setError(err.message || "Error al eliminar la imagen");
+      setLocalError(err.message || "Error al eliminar la imagen");
     }
   };
 
@@ -566,7 +577,9 @@ export default function ClientDetailsPage() {
         <div className={styles.pageWrapper}>
           <div className={styles.centerBox}>
             <h2>Error</h2>
-            <p>{error || "No se encontró el cliente."}</p>
+            <p>
+              {error ? (error as Error).message : "No se encontró el cliente."}
+            </p>
             <button className={styles.backButton} onClick={handleBack}>
               ← Volver a clientes
             </button>
@@ -579,6 +592,7 @@ export default function ClientDetailsPage() {
   const areas = client.areas || [];
   const totalEquipments = equipmentList.length;
   const principalContacto = getPrincipalContacto(client);
+  const isNatural = client.tipoCliente === "natural";
 
   return (
     <DashboardLayout>
@@ -671,9 +685,18 @@ export default function ClientDetailsPage() {
                 )}
               </div>
               <div className={styles.clientHeaderInfo}>
-                <h1 className={styles.clientName}>{client.nombre}</h1>
+                <div className={styles.clientHeaderTop}>
+                  <h1 className={styles.clientName}>{client.nombre}</h1>
+                  <span
+                    className={`${styles.clientTypeBadge} ${isNatural ? styles.natural : styles.juridica}`}
+                  >
+                    {isNatural ? "👤 Persona Natural" : "🏢 Persona Jurídica"}
+                  </span>
+                </div>
                 <span className={styles.clientNit}>
-                  NIT: {client.nit}-{client.verification_digit}
+                  {isNatural
+                    ? "Identificación: N/A"
+                    : `NIT: ${formatNit(client)}`}
                 </span>
               </div>
             </div>
@@ -770,13 +793,13 @@ export default function ClientDetailsPage() {
           </nav>
         </header>
 
-        {error && (
+        {localError && (
           <div className={styles.errorAlert}>
             <span className={styles.errorIcon}>⚠️</span>
-            <span>{error}</span>
+            <span>{localError}</span>
             <button
               className={styles.errorCloseBtn}
-              onClick={() => setError(null)}
+              onClick={() => setLocalError(null)}
             >
               ×
             </button>
@@ -918,27 +941,52 @@ export default function ClientDetailsPage() {
                 </div>
               </div>
 
-              {/* Empresa */}
+              {/* Información Personal/Empresa */}
               <div className={styles.infoCard}>
                 <h3 className={styles.cardTitle}>
-                  <span className={styles.cardIcon}>🏛️</span>
-                  Información de la Empresa
+                  <span className={styles.cardIcon}>
+                    {isNatural ? "👤" : "🏛️"}
+                  </span>
+                  {isNatural
+                    ? "Información Personal"
+                    : "Información de la Empresa"}
                 </h3>
                 <div className={styles.infoGrid}>
                   <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>NIT</span>
-                    <span className={styles.infoValueCode}>
-                      {client.nit}-{client.verification_digit}
-                    </span>
-                  </div>
-                  <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>
-                      Fecha de Creación de la Empresa
+                      {isNatural ? "Identificación" : "NIT"}
                     </span>
-                    <span className={styles.infoValue}>
-                      {formatDate(client.fechaCreacionEmpresa)}
+                    <span className={styles.infoValueCode}>
+                      {isNatural
+                        ? client.nit
+                          ? client.nit
+                          : "No registrado"
+                        : `${client.nit}-${client.verification_digit}`}
                     </span>
                   </div>
+
+                  {!isNatural && (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>
+                        Fecha de Creación de la Empresa
+                      </span>
+                      <span className={styles.infoValue}>
+                        {formatDate(client.fechaCreacionEmpresa)}
+                      </span>
+                    </div>
+                  )}
+
+                  {isNatural && client.fechaCreacionEmpresa && (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>
+                        Fecha de Nacimiento
+                      </span>
+                      <span className={styles.infoValue}>
+                        {formatDate(client.fechaCreacionEmpresa)}
+                      </span>
+                    </div>
+                  )}
+
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>
                       Registrado en Sistema
@@ -1026,7 +1074,9 @@ export default function ClientDetailsPage() {
           {activeTab === "areas" && (
             <section className={styles.areasSection}>
               {equipmentError && (
-                <div className={styles.errorBox}>{equipmentError}</div>
+                <div className={styles.errorBox}>
+                  {(equipmentError as Error).message}
+                </div>
               )}
 
               {equipmentLoading && (

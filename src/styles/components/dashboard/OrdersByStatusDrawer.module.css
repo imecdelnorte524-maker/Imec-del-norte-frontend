@@ -17,7 +17,7 @@
   width: 100%;
   max-width: 450px;
   height: 100vh;
-  background-color: white;
+  background-color: var(--primary-50);
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
   z-index: 1001;
   transition: right 0.3s ease;
@@ -124,7 +124,7 @@
 .retryButton {
   padding: 0.5rem 1rem;
   background-color: #ef4444;
-  color: white;
+  color: var(--primary-50);
   border: none;
   border-radius: 8px;
   font-size: 0.875rem;

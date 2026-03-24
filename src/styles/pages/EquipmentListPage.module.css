@@ -35,7 +35,7 @@
 /* Botón principal: Crear equipo */
 .createButton {
   background: var(--primary-500);
-  color: #ffffff;
+  color: var(--primary-50);
   border: none;
 }
 
@@ -51,7 +51,7 @@
 
 /* Botón secundario: Exportar plan mantenimiento */
 .exportButton {
-  background: #ffffff;
+  background: var(--primary-50);
   color: var(--primary-600);
   border: 1px solid var(--primary-500);
 }
@@ -71,7 +71,7 @@
 
 /* 👇 NUEVO: Botón para exportar inventario de equipos */
 .exportInventoryButton {
-  background: #ffffff;
+  background: var(--primary-50);
   color: #0d9488; /* teal-600 */
   border: 1px solid #14b8a6; /* teal-500 */
 }
@@ -115,7 +115,7 @@
 /* Botón para crear cliente desde estado vacío */
 .createClientButton {
   background: var(--primary-600);
-  color: #ffffff;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;

@@ -14,7 +14,7 @@
 }
 
 .modal {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-xl);
   max-width: 500px;
@@ -154,7 +154,7 @@
 
 .formActions button:last-child {
   background: var(--primary-500);
-  color: white;
+  color: var(--primary-50);
 }
 
 .formActions button:last-child:hover:not(:disabled) {

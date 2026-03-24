@@ -23,8 +23,8 @@
 }
 
 .userBadge {
-  background: #3b82f6;
-  color: white;
+  background: var(--primary-500);
+  color: var(--primary-50);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -33,7 +33,7 @@
 
 .adminBadge {
   background: #dc2626;
-  color: white;
+  color: var(--primary-50);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -46,7 +46,7 @@
 /* Badge para rol SG-SST */
 .sgsstBadge {
   background: #16a34a;
-  color: white;
+  color: var(--primary-50);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.75rem;
@@ -110,7 +110,7 @@
 }
 
 .metricCard {
-  background: var(--white);
+  background: var(--primary-50);
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
@@ -157,7 +157,7 @@
 
 /* Secciones */
 .section {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--gray-200);
@@ -231,7 +231,7 @@
   border-radius: var(--border-radius);
   font-size: var(--font-size-sm);
   transition: all 0.2s;
-  background: var(--white);
+  background: var(--primary-50);
 }
 
 .searchInput:focus,
@@ -307,7 +307,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-3xl);
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
 }
 
@@ -337,7 +337,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-3xl);
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   text-align: center;
 }
@@ -365,7 +365,7 @@
   justify-content: center;
   height: 50vh;
   text-align: center;
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-3xl);
 }

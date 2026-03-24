@@ -5,6 +5,7 @@ import React, {
   useMemo,
   type FormEvent,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query"; // 👈 IMPORTAR
 import DashboardLayout from "../components/layout/DashboardLayout";
 import { useAuth } from "../hooks/useAuth";
 import { usersApi } from "../api/users";
@@ -55,6 +56,7 @@ export default function UserProfilePage() {
     error: authError,
     refetchUser,
   } = useAuth();
+  const queryClient = useQueryClient(); // 👈 AÑADIR
   const location = useLocation();
 
   const [photo, setPhoto] = useState<UserPhoto | null>(null);
@@ -244,7 +246,7 @@ export default function UserProfilePage() {
   };
 
   const handleSaveProfile = async (e: FormEvent) => {
-    e.preventDefault(); // CRÍTICO: Prevenir recarga
+    e.preventDefault();
     setProfileError(null);
     setProfileSuccess(null);
 
@@ -294,6 +296,9 @@ export default function UserProfilePage() {
         console.warn("No se pudo recargar la foto:", photoErr);
       }
 
+      // 4. 🔥 REFRESCAR CACHÉ DE USUARIOS
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+
       setProfileSuccess("Información actualizada correctamente.");
 
       if (isProfileComplete) {
@@ -307,9 +312,9 @@ export default function UserProfilePage() {
     }
   };
 
-  // File handling (foto) - CORREGIDO
+  // File handling (foto)
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault(); // Prevenir cualquier comportamiento por defecto
+    e.preventDefault();
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -341,6 +346,9 @@ export default function UserProfilePage() {
       } catch {
         // noop
       }
+
+      // 🔥 REFRESCAR CACHÉ DE USUARIOS
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     } catch (err: any) {
       console.error("Error al subir foto de usuario:", err);
       setPhotoError(err.message || "Error al subir la foto de perfil");
@@ -353,7 +361,7 @@ export default function UserProfilePage() {
   };
 
   const handleDeletePhoto = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevenir cualquier comportamiento por defecto
+    e.preventDefault();
     if (!user || !photo) return;
 
     const confirmDelete = window.confirm(
@@ -375,6 +383,9 @@ export default function UserProfilePage() {
       } catch {
         // noop
       }
+
+      // 🔥 REFRESCAR CACHÉ DE USUARIOS
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     } catch (err: any) {
       console.error("Error eliminando foto de usuario:", err);
       setPhotoError(err.message || "Error al eliminar la foto de perfil");
@@ -384,7 +395,7 @@ export default function UserProfilePage() {
   };
 
   const handlePasswordSubmit = async (e: FormEvent) => {
-    e.preventDefault(); // CRÍTICO: Prevenir recarga
+    e.preventDefault();
     setPasswordError(null);
     setPasswordSuccess(null);
 
@@ -422,6 +433,9 @@ export default function UserProfilePage() {
       } catch {
         // noop
       }
+
+      // 🔥 REFRESCAR CACHÉ DE USUARIOS
+      queryClient.invalidateQueries({ queryKey: ["users"] });
     } catch {
       if (authError) {
         setPasswordError(authError);

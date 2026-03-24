@@ -1,7 +1,7 @@
 /* src/styles/components/ServicesCard.module.css */
 
 .card {
-  background: var(--white);
+  background: var(--primary-50);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--gray-200);
@@ -24,7 +24,7 @@
   align-items: flex-start;
   padding: 16px 20px 12px;
   background: var(--primary-800);
-  color: white;
+  color: var(--primary-50);
 }
 
 .serviceTitle {

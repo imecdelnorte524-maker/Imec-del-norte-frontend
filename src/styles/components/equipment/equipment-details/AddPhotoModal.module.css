@@ -160,7 +160,7 @@
 .submitBtn {
   background: #3182ce;
   border: none;
-  color: white;
+  color: var(--primary-50);
 }
 
 .submitBtn:disabled {

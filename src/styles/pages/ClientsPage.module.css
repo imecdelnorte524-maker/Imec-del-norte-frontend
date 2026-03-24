@@ -68,7 +68,7 @@
 
 .createButton {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 24px;
   border-radius: var(--radius-lg);
@@ -213,7 +213,7 @@
 
 .secondaryButton {
   background: var(--secondary-color);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 10px 20px;
   border-radius: var(--radius-md);
@@ -357,7 +357,7 @@
 .clientTableLogoPlaceholder,
 .clientLogoPlaceholderMobile {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -614,7 +614,7 @@
 
 .emptyButton {
   background: var(--primary-600);
-  color: white;
+  color: var(--primary-50);
   border: none;
   padding: 12px 32px;
   border-radius: var(--radius-lg);
@@ -825,4 +825,32 @@
   .emptyState {
     padding: 40px 16px;
   }
+}/* Tipo de cliente */
+.clientType {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.clientType.juridica {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.clientType.natural {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.noNit {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.mobileTypeBadge {
+  margin-top: 4px;
 }

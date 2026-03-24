@@ -1,5 +1,4 @@
-// src/hooks/useLoading.ts
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 interface LoadingState {
   isLoading: boolean;
@@ -12,20 +11,33 @@ export const useLoading = (initialState: boolean = false) => {
     message: undefined,
   });
 
+  // Contador para manejar múltiples cargas simultáneas
+  const loadingCountRef = useRef(0);
+
   const startLoading = useCallback((message?: string) => {
-    setLoadingState({ isLoading: true, message });
+    loadingCountRef.current += 1;
+
+    setLoadingState((prev) => ({
+      isLoading: true,
+      // Si llega un mensaje nuevo, lo usamos. Si no, mantenemos el anterior.
+      message: message ?? prev.message ?? "Cargando...",
+    }));
   }, []);
 
   const stopLoading = useCallback(() => {
-    setLoadingState({ isLoading: false, message: undefined });
+    loadingCountRef.current = Math.max(0, loadingCountRef.current - 1);
+
+    // Solo detener el loading si no hay más cargas pendientes
+    if (loadingCountRef.current === 0) {
+      setLoadingState({ isLoading: false, message: undefined });
+    }
   }, []);
 
   const withLoading = useCallback(
     async <T>(promise: Promise<T>, message?: string): Promise<T> => {
+      startLoading(message);
       try {
-        startLoading(message);
-        const result = await promise;
-        return result;
+        return await promise;
       } finally {
         stopLoading();
       }

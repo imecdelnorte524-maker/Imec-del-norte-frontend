@@ -15,7 +15,7 @@
 }
 
 .header p {
-  color: #6b7280;
+  color: var(--gray-500);
   font-size: 0.95rem;
 }
 
@@ -35,8 +35,8 @@
 
 /* Banner de aviso para cambio de contraseña */
 .passwordAlert {
-  background: #fef3c7;
-  border: 1px solid #facc15;
+  background: var(--alert-50);
+  border: 1px solid var(--border-50);
   border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
@@ -48,17 +48,17 @@
 .passwordAlertTitle {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #92400e;
+  color: var(--alert-100);
 }
 
 .passwordAlertText {
   font-size: 0.85rem;
-  color: #b45309;
+  color: var(--alert-200);
 }
 
 /* Tarjeta principal de perfil */
 .profileCard {
-  background: #ffffff;
+  background: var(--primary-50);
   border-radius: 0.75rem;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
@@ -79,8 +79,8 @@
   height: 130px;
   border-radius: 9999px;
   object-fit: cover;
-  border: 3px solid #3b82f6;
-  box-shadow: 0 0 0 2px #e5e7eb;
+  border: 3px solid var(--primary-600);
+  box-shadow: 0 0 0 2px var(--primary-100);
   cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
@@ -94,20 +94,20 @@
   width: 130px;
   height: 130px;
   border-radius: 9999px;
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--primary-100);
+  color: var(--gray-700);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2.2rem;
   font-weight: 600;
-  border: 2px solid #d1d5db;
+  border: 2px solid var(--primary-100);
 }
 
 .photoStatus {
   margin-top: 0.5rem;
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--gray-700);
 }
 
 .photoActions {
@@ -136,8 +136,8 @@
 }
 
 .primaryButton {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--primary-700);
+  color: var(--primary-50);
 }
 
 .primaryButton:hover:not(:disabled) {
@@ -181,7 +181,7 @@
 
 /* Tarjeta de info de cuenta */
 .metaCard {
-  background: #ffffff;
+  background: var(--primary-50);
   border-radius: 0.75rem;
   padding: 1rem 1.25rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
@@ -209,7 +209,7 @@
 
 /* Tarjeta de detalles */
 .detailCard {
-  background: #ffffff;
+  background: var(--primary-50);
   border-radius: 0.75rem;
   padding: 1.25rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
@@ -390,7 +390,7 @@
   border: none;
   cursor: pointer;
   background: #2563eb;
-  color: #ffffff;
+  color: var(--primary-50);
 }
 
 .saveButton:hover:not(:disabled) {
@@ -441,7 +441,7 @@
 
 .photoModal {
   position: relative;
-  background: #ffffff;
+  background: var(--primary-50);
   border-radius: 0.75rem;
   padding: 0.75rem;
   max-width: 700px;
@@ -540,7 +540,7 @@
 }
 
 .ctaButton {
-  background: #ffffff;
+  background: var(--primary-50);
   color: #1d4ed8;
   border-radius: 9999px;
   padding: 0.4rem 0.75rem;

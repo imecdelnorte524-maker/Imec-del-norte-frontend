@@ -109,7 +109,7 @@
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s;
-  background-color: white;
+  background-color: var(--primary-50);
 }
 
 .formGroup input:hover {
@@ -176,7 +176,7 @@
 .signaturePadWrapper:focus-within {
   border-color: #2196f3;
   border-style: solid;
-  background-color: white;
+  background-color: var(--primary-50);
   box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
 }
 
@@ -274,7 +274,7 @@
 
 .submitButton {
   background-color: #2196f3;
-  color: white;
+  color: var(--primary-50);
 }
 
 .submitButton:hover:not(:disabled) {
@@ -302,7 +302,7 @@
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: white;
+  border-top-color: var(--primary-50);
   animation: spin 0.8s linear infinite;
 }
 

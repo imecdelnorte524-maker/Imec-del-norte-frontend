@@ -46,6 +46,7 @@ export const mapClientFromBackend = (data: any): Client => {
 
   return {
     idCliente: data.idCliente,
+    tipoCliente: data.tipoCliente || "juridica", // 👈 AGREGAR ESTO
     nombre: data.nombre,
     nit: data.nit,
     verification_digit: data.verification_digit,
