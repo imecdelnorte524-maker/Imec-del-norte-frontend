@@ -523,8 +523,8 @@ export default function EquipmentDetailPage() {
       installationDate: editForm.installationDate || undefined,
       notes: editForm.notes || undefined,
       airConditionerTypeId: selectedAcTypeId ?? undefined,
-      areaId: selectedAreaId ?? undefined, // ✅ Tipado correcto
-      subAreaId: selectedSubAreaId ?? undefined, // ✅ Tipado correcto
+      areaId: selectedAreaId ?? undefined,
+      subAreaId: selectedSubAreaId ?? undefined,
       evaporators: evaporators,
       condensers: condensers,
       planMantenimiento: planMantenimiento ?? undefined,

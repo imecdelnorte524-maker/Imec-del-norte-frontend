@@ -307,3 +307,5 @@ export interface EquipmentDocument {
   downloadUrl: string;
   publicId?: string;
 }
+
+export type UpdateEquipmentData = UpdateEquipmentPayload;
