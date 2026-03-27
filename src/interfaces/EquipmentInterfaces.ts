@@ -213,8 +213,19 @@ export interface CreateEquipmentData {
   planMantenimientoAutomatico?: boolean;
 }
 
-export type UpdateEquipmentData = Partial<CreateEquipmentData>;
-
+export interface UpdateEquipmentPayload {
+  code?: string;
+  status?: string;
+  installationDate?: string | null;
+  notes?: string | null;
+  airConditionerTypeId?: number | null;
+  areaId?: number | null; // ← ID del área
+  subAreaId?: number | null; // ← ID de la subárea
+  evaporators?: EvaporatorData[];
+  condensers?: CondenserData[];
+  planMantenimiento?: PlanMantenimientoData | null;
+  planMantenimientoAutomatico?: boolean;
+}
 // ---------- Para formularios ----------
 export interface EquipmentFormValues {
   clientId: number;
