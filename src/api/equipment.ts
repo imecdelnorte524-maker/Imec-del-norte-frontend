@@ -3,7 +3,7 @@ import type {
   Equipment,
   EquipmentPhoto,
   CreateEquipmentData,
-  UpdateEquipmentData,
+  UpdateEquipmentPayload,
   EquipmentResponse,
   MotorData,
   EvaporatorData,
@@ -254,13 +254,25 @@ const prepareCondenserForBackend = (cond: CondenserData): any => ({
     : [],
 });
 
+// Type guard para verificar si es CreateEquipmentData
+const isCreateEquipmentData = (
+  data: CreateEquipmentData | UpdateEquipmentPayload,
+): data is CreateEquipmentData => {
+  return (data as CreateEquipmentData).clientId !== undefined;
+};
+
 export const prepareEquipmentForBackend = (
-  data: CreateEquipmentData | UpdateEquipmentData,
+  data: CreateEquipmentData | UpdateEquipmentPayload,
 ): any => {
   const payload: any = {};
 
-  if (data.clientId !== undefined) payload.clientId = data.clientId;
-  if (data.category !== undefined) payload.category = data.category;
+  // Solo incluir clientId y category si estamos creando un equipo
+  if (isCreateEquipmentData(data)) {
+    if (data.clientId !== undefined) payload.clientId = data.clientId;
+    if (data.category !== undefined) payload.category = data.category;
+  }
+
+  // Campos comunes que pueden estar en ambos tipos
   if (data.status !== undefined) payload.status = data.status || "Activo";
   if (data.areaId !== undefined) payload.areaId = data.areaId;
   if (data.subAreaId !== undefined) payload.subAreaId = data.subAreaId;
@@ -534,7 +546,7 @@ export const createEquipmentRequest = async (
  */
 export const updateEquipmentRequest = async (
   equipmentId: number,
-  data: UpdateEquipmentData,
+  data: UpdateEquipmentPayload,
 ): Promise<Equipment> => {
   try {
     const payload = prepareEquipmentForBackend(data);
