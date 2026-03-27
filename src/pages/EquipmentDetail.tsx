@@ -24,6 +24,7 @@ import type {
   AirConditionerTypeOption,
   WorkOrderInfo,
   PlanMantenimientoData,
+  UpdateEquipmentPayload,
 } from "../interfaces/EquipmentInterfaces";
 import type { Order } from "../interfaces/OrderInterfaces";
 import { useAuth } from "../hooks/useAuth";
@@ -166,7 +167,7 @@ export default function EquipmentDetailPage() {
   const isClient = roleName === "Cliente";
 
   // Función para actualizar equipo
-  const updateEquipment = async (data: Partial<Equipment>) => {
+  const updateEquipment = async (data: any) => {
     if (!equipment) return false;
 
     setSaving(true);
@@ -516,13 +517,14 @@ export default function EquipmentDetailPage() {
       }
     }
 
-    // 🔥 CORREGIDO: Convertir null a undefined para evitar errores de tipo
-    const payload: Partial<Equipment> = {
+    const payload: UpdateEquipmentPayload = {
       code: editForm.code || undefined,
       status: editForm.status,
       installationDate: editForm.installationDate || undefined,
       notes: editForm.notes || undefined,
       airConditionerTypeId: selectedAcTypeId ?? undefined,
+      areaId: selectedAreaId ?? undefined, // ✅ Tipado correcto
+      subAreaId: selectedSubAreaId ?? undefined, // ✅ Tipado correcto
       evaporators: evaporators,
       condensers: condensers,
       planMantenimiento: planMantenimiento ?? undefined,
