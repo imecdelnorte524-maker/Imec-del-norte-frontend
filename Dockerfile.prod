@@ -6,7 +6,7 @@ WORKDIR /app
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias con npm
+# Instalar dependencias
 RUN npm install
 
 # Copiar el resto del proyecto
@@ -19,12 +19,14 @@ RUN npm run build
 # Etapa 2: Nginx
 FROM nginx:1.25-alpine
 
-# Copiamos el build generado por Vite (por defecto en /dist)
+# Copiamos el build generado por Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copiamos configuración para SPA (React Router)
+# Copiamos configuración de nginx (la crearemos ahora)
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Exponemos el puerto 8080 (Railway usará este)
+EXPOSE 8080
 
+# Iniciamos nginx
 CMD ["nginx", "-g", "daemon off;"]
