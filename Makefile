@@ -50,7 +50,7 @@ rebuild:
 
 
 build:
-	pnpm run build && rm -rf dist
+	npm run build && rm -rf dist
 
 add:
 	git add .
