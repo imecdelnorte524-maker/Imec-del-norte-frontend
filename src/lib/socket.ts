@@ -6,7 +6,7 @@ let connectionAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
 const API_URL =
-  import.meta.env.VITE_API_URL;
+  import.meta.env.VITE_API_URL || "https://m3h6rtnz-4001.use.devtunnels.ms/api";
 
 // Extraer la URL base (sin /api)
 const BASE_URL = API_URL.replace(/\/api\/?$/, "");

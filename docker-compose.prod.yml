@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     ports:
-      - "3032:80"
+      - "3032:8080"
     restart: unless-stopped
     networks:
       - app_network

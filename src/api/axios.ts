@@ -24,7 +24,7 @@ type LoadingAwareConfig = InternalAxiosRequestConfig & {
 
 const api = axios.create({
   baseURL:
-    import.meta.env.VITE_API_URL,
+    import.meta.env.VITE_API_URL || "https://m3h6rtnz-4001.use.devtunnels.ms/api",
   timeout: 60000,
   headers: {
     "Content-Type": "application/json",

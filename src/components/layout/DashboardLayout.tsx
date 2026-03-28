@@ -196,7 +196,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   } = useModules();
 
   const httpBaseUrl =
-    (import.meta as any).env?.VITE_API_URL;
+    (import.meta as any).env?.VITE_API_URL || "https://m3h6rtnz-4001.use.devtunnels.ms/api";
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotifications({ token, httpBaseUrl });
