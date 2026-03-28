@@ -34,7 +34,7 @@ if (!baseURL || !/^https?:\/\//.test(baseURL)) {
 
 const api = axios.create({
   baseURL: baseURL,
-  timeout: 60000,
+  timeout: 100000,
   headers: {
     "Content-Type": "application/json",
   },
