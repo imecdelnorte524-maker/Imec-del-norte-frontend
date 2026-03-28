@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import OrderList from "./OrderList";
 import CreateOrderForm from "./CreateOrderForm";
 import OrderDetail from "./OrderDetail";
 import type { Order } from "../../interfaces/OrderInterfaces";
 import {
-  downloadBatchReportsRequest,
-  downloadInternalReportRequest,
-  sendWorkOrderReportsByEmailRequest,
-  sendWorkOrderReportsToClientsRequest,
+  enqueueWorkOrderReportRequest,
+  enqueueBatchWorkOrderReportsRequest,
+  enqueueClientReportsRequest,
+  downloadWorkOrderReportByTokenRequest,
 } from "../../api/orders";
 import { useAuth } from "../../hooks/useAuth";
 import { useModal } from "../../context/ModalContext";
 import styles from "../../styles/components/orders/AdminOrdersView.module.css";
+import { useSocket } from "../../context/SocketContext";
+import { useSocketEvent } from "../../hooks/useSocketEvent";
 
 interface Props {
   activeView: "list" | "create" | "detail";
@@ -33,10 +35,104 @@ export default function AdminOrdersView({
   const [downloading, setDownloading] = useState(false);
   const [sendingToSelf, setSendingToSelf] = useState(false);
   const [sendingToClients, setSendingToClients] = useState(false);
+
+  const socket = useSocket();
   const { user } = useAuth();
   const { showModal } = useModal();
 
   const isAdmin = userRole === "admin";
+
+  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  useSocketEvent<any>(socket, "workOrders.report.ready", (payload) => {
+    setDownloading(false);
+
+    showModal({
+      type: "success",
+      title: "Reporte listo",
+      message:
+        "El PDF se generó correctamente. Presiona 'Descargar' para guardarlo.",
+      buttons: [
+        { text: "Cerrar", variant: "secondary" },
+        {
+          text: "Descargar",
+          variant: "primary",
+          autoClose: true,
+          onClick: async () => {
+            try {
+              const token = payload?.token as string | undefined;
+              if (!token) return;
+
+              const { blob, fileName } =
+                await downloadWorkOrderReportByTokenRequest(token);
+
+              triggerBrowserDownload(blob, fileName);
+            } catch (err) {
+              console.error("Error descargando por token:", err);
+              showModal({
+                type: "error",
+                title: "Error descargando",
+                message:
+                  "No se pudo descargar el archivo. El token pudo haber expirado.",
+              });
+            }
+          },
+        },
+      ],
+    });
+  });
+
+  useSocketEvent<any>(socket, "workOrders.report.sent", (payload) => {
+    setSendingToSelf(false);
+    setSendingToClients(false);
+
+    if (payload?.totalClientsNotified !== undefined) {
+      showModal({
+        type: "success",
+        title: "Informes enviados a clientes",
+        message:
+          payload.totalClientsNotified > 0
+            ? `Se enviaron informes a ${payload.totalClientsNotified} cliente(s).`
+            : "No se encontró ningún cliente con correos configurados para enviar informes.",
+      });
+      return;
+    }
+
+    showModal({
+      type: "success",
+      title: "Correo enviado",
+      message: "El informe se envió correctamente.",
+    });
+  });
+
+  useSocketEvent<any>(socket, "workOrders.report.error", (payload) => {
+    setDownloading(false);
+    setSendingToSelf(false);
+    setSendingToClients(false);
+
+    showModal({
+      type: "error",
+      title: "Error generando informe",
+      message: payload?.message || "Ocurrió un error generando el informe.",
+    });
+  });
+
+  useEffect(() => {
+    return () => {
+      setDownloading(false);
+      setSendingToSelf(false);
+      setSendingToClients(false);
+    };
+  }, []);
 
   const handleCreateOrder = () => {
     if (!isAdmin) return;
@@ -53,18 +149,6 @@ export default function AdminOrdersView({
     onBackToList();
   };
 
-  const triggerBrowserDownload = (blob: Blob, fileName: string) => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-  };
-
-  // Descargar informes internos (solo órdenes seleccionadas)
   const handleDownloadReports = async (): Promise<void> => {
     if (selectedOrderIds.length === 0) {
       showModal({
@@ -78,41 +162,42 @@ export default function AdminOrdersView({
     try {
       setDownloading(true);
 
-      if (selectedOrderIds.length === 1) {
-        // Mantener comportamiento existente para 1 orden
-        const id = selectedOrderIds[0];
-        const { blob, fileName } = await downloadInternalReportRequest(id);
-        triggerBrowserDownload(blob, fileName);
-      } else {
-        // Para varias órdenes → usar endpoint batch y descargar ZIP
-        const { blob, fileName } = await downloadBatchReportsRequest({
-          orderIds: selectedOrderIds,
-          reportType: "internal",
-        });
-        triggerBrowserDownload(blob, fileName);
-      }
-
       showModal({
-        type: "success",
-        title: "Descarga completa",
+        type: "info",
+        title: "Generando PDF",
         message:
           selectedOrderIds.length === 1
-            ? "Se descargó el informe interno."
-            : `Se descargó el archivo con ${selectedOrderIds.length} informes internos.`,
+            ? "Estamos generando el informe en segundo plano. Te avisaremos cuando esté listo."
+            : "Estamos generando el lote de informes en segundo plano. Te avisaremos cuando esté listo.",
+        buttons: [{ text: "Entendido", variant: "primary" }],
       });
+
+      if (selectedOrderIds.length === 1) {
+        const id = selectedOrderIds[0];
+
+        await enqueueWorkOrderReportRequest(id, {
+          reportType: "internal",
+          action: "download",
+        });
+      } else {
+        await enqueueBatchWorkOrderReportsRequest({
+          orderIds: selectedOrderIds,
+          reportType: "internal",
+          action: "download",
+        });
+      }
     } catch (err) {
-      console.error("Error descargando informes internos:", err);
+      console.error("Error generando informes internos:", err);
+      setDownloading(false);
+
       showModal({
         type: "error",
         title: "Error al generar informes",
         message: "Ocurrió un error al generar los informes internos.",
       });
-    } finally {
-      setDownloading(false);
     }
   };
 
-  // Enviar informes internos a MI correo (solo seleccionadas)
   const handleSendReportsToSelf = async (): Promise<void> => {
     if (selectedOrderIds.length === 0) {
       showModal({
@@ -137,75 +222,81 @@ export default function AdminOrdersView({
     try {
       setSendingToSelf(true);
 
-      await sendWorkOrderReportsByEmailRequest({
-        orderIds: selectedOrderIds,
-        reportType: "internal",
-        toEmail,
+      showModal({
+        type: "info",
+        title: "Enviando PDF",
+        message:
+          selectedOrderIds.length === 1
+            ? "Se está generando y enviando el PDF en segundo plano. Te avisaremos cuando se envíe."
+            : "Se está generando y enviando el lote de PDFs en segundo plano. Te avisaremos cuando se envíe.",
+        buttons: [{ text: "Entendido", variant: "primary" }],
       });
 
-      showModal({
-        type: "success",
-        title: "Informes enviados",
-        message: `Se enviaron ${selectedOrderIds.length} informe(s) interno(s) al correo ${toEmail}.`,
-      });
+      if (selectedOrderIds.length === 1) {
+        const id = selectedOrderIds[0];
+
+        await enqueueWorkOrderReportRequest(id, {
+          reportType: "internal",
+          action: "email",
+          toEmail,
+        });
+      } else {
+        await enqueueBatchWorkOrderReportsRequest({
+          orderIds: selectedOrderIds,
+          reportType: "internal",
+          action: "email",
+          toEmail,
+        });
+      }
     } catch (err) {
       console.error("Error enviando informes internos por correo:", err);
+      setSendingToSelf(false);
+
       showModal({
         type: "error",
         title: "Error al enviar informes",
         message: "Ocurrió un error al enviar los informes internos.",
       });
-    } finally {
-      setSendingToSelf(false);
     }
   };
 
-  // Lógica real de envío automático a clientes (todas las COMPLETED)
   const doSendReportsToClients = async (): Promise<void> => {
     try {
       setSendingToClients(true);
 
-      const resp = await sendWorkOrderReportsToClientsRequest();
-
-      const total = resp?.data?.totalClientsNotified ?? 0;
       showModal({
-        type: "success",
-        title: "Informes enviados a clientes",
+        type: "info",
+        title: "Enviando a clientes",
         message:
-          total > 0
-            ? `Se enviaron informes a ${total} cliente(s).`
-            : "No se encontró ningún cliente con correos configurados para enviar informes.",
+          "Se está procesando el envío en segundo plano. Te avisaremos cuando finalice.",
+        buttons: [{ text: "Entendido", variant: "primary" }],
       });
+
+      await enqueueClientReportsRequest();
     } catch (err) {
       console.error("Error enviando informes a clientes:", err);
+      setSendingToClients(false);
+
       showModal({
         type: "error",
         title: "Error al enviar a clientes",
         message: "Ocurrió un error al enviar los informes a los clientes.",
       });
-    } finally {
-      setSendingToClients(false);
     }
   };
 
-  // Mostrar modal de confirmación antes de enviar a clientes
   const handleSendReportsToClients = () => {
     showModal({
       type: "warning",
       title: "Enviar informes a clientes",
       message:
-        "Se enviarán informes de TODAS las órdenes de servicio que estén FINALIZADAS a los correos de los usuarios contacto de cada cliente empresa. ¿Deseas continuar?",
+        "Se enviarán informes de TODAS las órdenes de servicio finalizadas a los correos de los usuarios contacto de cada cliente empresa. ¿Deseas continuar?",
       buttons: [
-        {
-          text: "Cancelar",
-          variant: "secondary",
-        },
+        { text: "Cancelar", variant: "secondary" },
         {
           text: "Enviar",
           variant: "primary",
-          onClick: () => {
-            void doSendReportsToClients();
-          },
+          onClick: () => void doSendReportsToClients(),
         },
       ],
     });
@@ -233,7 +324,6 @@ export default function AdminOrdersView({
       <div className={styles.header}>
         <h1>Gestión de Órdenes de Servicio</h1>
         <div className={styles.actions}>
-          {/* Descargar internos (requiere selección) */}
           <button
             type="button"
             className={styles.secondaryButton}
@@ -241,11 +331,10 @@ export default function AdminOrdersView({
             onClick={handleDownloadReports}
           >
             {downloading
-              ? "Generando informes internos..."
+              ? "Generando..."
               : `Descargar internos (${selectedOrderIds.length})`}
           </button>
 
-          {/* Enviar internos a mi correo (requiere selección) */}
           <button
             type="button"
             className={styles.secondaryButton}
@@ -253,20 +342,17 @@ export default function AdminOrdersView({
             onClick={handleSendReportsToSelf}
           >
             {sendingToSelf
-              ? "Enviando a mi correo..."
+              ? "Enviando..."
               : `Enviar a mi correo (${selectedOrderIds.length})`}
           </button>
 
-          {/* Enviar a clientes (AUTOMÁTICO, no requiere selección) */}
           <button
             type="button"
             className={styles.secondaryButton}
             disabled={anyBusy}
             onClick={handleSendReportsToClients}
           >
-            {sendingToClients
-              ? "Enviando a clientes..."
-              : "Enviar informes a clientes"}
+            {sendingToClients ? "Enviando..." : "Enviar informes a clientes"}
           </button>
 
           {isAdmin && (
