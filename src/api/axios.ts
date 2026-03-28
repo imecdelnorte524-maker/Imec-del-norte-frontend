@@ -26,10 +26,15 @@ const baseURL = import.meta.env.VITE_API_URL;
 if (!baseURL) {
   throw new Error("Falta VITE_API_URL. Revisa tu .env y reinicia Vite.");
 }
+if (!baseURL || !/^https?:\/\//.test(baseURL)) {
+  throw new Error(
+    `VITE_API_URL inválida: "${baseURL}". Debe iniciar con http:// o https://`,
+  );
+}
 
 const api = axios.create({
   baseURL: baseURL,
-  timeout: 60000,
+  timeout: 100000,
   headers: {
     "Content-Type": "application/json",
   },
