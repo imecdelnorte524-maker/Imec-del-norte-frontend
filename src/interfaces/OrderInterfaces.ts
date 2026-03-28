@@ -229,3 +229,17 @@ export interface DownloadedFile {
   blob: Blob;
   fileName: string;
 }
+
+export type AsyncReportType = "internal" | "client";
+export type AsyncReportAction = "download" | "email";
+
+export type EnqueueWorkOrderReportPayload = {
+  reportType: AsyncReportType;
+  action: AsyncReportAction;
+  toEmail?: string;
+  ccEmails?: string[];
+};
+
+export type EnqueueWorkOrderReportResponse = {
+  jobId: string | number;
+};

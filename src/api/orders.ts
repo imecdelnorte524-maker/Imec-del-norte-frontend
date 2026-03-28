@@ -17,6 +17,8 @@ import type {
   WorkOrderEvidencePhase,
   CostEstado,
   DownloadedFile,
+  EnqueueWorkOrderReportPayload,
+  EnqueueWorkOrderReportResponse,
 } from "../interfaces/OrderInterfaces";
 
 export interface CreateAcInspectionPayload {
@@ -943,83 +945,67 @@ export const createAcInspectionAfterRequest = async (
   return response.data?.data;
 };
 
-// Descargar informe PDF interno de una orden
-export const downloadInternalReportRequest = async (
+export const enqueueWorkOrderReportRequest = async (
   orderId: number,
-): Promise<DownloadedFile> => {
-  const response = await api.get(`/work-orders/${orderId}/informe`, {
-    responseType: "blob",
-  });
-
-  const disposition = response.headers["content-disposition"];
-  const fileName = getFileNameFromContentDisposition(
-    disposition,
-    `OT-${orderId}-interno.pdf`,
-  );
-
-  return {
-    blob: response.data as Blob,
-    fileName,
-  };
-};
-
-// Descargar informe PDF versión cliente de una orden
-export const downloadClientReportRequest = async (
-  orderId: number,
-): Promise<DownloadedFile> => {
-  const response = await api.get(`/work-orders/${orderId}/informe-client`, {
-    responseType: "blob",
-  });
-
-  const disposition = response.headers["content-disposition"];
-  const fileName = getFileNameFromContentDisposition(
-    disposition,
-    `Informe-Orden-Servicio-${orderId}-cliente.pdf`,
-  );
-
-  return {
-    blob: response.data as Blob,
-    fileName,
-  };
-};
-
-export const sendWorkOrderReportsByEmailRequest = async (payload: {
-  orderIds: number[];
-  reportType: "internal" | "client";
-  toEmail: string;
-  ccEmails?: string[];
-  subject?: string;
-  message?: string;
-}): Promise<any> => {
-  const response = await api.post("/work-orders/send-reports", payload);
-  return response.data;
-};
-
-export const sendWorkOrderReportsToClientsRequest = async (payload?: {
-  message?: string;
-}): Promise<any> => {
+  payload: EnqueueWorkOrderReportPayload,
+): Promise<EnqueueWorkOrderReportResponse> => {
   const response = await api.post(
-    "/work-orders/send-reports-to-clients",
-    payload ?? {},
+    `/work-orders/${orderId}/informe-async`,
+    payload,
+    {
+      headers: { "x-skip-global-loading": "1" },
+      skipGlobalLoading: true,
+    } as any,
   );
-  return response.data;
+
+  return response.data?.data;
 };
 
-export const downloadBatchReportsRequest = async (params: {
+export const enqueueBatchWorkOrderReportsRequest = async (payload: {
   orderIds: number[];
   reportType: "internal" | "client";
-}): Promise<DownloadedFile> => {
-  const response = await api.post("/work-orders/download-reports", params, {
+  action: "download" | "email";
+  toEmail?: string;
+  ccEmails?: string[];
+}): Promise<{ jobId: string | number }> => {
+  const response = await api.post(`/work-orders/reports/batch-async`, payload, {
+    headers: { "x-skip-global-loading": "1" },
+    skipGlobalLoading: true,
+  } as any);
+
+  return response.data?.data;
+};
+
+export const enqueueClientReportsRequest = async (payload?: {
+  orderIds?: number[];
+  message?: string;
+}): Promise<{ jobId: string | number }> => {
+  const response = await api.post(
+    `/work-orders/reports/clients-async`,
+    payload ?? {},
+    {
+      headers: { "x-skip-global-loading": "1" },
+      skipGlobalLoading: true,
+    } as any,
+  );
+
+  return response.data?.data;
+};
+
+export const downloadWorkOrderReportByTokenRequest = async (
+  token: string,
+): Promise<DownloadedFile> => {
+  const response = await api.get(`/work-orders/informe-download/${token}`, {
     responseType: "blob",
-  });
+    headers: { "x-skip-global-loading": "1" },
+    skipGlobalLoading: true,
+  } as any);
 
   const disposition = response.headers["content-disposition"];
-  const defaultName =
-    params.reportType === "internal"
-      ? "informes-internos-ordenes.zip"
-      : "informes-cliente-ordenes.zip";
-
-  const fileName = getFileNameFromContentDisposition(disposition, defaultName);
+  const fileName = getFileNameFromContentDisposition(
+    disposition,
+    "reporte.pdf",
+  );
 
   return {
     blob: response.data as Blob,
