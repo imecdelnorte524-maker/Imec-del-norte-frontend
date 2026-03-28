@@ -36,6 +36,9 @@ prod-up:
 prod-down:
 	docker-compose -f docker-compose.prod.yml down
 
+prod-down-volumes:
+	docker-compose -f docker-compose.prod.yml down -v
+
 prod-logs:
 	docker-compose -f docker-compose.prod.yml logs -f
 

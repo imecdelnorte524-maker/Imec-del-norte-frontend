@@ -15,16 +15,20 @@ const emitGlobalLoading = (active: boolean, message?: string) => {
 
 type LoadingAwareConfig = InternalAxiosRequestConfig & {
   __countedForGlobalLoading?: boolean;
-  /**
-   * Si es true, no dispara loader global para este request
-   * (útil para polling o background refresh).
-   */
   skipGlobalLoading?: boolean;
 };
 
+console.log("VITE_API_URL =>", import.meta.env.VITE_API_URL);
+console.log("VITE_API_BASE_URL =>", import.meta.env.VITE_API_BASE_URL);
+console.log("MODE =>", import.meta.env.MODE);
+
+const baseURL = import.meta.env.VITE_API_URL;
+if (!baseURL) {
+  throw new Error("Falta VITE_API_URL. Revisa tu .env y reinicia Vite.");
+}
+
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL,
+  baseURL: baseURL,
   timeout: 60000,
   headers: {
     "Content-Type": "application/json",
