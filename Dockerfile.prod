@@ -3,30 +3,27 @@ FROM node:24.11.1-alpine AS builder
 
 WORKDIR /app
 
-# Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias
-RUN npm install
+RUN npm cache clean --force && \
+    npm install --no-cache --prefer-offline false
 
-# Copiar el resto del proyecto
 COPY . .
 
-# Build - compila TypeScript y luego Vite
-RUN npm run build
+# ✅ Build-time variables para Vite
+ARG VITE_API_URL
+ARG VITE_API_BASE_URL
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
+RUN rm -rf node_modules/.cache .tsbuildinfo dist .vite && \
+    npm run build
 
 # Etapa 2: Nginx
 FROM nginx:1.25-alpine
 
-# Copiamos el build generado por Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copiamos configuración de nginx (la crearemos ahora)
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
-# Exponemos el puerto 8080 (Railway usará este)
 EXPOSE 8080
-
-# Iniciamos nginx
 CMD ["nginx", "-g", "daemon off;"]

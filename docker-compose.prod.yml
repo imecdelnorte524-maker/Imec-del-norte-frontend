@@ -4,11 +4,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
+      args:
+        VITE_API_URL: "${VITE_API_URL}"
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL}"
     ports:
-      - "3032:80"
+      - "3032:8080"
     restart: unless-stopped
     networks:
       - app_network
+    env_file:
+      - .env
 
 networks:
   app_network:

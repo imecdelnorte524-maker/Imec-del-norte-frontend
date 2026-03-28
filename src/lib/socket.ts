@@ -5,24 +5,16 @@ let socket: Socket | null = null;
 let connectionAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 10;
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "https://m3h6rtnz-4001.use.devtunnels.ms/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Extraer la URL base (sin /api)
-const BASE_URL = API_URL.replace(/\/api\/?$/, "");
-
-// 🔥 CONSTRUCTOR DE LA URL DEL WEBSOCKET - CORREGIDO
-// IMPORTANTE: Socket.IO NO usa el path /api, usa /socket.io por defecto
 const WS_URL = import.meta.env.VITE_WS_URL || BASE_URL;
 
 export function connectSocket(): Socket {
   if (!socket) {
-    // 🔥 CORRECCIÓN 1: Usar el token correcto
     const token =
       localStorage.getItem("accessToken") || localStorage.getItem("authToken");
 
     socket = io(WS_URL, {
-      // 🔥 CORRECCIÓN 2: Orden de transports - websocket primero, polling como fallback
       transports: ["websocket", "polling"],
       auth: {
         token: token || "",
@@ -32,15 +24,11 @@ export function connectSocket(): Socket {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
-      // 🔥 CORRECCIÓN 3: NO usar forceNew a menos que sea necesario
       forceNew: false,
-      // 🔥 CORRECCIÓN 4: Añadir withCredentials para CORS
       withCredentials: true,
-      // 🔥 CORRECCIÓN 5: Path explícito (por defecto es /socket.io)
       path: "/socket.io",
     });
 
-    // 🔥 CORRECCIÓN 6: Eventos con logs detallados
     socket.on("connect", () => {
       localStorage.setItem("socketId", socket?.id || "");
       connectionAttempts = 0;
@@ -103,7 +91,6 @@ export function isSocketConnected(): boolean {
   return socket?.connected || false;
 }
 
-// 🔥 CORRECCIÓN 8: Mejorar ensureSocketConnection
 export function ensureSocketConnection(): Promise<boolean> {
   return new Promise((resolve) => {
     if (socket?.connected) {
@@ -116,7 +103,7 @@ export function ensureSocketConnection(): Promise<boolean> {
     }
 
     let attempts = 0;
-    const maxAttempts = 30; // 3 segundos máximo (30 * 100ms)
+    const maxAttempts = 30;
 
     const checkInterval = setInterval(() => {
       attempts++;
@@ -131,7 +118,6 @@ export function ensureSocketConnection(): Promise<boolean> {
   });
 }
 
-// 🔥 NUEVA FUNCIÓN: Reconnect manual
 export function reconnectSocket(): Socket | null {
   disconnectSocket();
   return connectSocket();
