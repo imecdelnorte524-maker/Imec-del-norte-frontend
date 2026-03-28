@@ -1,17 +1,17 @@
 FROM node:24.11.1-alpine
 
-# Instalar pnpm globalmente
-RUN npm install -g pnpm
-
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+# Copiar archivos de dependencias
+COPY package*.json ./
 
-# Usar pnpm en lugar de npm
-RUN pnpm install
+# Instalar dependencias con npm
+RUN npm install
 
+# Copiar el resto del proyecto
 COPY . .
 
 EXPOSE 3032
 
-CMD ["pnpm", "run", "dev", "--", "--host"]
+# Usar npm run dev en lugar de pnpm
+CMD ["npm", "run", "dev", "--", "--host"]

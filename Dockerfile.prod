@@ -3,31 +3,30 @@ FROM node:24.11.1-alpine AS builder
 
 WORKDIR /app
 
-# Instalar pnpm
-RUN npm install -g pnpm
+# Copiar archivos de dependencias
+COPY package*.json ./
 
-# Copiar manifests primero (mejor cache de Docker)
-COPY package.json pnpm-lock.yaml ./
-
-# Instalar dependencias de forma reproducible
-RUN pnpm install --frozen-lockfile
+# Instalar dependencias
+RUN npm install
 
 # Copiar el resto del proyecto
 COPY . .
 
-# Build
-RUN pnpm run build
+# Build - compila TypeScript y luego Vite
+RUN npm run build
 
 
 # Etapa 2: Nginx
 FROM nginx:1.25-alpine
 
-# Copiamos el build
+# Copiamos el build generado por Vite
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copiamos config SPA
+# Copiamos configuración de nginx (la crearemos ahora)
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+# Exponemos el puerto 8080 (Railway usará este)
+EXPOSE 8080
 
+# Iniciamos nginx
 CMD ["nginx", "-g", "daemon off;"]
