@@ -20,6 +20,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import { rolesApi } from "../../../api/roles";
 import { getMyAssignedOrdersRequest } from "../../../api/orders";
 import { useModal } from "../../../context/ModalContext";
+import TermsModal from "../TermsModal";
 
 interface AtsFormProps {
   onSubmit: (data: AtsFormData) => void;
@@ -86,6 +87,7 @@ export default function AtsForm({
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const riskCategories = {
     fisicos: [
@@ -1314,11 +1316,19 @@ export default function AtsForm({
           <div className={styles.termsBox}>
             <p>Declaro que:</p>
             <ul className={styles.termsList}>
-              <li>He leído y comprendido las instrucciones de seguridad.</li>
-              <li>He identificado los riesgos asociados al trabajo.</li>
               <li>
-                Cuento con el herramienta de protección personal necesario.
+                He leído y comprendido los{" "}
+                <button
+                  type="button"
+                  className={styles.termsLink}
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  términos y condiciones
+                </button>
+                .
               </li>
+              <li>He identificado los riesgos asociados al trabajo.</li>
+              <li>Cuento con el equipo de protección personal necesario.</li>
               <li>Conozco los procedimientos de emergencia.</li>
               <li>
                 Acepto realizar el trabajo de acuerdo a los estándares de
@@ -1326,6 +1336,7 @@ export default function AtsForm({
               </li>
             </ul>
           </div>
+
           <label className={styles.privacyCheckbox}>
             <input
               type="checkbox"
@@ -1334,8 +1345,15 @@ export default function AtsForm({
               required
             />
             <span className={styles.checkboxLabel}>
-              Confirmo que he leído y acepto los términos y condiciones de
-              seguridad. *
+              Confirmo que he leído y acepto los{" "}
+              <button
+                type="button"
+                className={styles.termsLink}
+                onClick={() => setShowTermsModal(true)}
+              >
+                términos y condiciones
+              </button>{" "}
+              de seguridad. *
             </span>
           </label>
         </div>
@@ -1380,6 +1398,19 @@ export default function AtsForm({
           </div>
         )}
       </form>
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setPrivacyAccepted(true);
+          setShowTermsModal(false);
+        }}
+        onReject={() => {
+          setPrivacyAccepted(false);
+          setShowTermsModal(false);
+        }}
+        type="dataprivacy"
+      />
     </div>
   );
 }

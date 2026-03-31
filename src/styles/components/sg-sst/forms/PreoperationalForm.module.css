@@ -928,3 +928,21 @@
 .word-break-word {
   word-break: break-word;
 }
+
+/* Añade esto a cada archivo de estilos de los formularios */
+.termsLink {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  transition: color 0.2s;
+}
+
+.termsLink:hover {
+  color: #764ba2;
+}
