@@ -22,6 +22,7 @@ import {
   ToolStatus,
 } from "../../../interfaces/ToolsInterfaces";
 import { useModal } from "../../../context/ModalContext";
+import TermsModal from "../TermsModal";
 
 interface OrderWithTools extends Omit<Order, "toolDetails"> {
   toolDetails?: OrderToolDetail[];
@@ -72,6 +73,7 @@ export default function PreoperationalForm({
     null,
   );
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const {
     checklistItems,
@@ -1098,7 +1100,15 @@ export default function PreoperationalForm({
                 <strong>
                   {selectedTool?.nombre || "[NOMBRE HERRAMIENTA]"}
                 </strong>{" "}
-                según el checklist preoperacional.
+                según el{" "}
+                <button
+                  type="button"
+                  className={styles.termsLink}
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  checklist preoperacional
+                </button>
+                .
               </li>
               <li>Los resultados de la inspección son veraces y completos.</li>
               <li>
@@ -1132,7 +1142,15 @@ export default function PreoperationalForm({
               herramienta{" "}
               <strong>{selectedTool?.nombre || "[NOMBRE HERRAMIENTA]"}</strong>
               {selectedOrder && ` para la Orden #${selectedOrder.orden_id}`} y
-              acepto los términos establecidos. *
+              acepto los{" "}
+              <button
+                type="button"
+                className={styles.termsLink}
+                onClick={() => setShowTermsModal(true)}
+              >
+                términos y condiciones
+              </button>{" "}
+              establecidos. *
             </span>
           </label>
         </div>
@@ -1177,6 +1195,19 @@ export default function PreoperationalForm({
           </div>
         )}
       </form>
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setPrivacyAccepted(true);
+          setShowTermsModal(false);
+        }}
+        onReject={() => {
+          setPrivacyAccepted(false);
+          setShowTermsModal(false);
+        }}
+        type="preoperational"
+      />
     </div>
   );
 }

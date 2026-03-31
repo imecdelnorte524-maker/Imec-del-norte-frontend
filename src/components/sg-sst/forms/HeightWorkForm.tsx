@@ -17,6 +17,7 @@ import styles from "../../../styles/components/sg-sst/forms/HeightWorkForm.modul
 import { useAuth } from "../../../hooks/useAuth";
 import { rolesApi } from "../../../api/roles";
 import { useModal } from "../../../context/ModalContext";
+import TermsModal from "../TermsModal";
 
 interface HeightWorkFormProps {
   onSubmit: (data: HeightWorkFormData) => void;
@@ -73,6 +74,7 @@ export default function HeightWorkForm({
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const protectionElementsList = [
     "Casco con Barbuquejo",
@@ -981,7 +983,17 @@ export default function HeightWorkForm({
           <div className={styles.termsBox}>
             <p>Declaro que:</p>
             <ul className={styles.termsList}>
-              <li>He recibido entrenamiento para trabajo en alturas.</li>
+              <li>
+                He recibido entrenamiento para{" "}
+                <button
+                  type="button"
+                  className={styles.termsLink}
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  trabajo en alturas
+                </button>
+                .
+              </li>
               <li>
                 Conozco y utilizaré los elementos de protección personal
                 indicados.
@@ -1004,8 +1016,15 @@ export default function HeightWorkForm({
               required
             />
             <span className={styles.checkboxLabel}>
-              Confirmo que he leído, comprendido y acepto los términos y
-              condiciones para trabajo en alturas. *
+              Confirmo que he leído, comprendido y acepto los{" "}
+              <button
+                type="button"
+                className={styles.termsLink}
+                onClick={() => setShowTermsModal(true)}
+              >
+                términos y condiciones
+              </button>{" "}
+              para trabajo en alturas. *
             </span>
           </label>
         </div>
@@ -1050,6 +1069,19 @@ export default function HeightWorkForm({
           </div>
         )}
       </form>
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => {
+          setPrivacyAccepted(true);
+          setShowTermsModal(false);
+        }}
+        onReject={() => {
+          setPrivacyAccepted(false);
+          setShowTermsModal(false);
+        }}
+        type="heights"
+      />
     </div>
   );
 }

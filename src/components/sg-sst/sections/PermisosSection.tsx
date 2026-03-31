@@ -11,6 +11,7 @@ import { sgSstService } from "../../../api/sg-sst";
 import type { SgSstForm, SgSstStats } from "../../../interfaces/SgSstInterface";
 import styles from "../../../styles/components/sg-sst/sections/PermisosSection.module.css";
 import { getUserAccessLevel } from "../../../config/roles.config";
+import TermsManager from "../TermsManager";
 
 interface PermisosSectionProps {
   onBack: () => void;
@@ -29,13 +30,13 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
     "ats" | "height" | "preop" | "list" | "template"
   >("list");
 
+  // Estado para modal de términos
+  const [showTermsManager, setShowTermsManager] = useState(false);
+
   const accessLevel = getUserAccessLevel(user?.role.nombreRol);
-  const canView =
-    user?.role.nombreRol !== "Administrador" &&
-    user?.role.nombreRol !== "SG-SST" &&
-    user?.role.nombreRol !== "SGSST" &&
-    user?.role.nombreRol !== "Sg-sst";
-  const isAdmin = user?.role.nombreRol === "Administrador";
+  const isAdmin =
+    user?.role.nombreRol === "Administrador" ||
+    user?.role.nombreRol === "SGSST";
 
   // Cargar datos
   const loadData = async () => {
@@ -119,7 +120,7 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
           />
         );
       case "template":
-        // 🔹 Formulario para crear plantillas de checklist preoperacional
+        // Formulario para crear plantillas de checklist preoperacional
         return <PreoperationalTemplateForm />;
       case "list":
       default:
@@ -128,21 +129,21 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
             {/* Barra de acciones */}
             <div className={styles.actionsBar}>
               <button className={styles.refreshButton} onClick={loadData}>
-                Actualizar
+                🔄 Actualizar
               </button>
             </div>
 
             {/* Estadísticas */}
             {stats && (
               <div className={styles.statsSection}>
-                <h3>Estadísticas de Permisos</h3>
+                <h3>📊 Estadísticas de Permisos</h3>
                 <StatsCards stats={stats} />
               </div>
             )}
 
             {/* Lista de formularios */}
             <div className={styles.formsSection}>
-              <h3>Todos los Permisos</h3>
+              <h3>📋 Todos los Permisos</h3>
               {loading ? (
                 <div className={styles.loading}>Cargando permisos...</div>
               ) : (
@@ -162,7 +163,7 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
 
   return (
     <div className={styles.section}>
-      {/* Header */}
+      {/* Header con botón de administración de términos */}
       <div className={styles.sectionHeader}>
         <div className={styles.headerLeft}>
           <button className={styles.backButton} onClick={onBack}>
@@ -173,19 +174,21 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
             Gestión de ATS, Trabajos en Altura y Checklist Preoperacional
           </p>
         </div>
-        <div className={styles.headerRight}>
-          {currentForm !== "list" && (
+
+        {/* Botón de administración de términos - Solo visible para admin */}
+        {isAdmin && (
+          <div className={styles.headerRight}>
             <button
               className={styles.secondaryButton}
-              onClick={() => setCurrentForm("list")}
+              onClick={() => setShowTermsManager(true)}
             >
-              ← Ver Todos los Permisos
+              📜 Gestionar Términos y Condiciones
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Tabs de navegación */}
+      {/* Tabs de navegación - Formularios principales + Plantillas */}
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${
@@ -195,36 +198,30 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
         >
           📋 Todos los Permisos
         </button>
-        {canView && (
-          <button
-            className={`${styles.tab} ${
-              currentForm === "ats" ? styles.activeTab : ""
-            }`}
-            onClick={() => handleFormSelect("ATS")}
-          >
-            ⚠️ ATS
-          </button>
-        )}
-        {canView && (
-          <button
-            className={`${styles.tab} ${
-              currentForm === "height" ? styles.activeTab : ""
-            }`}
-            onClick={() => handleFormSelect("HEIGHT_WORK")}
-          >
-            🧗 Trabajos en Altura
-          </button>
-        )}
-        {canView && (
-          <button
-            className={`${styles.tab} ${
-              currentForm === "preop" ? styles.activeTab : ""
-            }`}
-            onClick={() => handleFormSelect("PREOPERATIONAL")}
-          >
-            ✅ Checklist Preoperacional
-          </button>
-        )}
+        <button
+          className={`${styles.tab} ${
+            currentForm === "ats" ? styles.activeTab : ""
+          }`}
+          onClick={() => handleFormSelect("ATS")}
+        >
+          ⚠️ ATS
+        </button>
+        <button
+          className={`${styles.tab} ${
+            currentForm === "height" ? styles.activeTab : ""
+          }`}
+          onClick={() => handleFormSelect("HEIGHT_WORK")}
+        >
+          🧗 Trabajos en Altura
+        </button>
+        <button
+          className={`${styles.tab} ${
+            currentForm === "preop" ? styles.activeTab : ""
+          }`}
+          onClick={() => handleFormSelect("PREOPERATIONAL")}
+        >
+          ✅ Checklist Preoperacional
+        </button>
         {isAdmin && (
           <button
             className={`${styles.tab} ${
@@ -255,12 +252,45 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
             loadData();
           }}
           canSignAsSST={
-            // Aquí aseguramos que role exista para evitar errores
             (user?.role?.nombreRol?.toUpperCase() || "").includes("SGSST") ||
             (user?.role?.nombreRol?.toUpperCase() || "").includes("SG-SST")
           }
           currentUser={user}
         />
+      )}
+
+      {/* Modal para gestión de términos y condiciones */}
+      {showTermsManager && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowTermsManager(false)}
+        >
+          <div
+            className={styles.modalContentLarge}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h2>Gestión de Términos y Condiciones</h2>
+              <button
+                className={styles.modalCloseButton}
+                onClick={() => setShowTermsManager(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <TermsManager />
+            </div>
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.modalCancelButton}
+                onClick={() => setShowTermsManager(false)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
