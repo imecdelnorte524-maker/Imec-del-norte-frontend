@@ -23,7 +23,6 @@ export default function FormsList({
   userRole,
   accessLevel = "none",
 }: FormsListProps) {
-  // Estado para controlar qué ID se está descargando (para mostrar spinner)
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const getFormTypeIcon = (formType: FormType): string => {
@@ -100,7 +99,6 @@ export default function FormsList({
     return `Usuario #${form.createdBy}`;
   };
 
-  // Determinar el texto del botón según el rol y estado
   const getButtonText = (form: SgSstForm): string => {
     if (
       userRole?.toUpperCase().includes("SGSST") &&
@@ -111,7 +109,6 @@ export default function FormsList({
     return "Ver detalles →";
   };
 
-  // Determinar la clase del botón según el rol y estado
   const getButtonClass = (form: SgSstForm): string => {
     if (
       userRole?.toUpperCase().includes("SGSST") &&
@@ -122,16 +119,14 @@ export default function FormsList({
     return styles.viewButton;
   };
 
-  // Función para descargar PDF desde la lista
   const handleDownload = async (e: React.MouseEvent, form: SgSstForm) => {
-    e.stopPropagation(); // Evita que se abra el modal al hacer clic en descargar
+    e.stopPropagation();
     if (downloadingId === form.id) return;
 
     try {
       setDownloadingId(form.id);
       const response = await sgSstService.downloadPdf(form.id);
 
-      // Crear Blob y descargar
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -217,9 +212,9 @@ export default function FormsList({
             </div>
 
             <div className={styles.formContent}>
-              {form.toolName && (
+              {form.equipmentTool && (
                 <div className={styles.tool}>
-                  <strong>Herramienta:</strong> {form.toolName}
+                  <strong>Herramienta:</strong> {form.equipmentTool}
                 </div>
               )}
 
@@ -239,6 +234,13 @@ export default function FormsList({
                     {formatDate(form.createdAt)}
                   </span>
                 </div>
+
+                {form.version != null && (
+                  <div className={styles.metaItem}>
+                    <span className={styles.metaLabel}>Versión:</span>
+                    <span className={styles.metaValue}>{form.version}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -263,7 +265,6 @@ export default function FormsList({
               </div>
 
               <div className={styles.actionsRow}>
-                {/* Botón de descarga rápida solo si está completado */}
                 {form.status === "COMPLETED" && (
                   <button
                     className={styles.iconButton}

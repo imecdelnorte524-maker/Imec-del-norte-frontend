@@ -1,9 +1,10 @@
-// src/components/sg-sst/HeightWorkForm.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
   HeightWorkFormData,
   SignFormData,
+  HeightCatalogs,
+  TermsAcceptancePayload,
 } from "../../../interfaces/SgSstInterface";
 import type { Usuario } from "../../../interfaces/UserInterfaces";
 import type { Rol } from "../../../interfaces/RolesInterfaces";
@@ -17,6 +18,7 @@ import styles from "../../../styles/components/sg-sst/forms/HeightWorkForm.modul
 import { useAuth } from "../../../hooks/useAuth";
 import { rolesApi } from "../../../api/roles";
 import { useModal } from "../../../context/ModalContext";
+import TermsModal from "../TermsModal";
 
 interface HeightWorkFormProps {
   onSubmit: (data: HeightWorkFormData) => void;
@@ -35,14 +37,13 @@ export default function HeightWorkForm({
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [formData, setFormData] = useState<HeightWorkFormData>({
+  const [formData, setFormData] = useState({
     workerName: "",
     identification: "",
     position: "",
     workDescription: "",
     location: "",
     estimatedTime: "",
-    protectionElements: {},
     physicalCondition: false,
     instructionsReceived: false,
     fitForHeightWork: false,
@@ -53,11 +54,18 @@ export default function HeightWorkForm({
     workOrderId: 0,
   });
 
+  const [selectedProtectionElementIds, setSelectedProtectionElementIds] =
+    useState<number[]>([]);
+  const [catalogs, setCatalogs] = useState<HeightCatalogs | null>(null);
+
   const [signatureData, setSignatureData] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
-  // OTP states
+  const [termsAcceptedVersion, setTermsAcceptedVersion] = useState<number | null>(
+    null,
+  );
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
   const [createdFormId, setCreatedFormId] = useState<number | null>(null);
   const [otpCode, setOtpCode] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
@@ -74,22 +82,6 @@ export default function HeightWorkForm({
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
-  const protectionElementsList = [
-    "Casco con Barbuquejo",
-    "Lentes de Seguridad",
-    "Botas de Seguridad",
-    "Guantes",
-    "Tapaoídos",
-    "Arnes",
-    "Eslinga de Posicionamiento",
-    "Línea de Vida",
-    "Señalización",
-    "Equipo de descenso",
-    "Andamios",
-    "Escalera extendible",
-    "Escalera tijera",
-  ];
-
   useEffect(() => {
     if (!user) return;
 
@@ -105,7 +97,24 @@ export default function HeightWorkForm({
   useEffect(() => {
     loadUsersAndRoles();
     loadOrders();
+    loadCatalogs();
   }, []);
+
+  const loadCatalogs = async () => {
+    try {
+      const response = await sgSstService.getHeightsCatalogs();
+      if (response.success && response.data) {
+        setCatalogs(response.data);
+      }
+    } catch (error) {
+      console.error("Error cargando catálogo de alturas:", error);
+      showModal({
+        type: "error",
+        title: "Error",
+        message: "No se pudieron cargar los elementos de protección",
+      });
+    }
+  };
 
   const loadUsersAndRoles = async () => {
     try {
@@ -138,7 +147,7 @@ export default function HeightWorkForm({
       console.error("Error cargando órdenes del técnico:", error);
       setOrdersError(
         error.response?.data?.message ||
-          "Error al cargar las órdenes del técnico",
+        "Error al cargar las órdenes del técnico",
       );
     } finally {
       setOrdersLoading(false);
@@ -149,100 +158,6 @@ export default function HeightWorkForm({
     setTimeout(() => {
       navigate("/sg-sst");
     }, 2000);
-  };
-
-  const isFormValid = useMemo(() => {
-    const requiredFields = [
-      formData.workerName?.trim(),
-      formData.identification?.trim(),
-      formData.workDescription?.trim(),
-      formData.location?.trim(),
-      selectedOrder,
-    ];
-
-    const allRequiredFieldsFilled = requiredFields.every(
-      (field) => field !== undefined && field !== null && field !== "",
-    );
-
-    const hasSelectedProtection = Object.values(
-      formData.protectionElements || {},
-    ).some((value) => value === true);
-
-    const safetyChecksOk =
-      formData.physicalCondition &&
-      formData.instructionsReceived &&
-      formData.fitForHeightWork;
-
-    const hasSignature = !!signatureData;
-    const hasAcceptedTerms = privacyAccepted;
-
-    return (
-      allRequiredFieldsFilled &&
-      hasSelectedProtection &&
-      safetyChecksOk &&
-      hasSignature &&
-      hasAcceptedTerms
-    );
-  }, [formData, signatureData, privacyAccepted, selectedOrder]);
-
-  const getValidationErrors = () => {
-    const errors: string[] = [];
-
-    if (!selectedOrder) errors.push("Orden de trabajo");
-    if (!formData.workerName?.trim()) errors.push("Nombre del trabajador");
-    if (!formData.identification?.trim()) errors.push("Cédula del trabajador");
-    if (!formData.workDescription?.trim())
-      errors.push("Descripción del trabajo");
-    if (!formData.location?.trim()) errors.push("Ubicación específica");
-
-    if (
-      !Object.values(formData.protectionElements || {}).some(
-        (value) => value === true,
-      )
-    ) {
-      errors.push("Al menos un elemento de protección seleccionado");
-    }
-
-    if (!formData.physicalCondition)
-      errors.push("Confirmar condiciones físicas para trabajo en alturas");
-    if (!formData.instructionsReceived)
-      errors.push(
-        "Confirmar que recibió instrucciones para trabajo en alturas",
-      );
-    if (!formData.fitForHeightWork)
-      errors.push("Confirmar que está apto para trabajo en alturas");
-
-    if (!signatureData) errors.push("Firma del trabajador");
-    if (!privacyAccepted) errors.push("Aceptación de términos de seguridad");
-
-    return errors;
-  };
-
-  const getSectionStatus = (sectionNumber: number) => {
-    switch (sectionNumber) {
-      case 1:
-        return formData.workerName?.trim() && formData.identification?.trim();
-      case 2:
-        return !!selectedOrder;
-      case 3:
-        return formData.workDescription?.trim() && formData.location?.trim();
-      case 4: {
-        const hasProtection = Object.values(
-          formData.protectionElements || {},
-        ).some((value) => value === true);
-        const safetyChecksOk =
-          formData.physicalCondition &&
-          formData.instructionsReceived &&
-          formData.fitForHeightWork;
-        return hasProtection && safetyChecksOk;
-      }
-      case 5:
-        return !!signatureData;
-      case 6:
-        return privacyAccepted;
-      default:
-        return true;
-    }
   };
 
   const handleWorkerNameChange = (value: string) => {
@@ -275,28 +190,6 @@ export default function HeightWorkForm({
       position: usuario.role?.nombreRol || "",
     }));
     setShowSuggestions(false);
-  };
-
-  const handleProtectionToggle = (element: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      protectionElements: {
-        ...prev.protectionElements,
-        [element]: !prev.protectionElements?.[element],
-      },
-    }));
-  };
-
-  const handleInputChange = (field: keyof HeightWorkFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSignatureSave = (signature: string) => {
-    setSignatureData(signature);
-  };
-
-  const handleSignatureClear = () => {
-    setSignatureData("");
   };
 
   const handleSelectOrder = (orderId: string) => {
@@ -341,6 +234,29 @@ export default function HeightWorkForm({
     });
   };
 
+  const handleProtectionToggle = (elementId: number) => {
+    setSelectedProtectionElementIds((prev) =>
+      prev.includes(elementId)
+        ? prev.filter((id) => id !== elementId)
+        : [...prev, elementId],
+    );
+  };
+
+  const handleInputChange = (
+    field: keyof typeof formData,
+    value: string | boolean,
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSignatureSave = (signature: string) => {
+    setSignatureData(signature);
+  };
+
+  const handleSignatureClear = () => {
+    setSignatureData("");
+  };
+
   const getClientContactDisplay = () => {
     const empresaContact = (selectedClient as any)?.contacto as
       | string
@@ -364,12 +280,95 @@ export default function HeightWorkForm({
     return "N/D";
   };
 
+  const isFormValid = useMemo(() => {
+    const requiredFields = [
+      formData.workerName?.trim(),
+      formData.identification?.trim(),
+      formData.workDescription?.trim(),
+      formData.location?.trim(),
+      selectedOrder,
+    ];
+
+    const allRequiredFieldsFilled = requiredFields.every(
+      (field) => field !== undefined && field !== null && field !== "",
+    );
+
+    const hasSelectedProtection = selectedProtectionElementIds.length > 0;
+
+    const safetyChecksOk =
+      formData.physicalCondition &&
+      formData.instructionsReceived &&
+      formData.fitForHeightWork;
+
+    const hasSignature = !!signatureData;
+    const hasAcceptedTerms = !!termsAcceptedVersion;
+
+    return (
+      allRequiredFieldsFilled &&
+      hasSelectedProtection &&
+      safetyChecksOk &&
+      hasSignature &&
+      hasAcceptedTerms
+    );
+  }, [
+    formData,
+    signatureData,
+    selectedOrder,
+    selectedProtectionElementIds,
+    termsAcceptedVersion,
+  ]);
+
+  const getValidationErrors = () => {
+    const errors: string[] = [];
+
+    if (!selectedOrder) errors.push("Orden de trabajo");
+    if (!formData.workerName?.trim()) errors.push("Nombre del trabajador");
+    if (!formData.identification?.trim()) errors.push("Cédula del trabajador");
+    if (!formData.workDescription?.trim())
+      errors.push("Descripción del trabajo");
+    if (!formData.location?.trim()) errors.push("Ubicación específica");
+    if (selectedProtectionElementIds.length === 0)
+      errors.push("Al menos un elemento de protección seleccionado");
+    if (!formData.physicalCondition)
+      errors.push("Confirmar condiciones físicas para trabajo en alturas");
+    if (!formData.instructionsReceived)
+      errors.push("Confirmar que recibió instrucciones para trabajo en alturas");
+    if (!formData.fitForHeightWork)
+      errors.push("Confirmar que está apto para trabajo en alturas");
+    if (!signatureData) errors.push("Firma del trabajador");
+    if (!termsAcceptedVersion) errors.push("Aceptación de términos");
+
+    return errors;
+  };
+
+  const getSectionStatus = (sectionNumber: number) => {
+    switch (sectionNumber) {
+      case 1:
+        return formData.workerName?.trim() && formData.identification?.trim();
+      case 2:
+        return !!selectedOrder;
+      case 3:
+        return formData.workDescription?.trim() && formData.location?.trim();
+      case 4: {
+        const hasProtection = selectedProtectionElementIds.length > 0;
+        const safetyChecksOk =
+          formData.physicalCondition &&
+          formData.instructionsReceived &&
+          formData.fitForHeightWork;
+        return hasProtection && safetyChecksOk;
+      }
+      case 5:
+        return !!signatureData;
+      case 6:
+        return !!termsAcceptedVersion;
+      default:
+        return true;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // ----------------------------------------------------
-    // PASO 1: Crear Formulario y Solicitar OTP
-    // ----------------------------------------------------
     if (!createdFormId) {
       if (!isFormValid) {
         const errors = getValidationErrors();
@@ -394,6 +393,17 @@ export default function HeightWorkForm({
       setSuccessMessage("");
 
       try {
+        const termsAcceptances: TermsAcceptancePayload[] = [
+          {
+            termsType: "dataprivacy",
+            termsVersion: termsAcceptedVersion!,
+          },
+          {
+            termsType: "HEIGHT_WORK",
+            termsVersion: termsAcceptedVersion!,
+          },
+        ];
+
         const submitData: HeightWorkFormData = {
           workerName: formData.workerName,
           identification: formData.identification || "",
@@ -401,19 +411,19 @@ export default function HeightWorkForm({
           workDescription: formData.workDescription || "",
           location: formData.location || "",
           estimatedTime: formData.estimatedTime || "",
-          protectionElements: formData.protectionElements || {},
+          protectionElementIds: selectedProtectionElementIds,
           physicalCondition: formData.physicalCondition,
           instructionsReceived: formData.instructionsReceived,
           fitForHeightWork: formData.fitForHeightWork,
           authorizerName: formData.authorizerName || "",
           authorizerIdentification: formData.authorizerIdentification || "",
+          termsAcceptances,
           userId: formData.userId,
           createdBy: formData.createdBy,
           workOrderId: formData.workOrderId,
         };
 
-        // 1. Crear HeightWork sin firma
-        const resp = await sgSstService.createHeightWork(submitData as any);
+        const resp = await sgSstService.createHeightWork(submitData);
         const newFormId = resp?.data?.form?.id;
 
         if (!newFormId) {
@@ -422,7 +432,6 @@ export default function HeightWorkForm({
           );
         }
 
-        // 2. Solicitar OTP
         await sgSstService.requestSignOtp(newFormId, "TECHNICIAN");
 
         setCreatedFormId(newFormId);
@@ -448,9 +457,6 @@ export default function HeightWorkForm({
       return;
     }
 
-    // ----------------------------------------------------
-    // PASO 2: Firmar con OTP
-    // ----------------------------------------------------
     if (!otpCode.trim()) {
       showModal({
         type: "warning",
@@ -476,9 +482,35 @@ export default function HeightWorkForm({
         message: "Permiso firmado exitosamente con OTP.",
       });
 
-      if (onSubmit) {
-        onSubmit(formData);
-      }
+      const payload: HeightWorkFormData = {
+        workerName: formData.workerName,
+        identification: formData.identification || "",
+        position: formData.position || "",
+        workDescription: formData.workDescription || "",
+        location: formData.location || "",
+        estimatedTime: formData.estimatedTime || "",
+        protectionElementIds: selectedProtectionElementIds,
+        physicalCondition: formData.physicalCondition,
+        instructionsReceived: formData.instructionsReceived,
+        fitForHeightWork: formData.fitForHeightWork,
+        authorizerName: formData.authorizerName || "",
+        authorizerIdentification: formData.authorizerIdentification || "",
+        termsAcceptances: [
+          {
+            termsType: "dataprivacy",
+            termsVersion: termsAcceptedVersion!,
+          },
+          {
+            termsType: "HEIGHT_WORK",
+            termsVersion: termsAcceptedVersion!,
+          },
+        ],
+        userId: formData.userId,
+        createdBy: formData.createdBy,
+        workOrderId: formData.workOrderId,
+      };
+
+      onSubmit(payload);
       redirectToReportsList();
     } catch (error: any) {
       console.error("Error firmando:", error);
@@ -503,9 +535,8 @@ export default function HeightWorkForm({
         <h1 className={styles.title}>Permiso para Trabajo en Alturas</h1>
 
         <div
-          className={`${styles.validationIndicator} ${
-            isFormValid ? styles.valid : styles.invalid
-          }`}
+          className={`${styles.validationIndicator} ${isFormValid ? styles.valid : styles.invalid
+            }`}
         >
           {isOtpStep
             ? "Código OTP pendiente"
@@ -526,30 +557,23 @@ export default function HeightWorkForm({
           </div>
         )}
 
-        {/* SECCIÓN 1: DATOS DEL TRABAJADOR */}
-        <div
-          className={`${styles.section} ${!getSectionStatus(1) ? styles.sectionIncomplete : ""}`}
-        >
+        {/* 1. DATOS TRABAJADOR */}
+        <div className={`${styles.section} ${!getSectionStatus(1) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>1. Datos del Trabajador</h2>
-            {getSectionStatus(1) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
+            {getSectionStatus(1) && <span className={styles.sectionStatus}>✓</span>}
           </div>
-          {/* ... Inputs trabajador ... */}
+
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label className={styles.label}>Nombre Completo *</label>
-              {/* ... input ... */}
               <div className={styles.autocompleteContainer}>
                 <input
                   type="text"
                   className={styles.input}
                   value={formData.workerName}
                   onChange={(e) => handleWorkerNameChange(e.target.value)}
-                  onBlur={() =>
-                    setTimeout(() => setShowSuggestions(false), 200)
-                  }
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   onFocus={() => {
                     if (formData.workerName.length > 1) {
                       setShowSuggestions(true);
@@ -590,17 +614,11 @@ export default function HeightWorkForm({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Cédula *
-                {!formData.identification?.trim() && (
-                  <span className={styles.requiredIndicator}> (Requerido)</span>
-                )}
-              </label>
+              <label className={styles.label}>Cédula *</label>
               <input
                 type="text"
-                className={`${styles.input} ${
-                  !formData.identification?.trim() ? styles.inputError : ""
-                }`}
+                className={`${styles.input} ${!formData.identification?.trim() ? styles.inputError : ""
+                  }`}
                 value={formData.identification}
                 onChange={(e) =>
                   handleInputChange("identification", e.target.value)
@@ -611,16 +629,10 @@ export default function HeightWorkForm({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Cargo *
-                {!formData.position?.trim() && (
-                  <span className={styles.requiredIndicator}> (Requerido)</span>
-                )}
-              </label>
+              <label className={styles.label}>Cargo *</label>
               <select
-                className={`${styles.input} ${
-                  !formData.position?.trim() ? styles.inputError : ""
-                }`}
+                className={`${styles.input} ${!formData.position?.trim() ? styles.inputError : ""
+                  }`}
                 value={formData.position}
                 onChange={(e) => handleInputChange("position", e.target.value)}
                 required
@@ -636,38 +648,23 @@ export default function HeightWorkForm({
           </div>
         </div>
 
-        {/* SECCIÓN 2: ORDEN DE TRABAJO / CLIENTE */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(2) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 2. ORDEN / CLIENTE */}
+        <div className={`${styles.section} ${!getSectionStatus(2) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>
-              2. Orden de Trabajo e Información del Cliente
-            </h2>
-            {getSectionStatus(2) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
+            <h2 className={styles.sectionTitle}>2. Orden de Trabajo e Información del Cliente</h2>
+            {getSectionStatus(2) && <span className={styles.sectionStatus}>✓</span>}
           </div>
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Orden de trabajo *
-                {!selectedOrder && (
-                  <span className={styles.requiredIndicator}> (Requerido)</span>
-                )}
-              </label>
+              <label className={styles.label}>Orden de trabajo *</label>
               {ordersLoading ? (
                 <p>Cargando órdenes...</p>
               ) : ordersError ? (
                 <p className={styles.errorText}>{ordersError}</p>
               ) : (
                 <select
-                  className={`${styles.input} ${
-                    !selectedOrder ? styles.inputError : ""
-                  }`}
+                  className={`${styles.input} ${!selectedOrder ? styles.inputError : ""}`}
                   value={selectedOrder?.orden_id || ""}
                   onChange={(e) => handleSelectOrder(e.target.value)}
                   required
@@ -678,15 +675,13 @@ export default function HeightWorkForm({
                     const clientName =
                       o.cliente_empresa?.nombre ||
                       (personaClient
-                        ? `${personaClient.nombre} ${
-                            personaClient.apellido ?? ""
+                        ? `${personaClient.nombre} ${personaClient.apellido ?? ""
                           }`.trim()
                         : "N/D");
 
                     return (
                       <option key={o.orden_id} value={o.orden_id}>
-                        #{o.orden_id} - {clientName} -{" "}
-                        {o.servicio.nombre_servicio}
+                        #{o.orden_id} - {clientName} - {o.servicio.nombre_servicio}
                       </option>
                     );
                   })}
@@ -699,98 +694,67 @@ export default function HeightWorkForm({
               {selectedClient ? (
                 <div className={styles.selectedClientCard}>
                   <div className={styles.clientCardHeader}>
-                    <h3 className={styles.clientCardTitle}>
-                      {selectedClient.nombre}
-                    </h3>
+                    <h3 className={styles.clientCardTitle}>{selectedClient.nombre}</h3>
                   </div>
                   <div className={styles.clientCardDetails}>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>NIT:</span>
-                      <span className={styles.detailValue}>
-                        {selectedClient.nit}
-                      </span>
+                      <span className={styles.detailValue}>{selectedClient.nit}</span>
                     </div>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>Contacto:</span>
-                      <span className={styles.detailValue}>
-                        {getClientContactDisplay()}
-                      </span>
+                      <span className={styles.detailValue}>{getClientContactDisplay()}</span>
                     </div>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>Email:</span>
-                      <span className={styles.detailValue}>
-                        {selectedClient.email}
-                      </span>
+                      <span className={styles.detailValue}>{selectedClient.email}</span>
                     </div>
                     <div className={styles.clientDetail}>
                       <span className={styles.detailLabel}>Teléfono:</span>
-                      <span className={styles.detailValue}>
-                        {getClientPhoneDisplay()}
-                      </span>
+                      <span className={styles.detailValue}>{getClientPhoneDisplay()}</span>
                     </div>
                   </div>
                 </div>
               ) : (
                 <p className={styles.infoText}>
-                  Seleccione una orden de trabajo para ver la información del
-                  cliente.
+                  Seleccione una orden de trabajo para ver la información del cliente.
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* SECCIÓN 3: DESCRIPCIÓN DEL TRABAJO */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(3) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 3. DESCRIPCIÓN TRABAJO */}
+        <div className={`${styles.section} ${!getSectionStatus(3) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>3. Descripción del Trabajo</h2>
-            {getSectionStatus(3) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
+            {getSectionStatus(3) && <span className={styles.sectionStatus}>✓</span>}
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Descripción del Trabajo a Realizar *
-              {!formData.workDescription?.trim() && (
-                <span className={styles.requiredIndicator}> (Requerido)</span>
-              )}
-            </label>
+            <label className={styles.label}>Descripción del Trabajo a Realizar *</label>
             <textarea
-              className={`${styles.textarea} ${
-                !formData.workDescription?.trim() ? styles.textareaError : ""
-              }`}
+              className={`${styles.textarea} ${!formData.workDescription?.trim() ? styles.textareaError : ""
+                }`}
               value={formData.workDescription}
               onChange={(e) =>
                 handleInputChange("workDescription", e.target.value)
               }
               rows={3}
               required
-              placeholder="Ej: Mantenimiento de equipo de aire acondicionado"
             />
           </div>
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Ubicación Específica *
-                {!formData.location?.trim() && (
-                  <span className={styles.requiredIndicator}> (Requerido)</span>
-                )}
-              </label>
+              <label className={styles.label}>Ubicación Específica *</label>
               <textarea
-                className={`${styles.textarea} ${
-                  !formData.location?.trim() ? styles.textareaError : ""
-                }`}
+                className={`${styles.textarea} ${!formData.location?.trim() ? styles.textareaError : ""
+                  }`}
                 value={formData.location}
                 onChange={(e) => handleInputChange("location", e.target.value)}
                 rows={2}
                 required
-                placeholder="Ej: Fachada lateral izquierda, Edificio Aeropuerto Camilo Daza"
               />
             </div>
 
@@ -803,55 +767,35 @@ export default function HeightWorkForm({
                 onChange={(e) =>
                   handleInputChange("estimatedTime", e.target.value)
                 }
-                placeholder="Ej: 24 horas"
               />
             </div>
           </div>
         </div>
 
-        {/* SECCIÓN 4: ELEMENTOS DE PROTECCIÓN + VERIFICACIONES */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(4) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 4. ELEMENTOS PROTECCIÓN */}
+        <div className={`${styles.section} ${!getSectionStatus(4) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               4. Elementos de Protección Personal y Verificaciones
             </h2>
-            {getSectionStatus(4) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
-            {!getSectionStatus(4) && (
-              <span className={styles.requiredIndicator}>
-                {" "}
-                (Seleccione al menos un EPP y complete las verificaciones)
-              </span>
-            )}
+            {getSectionStatus(4) && <span className={styles.sectionStatus}>✓</span>}
           </div>
-          <p className={styles.sectionSubtitle}>
-            Seleccione los elementos que serán utilizados durante la labor:
-          </p>
 
           <div className={styles.protectionGrid}>
-            {protectionElementsList.map((element) => (
-              <label key={element} className={styles.protectionCheckbox}>
+            {catalogs?.protectionElements?.map((element) => (
+              <label key={element.id} className={styles.protectionCheckbox}>
                 <input
                   type="checkbox"
-                  checked={formData.protectionElements?.[element] || false}
-                  onChange={() => handleProtectionToggle(element)}
+                  checked={selectedProtectionElementIds.includes(element.id)}
+                  onChange={() => handleProtectionToggle(element.id)}
                 />
-                <span className={styles.protectionLabel}>{element}</span>
+                <span className={styles.protectionLabel}>{element.name}</span>
               </label>
             ))}
           </div>
 
-          {/* 🔹 Verificaciones que antes estaban en el modal SST */}
           <div className={styles.verificationsSection}>
             <h3 className={styles.subsectionTitle}>Verificaciones previas</h3>
-            <p className={styles.sectionSubtitle}>
-              Confirme las siguientes condiciones antes de iniciar el trabajo:
-            </p>
 
             <div className={styles.verificationsList}>
               <label className={styles.verificationCheckbox}>
@@ -899,25 +843,12 @@ export default function HeightWorkForm({
           </div>
         </div>
 
-        {/* SECCIÓN 5: FIRMA DEL TRABAJADOR */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(5) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 5. FIRMA */}
+        <div className={`${styles.section} ${!getSectionStatus(5) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>5. Firma del Trabajador</h2>
-            {getSectionStatus(5) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
-            {!getSectionStatus(5) && (
-              <span className={styles.requiredIndicator}> (Requerida)</span>
-            )}
+            {getSectionStatus(5) && <span className={styles.sectionStatus}>✓</span>}
           </div>
-          <p className={styles.sectionSubtitle}>
-            {formData.workerName || "Trabajador"}, firme en el área inferior
-            para autorizar el trabajo en alturas
-          </p>
 
           <SignaturePad
             onSignatureSave={handleSignatureSave}
@@ -937,9 +868,7 @@ export default function HeightWorkForm({
 
           {isOtpStep && (
             <div className={styles.otpSection} style={{ marginTop: "20px" }}>
-              <label className={styles.label}>
-                Código OTP enviado a tu correo *
-              </label>
+              <label className={styles.label}>Código OTP enviado a tu correo *</label>
               <input
                 type="text"
                 className={styles.input}
@@ -947,88 +876,72 @@ export default function HeightWorkForm({
                 onChange={(e) => setOtpCode(e.target.value)}
                 maxLength={6}
                 placeholder="Ingresa los 6 dígitos"
-                style={{
-                  fontSize: "1.5rem",
-                  letterSpacing: "0.25rem",
-                  textAlign: "center",
-                  maxWidth: "250px",
-                  margin: "0 auto",
-                  display: "block",
-                }}
               />
-              <p className={styles.otpHelpText} style={{ marginTop: "10px" }}>
-                Revisa tu bandeja de entrada.
-              </p>
             </div>
           )}
         </div>
 
-        {/* SECCIÓN 6: TÉRMINOS Y CONDICIONES */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(6) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 6. TÉRMINOS */}
+        <div className={`${styles.section} ${!getSectionStatus(6) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>6. Términos y Condiciones</h2>
-            {getSectionStatus(6) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
-            {!getSectionStatus(6) && (
-              <span className={styles.requiredIndicator}> (Requerida)</span>
-            )}
+            {getSectionStatus(6) && <span className={styles.sectionStatus}>✓</span>}
           </div>
+
           <div className={styles.termsBox}>
             <p>Declaro que:</p>
             <ul className={styles.termsList}>
-              <li>He recibido entrenamiento para trabajo en alturas.</li>
               <li>
-                Conozco y utilizaré los elementos de protección personal
-                indicados.
+                He recibido entrenamiento para{" "}
+                <button
+                  type="button"
+                  className={styles.termsLink}
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  trabajo en alturas
+                </button>.
               </li>
-              <li>
-                He verificado el estado de los equipos y sistemas de protección.
-              </li>
+              <li>Conozco y utilizaré los elementos de protección personal indicados.</li>
+              <li>He verificado el estado de los equipos y sistemas de protección.</li>
               <li>Informaré inmediatamente cualquier condición insegura.</li>
-              <li>
-                Acepto seguir los procedimientos establecidos para trabajo en
-                alturas.
-              </li>
+              <li>Acepto seguir los procedimientos establecidos para trabajo en alturas.</li>
             </ul>
           </div>
+
           <label className={styles.privacyCheckbox}>
             <input
               type="checkbox"
-              checked={privacyAccepted}
-              onChange={(e) => setPrivacyAccepted(e.target.checked)}
-              required
+              checked={!!termsAcceptedVersion}
+              onChange={(e) => {
+                if (!e.target.checked) setTermsAcceptedVersion(null);
+              }}
             />
             <span className={styles.checkboxLabel}>
-              Confirmo que he leído, comprendido y acepto los términos y
-              condiciones para trabajo en alturas. *
+              Confirmo que he leído, comprendido y acepto los{" "}
+              <button
+                type="button"
+                className={styles.termsLink}
+                onClick={() => setShowTermsModal(true)}
+              >
+                términos y condiciones
+              </button>{" "}
+              para trabajo en alturas. *
             </span>
           </label>
         </div>
 
-        {/* Botones de acción */}
         <div className={styles.formActions}>
-          <button
-            type="button"
-            className={styles.cancelButton}
-            onClick={onCancel}
-          >
+          <button type="button" className={styles.cancelButton} onClick={onCancel}>
             Cancelar
           </button>
           <button
             type="submit"
-            className={`${styles.submitButton} ${
-              !isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
-            }`}
+            className={`${styles.submitButton} ${!isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
+              }`}
             disabled={
               isSubmitting ||
               (!isFormValid && !isOtpStep) ||
-              (isOtpStep && !otpCode.trim()) ||
-              (!!successMessage && !isOtpStep)
+              (isOtpStep && !otpCode.trim())
             }
           >
             {isSubmitting
@@ -1050,6 +963,20 @@ export default function HeightWorkForm({
           </div>
         )}
       </form>
+
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={(version) => {
+          setTermsAcceptedVersion(version);
+          setShowTermsModal(false);
+        }}
+        onReject={() => {
+          setTermsAcceptedVersion(null);
+          setShowTermsModal(false);
+        }}
+        type="height_work"
+      />
     </div>
   );
 }

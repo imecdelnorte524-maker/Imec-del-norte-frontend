@@ -1,10 +1,10 @@
-// src/components/sg-sst/PreoperationalForm.tsx
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
   PreoperationalFormData,
   CheckValue,
   SignFormData,
+  TermsAcceptancePayload,
 } from "../../../interfaces/SgSstInterface";
 import type { Order } from "../../../interfaces/OrderInterfaces";
 import type { Client } from "../../../interfaces/ClientInterfaces";
@@ -22,6 +22,7 @@ import {
   ToolStatus,
 } from "../../../interfaces/ToolsInterfaces";
 import { useModal } from "../../../context/ModalContext";
+import TermsModal from "../TermsModal";
 
 interface OrderWithTools extends Omit<Order, "toolDetails"> {
   toolDetails?: OrderToolDetail[];
@@ -40,7 +41,6 @@ interface PreoperationalFormProps {
   userName: string;
 }
 
-// Valores válidos para checklist
 const CHECK_VALUES: CheckValue[] = ["GOOD", "REGULAR", "BAD"];
 
 export default function PreoperationalForm({
@@ -62,7 +62,6 @@ export default function PreoperationalForm({
   const [signatureData, setSignatureData] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
 
   const [orders, setOrders] = useState<OrderWithTools[]>([]);
@@ -72,6 +71,11 @@ export default function PreoperationalForm({
     null,
   );
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsAcceptedVersion, setTermsAcceptedVersion] = useState<number | null>(
+    null,
+  );
 
   const {
     checklistItems,
@@ -85,22 +89,21 @@ export default function PreoperationalForm({
     checklistError,
   } = useChecklistForm();
 
-  // 🔹 Datos internos del formulario (incluye toolName para UI)
+  // Estado interno
   const [formData, setFormData] = useState<{
+    templateId?: number;
     toolName?: string;
-    checks: { parameter: string; value?: CheckValue; observations?: string }[];
     userId: number;
     createdBy: number;
     workOrderId: number;
   }>({
+    templateId: undefined,
     toolName: "",
-    checks: [],
     userId,
     createdBy,
     workOrderId: 0,
   });
 
-  // 🔹 Estado para OTP
   const [createdFormId, setCreatedFormId] = useState<number | null>(null);
   const [otpCode, setOtpCode] = useState<string>("");
 
@@ -110,17 +113,18 @@ export default function PreoperationalForm({
     }, 2000);
   };
 
-  // Validación global (NO incluye OTP, OTP se valida aparte)
   const isFormValid = useMemo(() => {
     const hasSelectedOrder = !!selectedOrder;
     const hasSelectedTool = !!selectedTool;
+    const hasTemplate = !!formData.templateId;
     const checklistValid = checklistItems.length > 0 && isChecklistComplete();
     const hasSignature = !!signatureData;
-    const hasAcceptedTerms = privacyAccepted;
+    const hasAcceptedTerms = !!termsAcceptedVersion;
 
     return (
       hasSelectedOrder &&
       hasSelectedTool &&
+      hasTemplate &&
       checklistValid &&
       hasSignature &&
       hasAcceptedTerms
@@ -128,10 +132,11 @@ export default function PreoperationalForm({
   }, [
     selectedOrder,
     selectedTool,
+    formData.templateId,
     checklistItems,
     isChecklistComplete,
     signatureData,
-    privacyAccepted,
+    termsAcceptedVersion,
   ]);
 
   const getValidationErrors = () => {
@@ -139,6 +144,7 @@ export default function PreoperationalForm({
 
     if (!selectedOrder) errors.push("Selección de orden de trabajo");
     if (!selectedTool) errors.push("Selección de herramienta");
+    if (!formData.templateId) errors.push("Plantilla preoperacional");
 
     if (checklistItems.length === 0) {
       errors.push("Checklist preoperacional");
@@ -152,7 +158,7 @@ export default function PreoperationalForm({
     }
 
     if (!signatureData) errors.push("Firma del técnico");
-    if (!privacyAccepted) errors.push("Aceptación de términos de seguridad");
+    if (!termsAcceptedVersion) errors.push("Aceptación de términos");
 
     return errors;
   };
@@ -164,11 +170,11 @@ export default function PreoperationalForm({
       case 2:
         return !!selectedTool && toolsForSelectedOrder.length > 0;
       case 3:
-        return checklistItems.length > 0 && isChecklistComplete();
+        return !!formData.templateId && checklistItems.length > 0 && isChecklistComplete();
       case 4:
         return !!signatureData;
       case 5:
-        return privacyAccepted;
+        return !!termsAcceptedVersion;
       default:
         return true;
     }
@@ -211,7 +217,7 @@ export default function PreoperationalForm({
       console.error("Error cargando órdenes del técnico:", error);
       setOrdersError(
         error.response?.data?.message ||
-          "Error al cargar las órdenes del técnico",
+        "Error al cargar las órdenes del técnico",
       );
     } finally {
       setOrdersLoading(false);
@@ -300,6 +306,8 @@ export default function PreoperationalForm({
     setFormData((prev) => ({
       ...prev,
       workOrderId: order ? order.orden_id : 0,
+      templateId: undefined,
+      toolName: "",
     }));
 
     setSelectedTool(null);
@@ -327,49 +335,35 @@ export default function PreoperationalForm({
     try {
       setSelectedTool(tool);
 
-      const { items } = await initializeChecklist(tool.nombre.toUpperCase());
+      const { meta } = await initializeChecklist(tool.nombre.toUpperCase());
 
       setFormData((prev) => ({
         ...prev,
+        templateId: meta?.id,
         toolName: tool.nombre,
-        checks: items.map((item) => ({
-          parameter: item.parameter,
-          value: item.value,
-          observations: item.observations,
-        })),
       }));
+
+      if (!meta?.id) {
+        throw new Error("No se pudo obtener el templateId de la plantilla");
+      }
     } catch (error) {
       console.error("Error al cargar checklist:", error);
+      setFormData((prev) => ({
+        ...prev,
+        templateId: undefined,
+      }));
     }
   };
 
-  const handleCheckChange = (parameterId: string, value: CheckValue) => {
+  const handleCheckChange = (parameterId: number, value: CheckValue) => {
     updateItemValue(parameterId, value);
-
-    setFormData((prev) => ({
-      ...prev,
-      checks: checklistItems.map((item) => ({
-        parameter: item.parameter,
-        value: item.value,
-        observations: item.observations,
-      })),
-    }));
   };
 
   const handleObservationsChange = (
-    parameterId: string,
+    parameterId: number,
     observations: string,
   ) => {
     updateItemObservations(parameterId, observations);
-
-    setFormData((prev) => ({
-      ...prev,
-      checks: checklistItems.map((item) => ({
-        parameter: item.parameter,
-        value: item.value,
-        observations: item.observations,
-      })),
-    }));
   };
 
   const handleSignatureSave = (signature: string) => {
@@ -383,7 +377,6 @@ export default function PreoperationalForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Paso 1: Crear Formulario y Solicitar OTP
     if (!createdFormId) {
       if (!isFormValid) {
         const errors = getValidationErrors();
@@ -409,20 +402,32 @@ export default function PreoperationalForm({
       setSuccessMessage("");
 
       try {
-        const submitDto = {
+        const termsAcceptances: TermsAcceptancePayload[] = [
+          {
+            termsType: "dataprivacy",
+            termsVersion: termsAcceptedVersion!,
+          },
+          {
+            termsType: "PREOPERATIONAL",
+            termsVersion: termsAcceptedVersion!,
+          },
+        ];
+
+        const submitDto: PreoperationalFormData = {
+          templateId: formData.templateId!,
           equipmentTool: formData.toolName || undefined,
-          checks: formData.checks.map((c) => ({
-            parameter: c.parameter,
-            value: c.value,
-            observations: c.observations,
+          checks: checklistItems.map((item) => ({
+            parameterId: item.parameterId,
+            value: item.value,
+            observations: item.observations,
           })),
+          termsAcceptances,
           userId: formData.userId,
           createdBy: formData.createdBy,
           workOrderId: formData.workOrderId,
         };
 
-        // 1) Crear formulario preoperacional
-        const resp = await sgSstService.createPreoperational(submitDto as any);
+        const resp = await sgSstService.createPreoperational(submitDto);
         const newFormId = resp?.data?.form?.id;
 
         if (!newFormId) {
@@ -431,7 +436,6 @@ export default function PreoperationalForm({
           );
         }
 
-        // 2) Solicitar OTP
         await sgSstService.requestSignOtp(newFormId, "TECHNICIAN");
 
         setCreatedFormId(newFormId);
@@ -460,7 +464,6 @@ export default function PreoperationalForm({
       return;
     }
 
-    // Paso 2: Firmar con OTP
     if (!otpCode.trim()) {
       showModal({
         type: "warning",
@@ -487,15 +490,29 @@ export default function PreoperationalForm({
       });
 
       const callbackData: PreoperationalFormData = {
+        templateId: formData.templateId!,
         equipmentTool: formData.toolName,
-        checks: formData.checks,
+        checks: checklistItems.map((item) => ({
+          parameterId: item.parameterId,
+          value: item.value,
+          observations: item.observations,
+        })),
+        termsAcceptances: [
+          {
+            termsType: "dataprivacy",
+            termsVersion: termsAcceptedVersion!,
+          },
+          {
+            termsType: "PREOPERATIONAL",
+            termsVersion: termsAcceptedVersion!,
+          },
+        ],
         userId: formData.userId,
         createdBy: formData.createdBy,
         workOrderId: formData.workOrderId,
       };
 
       await onSubmit(callbackData);
-
       redirectToReportsList();
     } catch (error: any) {
       console.error("Error firmando Checklist Preoperacional:", error);
@@ -590,9 +607,8 @@ export default function PreoperationalForm({
         <h1 className={styles.title}>Checklist Preoperacional</h1>
 
         <div
-          className={`${styles.validationIndicator} ${
-            isFormValid ? styles.valid : styles.invalid
-          }`}
+          className={`${styles.validationIndicator} ${isFormValid ? styles.valid : styles.invalid
+            }`}
         >
           {isOtpStep
             ? "Código OTP pendiente de ingreso"
@@ -613,29 +629,18 @@ export default function PreoperationalForm({
           </div>
         )}
 
-        {/* SECCIÓN 1: ORDEN DE TRABAJO / CLIENTE */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(1) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 1. ORDEN / CLIENTE */}
+        <div className={`${styles.section} ${!getSectionStatus(1) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               1. Orden de Trabajo e Información del Cliente
             </h2>
-            {getSectionStatus(1) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
+            {getSectionStatus(1) && <span className={styles.sectionStatus}>✓</span>}
           </div>
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Orden de trabajo *
-                {!selectedOrder && (
-                  <span className={styles.requiredIndicator}> (Requerido)</span>
-                )}
-              </label>
+              <label className={styles.label}>Orden de trabajo *</label>
               {ordersLoading ? (
                 <p>Cargando órdenes...</p>
               ) : ordersError ? (
@@ -646,24 +651,18 @@ export default function PreoperationalForm({
                 </div>
               ) : (
                 <select
-                  className={`${styles.input} ${
-                    !selectedOrder ? styles.inputError : ""
-                  }`}
+                  className={`${styles.input} ${!selectedOrder ? styles.inputError : ""}`}
                   value={selectedOrder?.orden_id || ""}
                   onChange={(e) => handleSelectOrder(e.target.value)}
                   required
                 >
-                  <option value="">
-                    Seleccione una orden con herramientas...
-                  </option>
+                  <option value="">Seleccione una orden con herramientas...</option>
                   {validOrders.map((order, index) => {
                     const personaClient = order.cliente;
                     const clientName =
                       order.cliente_empresa?.nombre ||
                       (personaClient
-                        ? `${personaClient.nombre} ${
-                            personaClient.apellido ?? ""
-                          }`.trim()
+                        ? `${personaClient.nombre} ${personaClient.apellido ?? ""}`.trim()
                         : "N/D");
 
                     return (
@@ -729,20 +728,15 @@ export default function PreoperationalForm({
                 </div>
               ) : (
                 <p className={styles.infoText}>
-                  Seleccione una orden de trabajo para ver la información del
-                  cliente.
+                  Seleccione una orden de trabajo para ver la información del cliente.
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* SECCIÓN 2: SELECCIÓN DE HERRAMIENTA */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(2) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 2. HERRAMIENTA */}
+        <div className={`${styles.section} ${!getSectionStatus(2) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>
               2. Selección de Herramienta
@@ -751,24 +745,11 @@ export default function PreoperationalForm({
             {getSectionStatus(2) && toolsForSelectedOrder.length > 0 && (
               <span className={styles.sectionStatus}>✓</span>
             )}
-            {!getSectionStatus(2) && selectedOrder && (
-              <span className={styles.requiredIndicator}>
-                {" "}
-                (
-                {toolsForSelectedOrder.length === 0
-                  ? "No hay herramientas"
-                  : "Seleccione una herramienta"}
-                )
-              </span>
-            )}
           </div>
 
           {!selectedOrder ? (
             <div className={styles.infoText}>
-              <p>
-                Primero seleccione una orden de trabajo con herramientas
-                asignadas.
-              </p>
+              <p>Primero seleccione una orden de trabajo con herramientas asignadas.</p>
             </div>
           ) : error && !successMessage ? (
             <div className={styles.error}>{error}</div>
@@ -779,11 +760,6 @@ export default function PreoperationalForm({
           ) : toolsForSelectedOrder.length === 0 ? (
             <div className={styles.emptyState}>
               <p>⚠️ No hay herramientas asignadas a esta orden.</p>
-              <p className={styles.infoText}>
-                Esta orden no tiene herramientas en el campo{" "}
-                <code>toolDetails</code>. Contacte al administrador para asignar
-                herramientas a esta orden.
-              </p>
             </div>
           ) : (
             <>
@@ -791,7 +767,6 @@ export default function PreoperationalForm({
                 <p>
                   <strong>Orden #{selectedOrder.orden_id}:</strong>{" "}
                   {toolsForSelectedOrder.length} herramienta(s) disponible(s)
-                  para preoperacional
                 </p>
               </div>
               <div className={styles.equipmentGrid}>
@@ -802,19 +777,16 @@ export default function PreoperationalForm({
                         ? `tool-detail-${tool.detalleHerramientaId}`
                         : `tool-index-${index}`
                     }
-                    className={`${styles.equipmentCard} ${
-                      selectedTool?.herramientaId === tool.herramientaId
-                        ? styles.selected
-                        : ""
-                    }`}
+                    className={`${styles.equipmentCard} ${selectedTool?.herramientaId === tool.herramientaId
+                      ? styles.selected
+                      : ""
+                      }`}
                     onClick={() => handleToolSelect(tool)}
                   >
                     <div className={styles.equipmentHeader}>
                       <h3 className={styles.equipmentName}>{tool.nombre}</h3>
                       <span
-                        className={`${styles.statusBadge} ${getStatusBadgeClass(
-                          tool.estado,
-                        )}`}
+                        className={`${styles.statusBadge} ${getStatusBadgeClass(tool.estado)}`}
                       >
                         {tool.estado}
                       </span>
@@ -839,12 +811,6 @@ export default function PreoperationalForm({
                       <div className={styles.detail}>
                         <strong>Tipo:</strong> {tool.tipo}
                       </div>
-                      {tool.detalleHerramientaId && (
-                        <div className={styles.detail}>
-                          <strong>ID Detalle:</strong>{" "}
-                          {tool.detalleHerramientaId}
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -853,12 +819,9 @@ export default function PreoperationalForm({
           )}
         </div>
 
+        {/* 3. CHECKLIST */}
         {selectedTool && (
-          <div
-            className={`${styles.section} ${
-              !getSectionStatus(3) ? styles.sectionIncomplete : ""
-            }`}
-          >
+          <div className={`${styles.section} ${!getSectionStatus(3) ? styles.sectionIncomplete : ""}`}>
             <div className={styles.sectionHeader}>
               <div className={styles.sectionTitleContainer}>
                 <h2 className={styles.sectionTitle}>
@@ -867,13 +830,10 @@ export default function PreoperationalForm({
                 </h2>
                 <div className={styles.statsContainer}>
                   {loadingChecklist ? (
-                    <span className={styles.statsText}>
-                      Cargando checklist...
-                    </span>
+                    <span className={styles.statsText}>Cargando checklist...</span>
                   ) : checklistItems.length > 0 ? (
                     <span className={styles.statsText}>
-                      {checklistStats.completed}/{checklistStats.total}{" "}
-                      completados
+                      {checklistStats.completed}/{checklistStats.total} completados
                       {checklistStats.criticalWithIssues > 0 && (
                         <span className={styles.criticalStats}>
                           {" "}
@@ -883,7 +843,7 @@ export default function PreoperationalForm({
                     </span>
                   ) : (
                     <span className={styles.statsText}>
-                      No hay parámetros configurados para este herramienta
+                      No hay parámetros configurados para esta herramienta
                     </span>
                   )}
                 </div>
@@ -892,43 +852,27 @@ export default function PreoperationalForm({
                 {getSectionStatus(3) && checklistItems.length > 0 && (
                   <span className={styles.sectionStatus}>✓</span>
                 )}
-                {!getSectionStatus(3) && (
-                  <span className={styles.requiredIndicator}>Completar</span>
-                )}
               </div>
             </div>
 
-            {checklistError && (
-              <div className={styles.error}>{checklistError}</div>
-            )}
+            {checklistError && <div className={styles.error}>{checklistError}</div>}
 
             {checklistItems.length > 0 && (
               <>
                 <div className={styles.checklist}>
                   {checklistItems.map((check, index) => (
                     <div
-                      key={
-                        check.parameterId
-                          ? `check-${check.parameterId}`
-                          : `check-index-${index}`
-                      }
-                      className={`${styles.checkItem} ${
-                        check.critical ? styles.checkItemCritical : ""
-                      }`}
+                      key={`check-${check.parameterId}-${index}`}
+                      className={`${styles.checkItem} ${check.critical ? styles.checkItemCritical : ""
+                        }`}
                     >
                       <div className={styles.checkHeader}>
                         <div className={styles.checkQuestion}>
-                          <span className={styles.questionNumber}>
-                            {index + 1}.
-                          </span>
+                          <span className={styles.questionNumber}>{index + 1}.</span>
                           <div className={styles.questionContent}>
-                            <span className={styles.questionText}>
-                              {check.parameter}
-                            </span>
+                            <span className={styles.questionText}>{check.parameter}</span>
                             {check.critical && (
-                              <span className={styles.criticalLabel}>
-                                ⚠️ CRÍTICO
-                              </span>
+                              <span className={styles.criticalLabel}>⚠️ CRÍTICO</span>
                             )}
                           </div>
                         </div>
@@ -938,12 +882,12 @@ export default function PreoperationalForm({
                         <div className={styles.valueOptions}>
                           {CHECK_VALUES.map((value, valueIndex) => (
                             <label
-                              key={`${check.parameterId || `check-${index}`}-value-${valueIndex}`}
+                              key={`${check.parameterId}-value-${valueIndex}`}
                               className={styles.valueOption}
                             >
                               <input
                                 type="radio"
-                                name={`check-${check.parameterId || `check-${index}`}`}
+                                name={`check-${check.parameterId}`}
                                 value={value}
                                 checked={check.value === value}
                                 onChange={(e) =>
@@ -989,14 +933,10 @@ export default function PreoperationalForm({
                     <div className={styles.warningHeader}>
                       <span className={styles.warningIcon}>⚠️</span>
                       <strong>
-                        Atención: {validation.criticalIssues.length} problema(s)
-                        crítico(s) encontrado(s)
+                        Atención: {validation.criticalIssues.length} problema(s) crítico(s)
                       </strong>
                     </div>
-                    <p>
-                      No utilice la herramienta hasta que se resuelvan estos
-                      problemas.
-                    </p>
+                    <p>No utilice la herramienta hasta que se resuelvan estos problemas.</p>
                   </div>
                 )}
               </>
@@ -1004,26 +944,17 @@ export default function PreoperationalForm({
           </div>
         )}
 
-        {/* SECCIÓN 4: FIRMA DEL TÉCNICO */}
+        {/* 4. FIRMA */}
         {selectedTool && checklistItems.length > 0 && (
-          <div
-            className={`${styles.section} ${
-              !getSectionStatus(4) ? styles.sectionIncomplete : ""
-            }`}
-          >
+          <div className={`${styles.section} ${!getSectionStatus(4) ? styles.sectionIncomplete : ""}`}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>4. Firma del Técnico</h2>
-              {getSectionStatus(4) && (
-                <span className={styles.sectionStatus}>✓</span>
-              )}
-              {!getSectionStatus(4) && (
-                <span className={styles.requiredIndicator}> (Requerida)</span>
-              )}
+              {getSectionStatus(4) && <span className={styles.sectionStatus}>✓</span>}
             </div>
+
             <p className={styles.sectionSubtitle}>
-              {userName}, firme en el área inferior para confirmar la
-              verificación de la herramienta{" "}
-              <strong>{selectedTool.nombre}</strong>
+              {userName}, firme en el área inferior para confirmar la verificación
+              de la herramienta <strong>{selectedTool.nombre}</strong>
               {selectedOrder && ` para la Orden #${selectedOrder.orden_id}`}
             </p>
 
@@ -1045,9 +976,7 @@ export default function PreoperationalForm({
 
             {isOtpStep && (
               <div className={styles.otpSection} style={{ marginTop: "20px" }}>
-                <label className={styles.label}>
-                  Código OTP enviado a tu correo *
-                </label>
+                <label className={styles.label}>Código OTP enviado a tu correo *</label>
                 <input
                   type="text"
                   className={styles.input}
@@ -1055,107 +984,81 @@ export default function PreoperationalForm({
                   onChange={(e) => setOtpCode(e.target.value)}
                   maxLength={6}
                   placeholder="Ingresa los 6 dígitos"
-                  style={{
-                    fontSize: "1.5rem",
-                    letterSpacing: "0.25rem",
-                    textAlign: "center",
-                    maxWidth: "250px",
-                    margin: "0 auto",
-                    display: "block",
-                  }}
                 />
-                <p
-                  className={styles.otpHelpText}
-                  style={{ marginTop: "10px", textAlign: "center" }}
-                >
-                  Revisa tu bandeja de entrada.
-                </p>
               </div>
             )}
           </div>
         )}
 
-        {/* SECCIÓN 5: TÉRMINOS Y CONDICIONES */}
-        <div
-          className={`${styles.section} ${
-            !getSectionStatus(5) ? styles.sectionIncomplete : ""
-          }`}
-        >
+        {/* 5. TÉRMINOS */}
+        <div className={`${styles.section} ${!getSectionStatus(5) ? styles.sectionIncomplete : ""}`}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>5. Términos y Condiciones</h2>
-            {getSectionStatus(5) && (
-              <span className={styles.sectionStatus}>✓</span>
-            )}
-            {!getSectionStatus(5) && (
-              <span className={styles.requiredIndicator}> (Requerida)</span>
-            )}
+            {getSectionStatus(5) && <span className={styles.sectionStatus}>✓</span>}
           </div>
+
           <div className={styles.termsBox}>
             <p>Declaro que:</p>
             <ul className={styles.termsList}>
               <li>
                 He verificado el estado de la herramienta{" "}
-                <strong>
-                  {selectedTool?.nombre || "[NOMBRE HERRAMIENTA]"}
-                </strong>{" "}
-                según el checklist preoperacional.
+                <strong>{selectedTool?.nombre || "[NOMBRE HERRAMIENTA]"}</strong>{" "}
+                según el{" "}
+                <button
+                  type="button"
+                  className={styles.termsLink}
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  checklist preoperacional
+                </button>.
               </li>
               <li>Los resultados de la inspección son veraces y completos.</li>
-              <li>
-                Reportaré cualquier anomalía encontrada al supervisor inmediato.
-              </li>
-              <li>
-                No utilizaré herramientas en mal estado o con deficiencias
-                identificadas.
-              </li>
-              <li>
-                Acepto seguir los procedimientos establecidos para uso de
-                herramientas.
-              </li>
+              <li>Reportaré cualquier anomalía encontrada al supervisor inmediato.</li>
+              <li>No utilizaré herramientas en mal estado o con deficiencias identificadas.</li>
+              <li>Acepto seguir los procedimientos establecidos para uso de herramientas.</li>
               {selectedOrder && (
-                <li>
-                  Esta verificación corresponde a la Orden de Trabajo #
-                  {selectedOrder.orden_id}.
-                </li>
+                <li>Esta verificación corresponde a la Orden de Trabajo #{selectedOrder.orden_id}.</li>
               )}
             </ul>
           </div>
+
           <label className={styles.privacyCheckbox}>
             <input
               type="checkbox"
-              checked={privacyAccepted}
-              onChange={(e) => setPrivacyAccepted(e.target.checked)}
-              required
+              checked={!!termsAcceptedVersion}
+              onChange={(e) => {
+                if (!e.target.checked) setTermsAcceptedVersion(null);
+              }}
             />
             <span className={styles.checkboxLabel}>
-              Confirmo que he realizado la verificación preoperacional de la
-              herramienta{" "}
+              Confirmo que he realizado la verificación preoperacional de la herramienta{" "}
               <strong>{selectedTool?.nombre || "[NOMBRE HERRAMIENTA]"}</strong>
               {selectedOrder && ` para la Orden #${selectedOrder.orden_id}`} y
-              acepto los términos establecidos. *
+              acepto los{" "}
+              <button
+                type="button"
+                className={styles.termsLink}
+                onClick={() => setShowTermsModal(true)}
+              >
+                términos y condiciones
+              </button>{" "}
+              establecidos. *
             </span>
           </label>
         </div>
 
-        {/* Botones de acción */}
         <div className={styles.formActions}>
-          <button
-            type="button"
-            className={styles.cancelButton}
-            onClick={onCancel}
-          >
+          <button type="button" className={styles.cancelButton} onClick={onCancel}>
             Cancelar
           </button>
           <button
             type="submit"
-            className={`${styles.submitButton} ${
-              !isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
-            }`}
+            className={`${styles.submitButton} ${!isFormValid && !isOtpStep ? styles.submitButtonDisabled : ""
+              }`}
             disabled={
               isSubmitting ||
               (!isFormValid && !isOtpStep) ||
-              (isOtpStep && !otpCode.trim()) ||
-              (!!successMessage && !isOtpStep)
+              (isOtpStep && !otpCode.trim())
             }
           >
             {isSubmitting
@@ -1177,6 +1080,20 @@ export default function PreoperationalForm({
           </div>
         )}
       </form>
+
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={(version) => {
+          setTermsAcceptedVersion(version);
+          setShowTermsModal(false);
+        }}
+        onReject={() => {
+          setTermsAcceptedVersion(null);
+          setShowTermsModal(false);
+        }}
+        type="preoperational_form"
+      />
     </div>
   );
 }

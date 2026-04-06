@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import OrderList from "./OrderList";
 import CreateOrderForm from "./CreateOrderForm";
 import OrderDetail from "./OrderDetail";
@@ -23,6 +23,25 @@ interface Props {
   initialOrderId?: number;
 }
 
+type ReadyPayload = {
+  jobId?: string | number;
+  token?: string;
+  fileName?: string;
+  reportType?: "internal" | "client";
+  ordenId?: number;
+  orderIds?: number[];
+};
+
+type ErrorPayload = {
+  jobId?: string | number;
+  message?: string;
+};
+
+type SentPayload = {
+  jobId?: string | number;
+  totalClientsNotified?: number;
+};
+
 export default function AdminOrdersView({
   activeView,
   setActiveView,
@@ -35,6 +54,10 @@ export default function AdminOrdersView({
   const [downloading, setDownloading] = useState(false);
   const [sendingToSelf, setSendingToSelf] = useState(false);
   const [sendingToClients, setSendingToClients] = useState(false);
+
+  // Track del último job que esperamos (para no reaccionar a eventos viejos)
+  const pendingJobIdRef = useRef<string | number | null>(null);
+  const pendingKindRef = useRef<"download" | "email" | "clients" | null>(null);
 
   const socket = useSocket();
   const { user } = useAuth();
@@ -53,14 +76,29 @@ export default function AdminOrdersView({
     window.URL.revokeObjectURL(url);
   };
 
-  useSocketEvent<any>(socket, "workOrders.report.ready", (payload) => {
+  const isSamePendingJob = (jobId?: string | number) => {
+    if (!pendingJobIdRef.current) return true; // si no hay pending, no filtramos
+    return String(pendingJobIdRef.current) === String(jobId ?? "");
+  };
+
+  useSocketEvent<ReadyPayload>(socket, "workOrders.report.ready", (payload) => {
+    if (!isSamePendingJob(payload?.jobId)) return;
+
     setDownloading(false);
+    pendingJobIdRef.current = null;
+    pendingKindRef.current = null;
+
+
+    const token = payload?.token as string | undefined;
+    const fileName = payload?.fileName || "reporte.pdf";
+    const isZip = fileName.toLowerCase().endsWith(".zip");
 
     showModal({
       type: "success",
-      title: "Reporte listo",
-      message:
-        "El PDF se generó correctamente. Presiona 'Descargar' para guardarlo.",
+      title: "Archivo listo",
+      message: isZip
+        ? "El lote de informes se generó correctamente. Se descargará un .zip."
+        : "El PDF se generó correctamente. Presiona 'Descargar' para guardarlo.",
       buttons: [
         { text: "Cerrar", variant: "secondary" },
         {
@@ -69,11 +107,11 @@ export default function AdminOrdersView({
           autoClose: true,
           onClick: async () => {
             try {
-              const token = payload?.token as string | undefined;
               if (!token) return;
 
-              const { blob, fileName } =
-                await downloadWorkOrderReportByTokenRequest(token);
+              const { blob, fileName } = await downloadWorkOrderReportByTokenRequest(token, {
+                fallbackFileName: payload?.fileName || "informes.zip",
+              });
 
               triggerBrowserDownload(blob, fileName);
             } catch (err) {
@@ -82,7 +120,7 @@ export default function AdminOrdersView({
                 type: "error",
                 title: "Error descargando",
                 message:
-                  "No se pudo descargar el archivo. El token pudo haber expirado.",
+                  "No se pudo descargar el archivo. Intenta nuevamente (si el archivo era grande puede tardar).",
               });
             }
           },
@@ -91,9 +129,13 @@ export default function AdminOrdersView({
     });
   });
 
-  useSocketEvent<any>(socket, "workOrders.report.sent", (payload) => {
+  useSocketEvent<SentPayload>(socket, "workOrders.report.sent", (payload) => {
+    if (!isSamePendingJob(payload?.jobId)) return;
+
     setSendingToSelf(false);
     setSendingToClients(false);
+    pendingJobIdRef.current = null;
+    pendingKindRef.current = null;
 
     if (payload?.totalClientsNotified !== undefined) {
       showModal({
@@ -114,10 +156,14 @@ export default function AdminOrdersView({
     });
   });
 
-  useSocketEvent<any>(socket, "workOrders.report.error", (payload) => {
+  useSocketEvent<ErrorPayload>(socket, "workOrders.report.error", (payload) => {
+    if (!isSamePendingJob(payload?.jobId)) return;
+
     setDownloading(false);
     setSendingToSelf(false);
     setSendingToClients(false);
+    pendingJobIdRef.current = null;
+    pendingKindRef.current = null;
 
     showModal({
       type: "error",
@@ -131,6 +177,8 @@ export default function AdminOrdersView({
       setDownloading(false);
       setSendingToSelf(false);
       setSendingToClients(false);
+      pendingJobIdRef.current = null;
+      pendingKindRef.current = null;
     };
   }, []);
 
@@ -161,34 +209,38 @@ export default function AdminOrdersView({
 
     try {
       setDownloading(true);
+      pendingKindRef.current = "download";
 
       showModal({
         type: "info",
-        title: "Generando PDF",
+        title: "Generando archivo",
         message:
           selectedOrderIds.length === 1
             ? "Estamos generando el informe en segundo plano. Te avisaremos cuando esté listo."
-            : "Estamos generando el lote de informes en segundo plano. Te avisaremos cuando esté listo.",
+            : "Estamos generando el lote de informes (ZIP) en segundo plano. Te avisaremos cuando esté listo.",
         buttons: [{ text: "Entendido", variant: "primary" }],
       });
 
       if (selectedOrderIds.length === 1) {
         const id = selectedOrderIds[0];
-
-        await enqueueWorkOrderReportRequest(id, {
+        const { jobId } = await enqueueWorkOrderReportRequest(id, {
           reportType: "internal",
           action: "download",
         });
+        pendingJobIdRef.current = jobId;
       } else {
-        await enqueueBatchWorkOrderReportsRequest({
+        const { jobId } = await enqueueBatchWorkOrderReportsRequest({
           orderIds: selectedOrderIds,
           reportType: "internal",
           action: "download",
         });
+        pendingJobIdRef.current = jobId;
       }
     } catch (err) {
       console.error("Error generando informes internos:", err);
       setDownloading(false);
+      pendingJobIdRef.current = null;
+      pendingKindRef.current = null;
 
       showModal({
         type: "error",
@@ -221,36 +273,41 @@ export default function AdminOrdersView({
 
     try {
       setSendingToSelf(true);
+      pendingKindRef.current = "email";
 
       showModal({
         type: "info",
-        title: "Enviando PDF",
+        title: "Enviando archivo",
         message:
           selectedOrderIds.length === 1
             ? "Se está generando y enviando el PDF en segundo plano. Te avisaremos cuando se envíe."
-            : "Se está generando y enviando el lote de PDFs en segundo plano. Te avisaremos cuando se envíe.",
+            : "Se está generando y enviando el lote (ZIP) en segundo plano. Te avisaremos cuando se envíe.",
         buttons: [{ text: "Entendido", variant: "primary" }],
       });
 
       if (selectedOrderIds.length === 1) {
         const id = selectedOrderIds[0];
 
-        await enqueueWorkOrderReportRequest(id, {
+        const { jobId } = await enqueueWorkOrderReportRequest(id, {
           reportType: "internal",
           action: "email",
           toEmail,
         });
+        pendingJobIdRef.current = jobId;
       } else {
-        await enqueueBatchWorkOrderReportsRequest({
+        const { jobId } = await enqueueBatchWorkOrderReportsRequest({
           orderIds: selectedOrderIds,
           reportType: "internal",
           action: "email",
           toEmail,
         });
+        pendingJobIdRef.current = jobId;
       }
     } catch (err) {
       console.error("Error enviando informes internos por correo:", err);
       setSendingToSelf(false);
+      pendingJobIdRef.current = null;
+      pendingKindRef.current = null;
 
       showModal({
         type: "error",
@@ -263,6 +320,7 @@ export default function AdminOrdersView({
   const doSendReportsToClients = async (): Promise<void> => {
     try {
       setSendingToClients(true);
+      pendingKindRef.current = "clients";
 
       showModal({
         type: "info",
@@ -272,10 +330,13 @@ export default function AdminOrdersView({
         buttons: [{ text: "Entendido", variant: "primary" }],
       });
 
-      await enqueueClientReportsRequest();
+      const { jobId } = await enqueueClientReportsRequest();
+      pendingJobIdRef.current = jobId;
     } catch (err) {
       console.error("Error enviando informes a clientes:", err);
       setSendingToClients(false);
+      pendingJobIdRef.current = null;
+      pendingKindRef.current = null;
 
       showModal({
         type: "error",

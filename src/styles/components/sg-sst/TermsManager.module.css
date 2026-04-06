@@ -1,0 +1,521 @@
+/* src/styles/components/sg-sst/TermsManager.module.css */
+.container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Selector de tipos */
+.typeSelector {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.selectorLabel {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+}
+
+.typeButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.typeButton {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.typeButton:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.activeType {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  border-color: #1e40af;
+}
+
+.activeType .typeButtonLabel,
+.activeType .typeButtonForm {
+  color: white;
+}
+
+.typeButtonLabel {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+
+.typeButtonForm {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+/* Header con información de versión */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.headerInfo {
+  flex: 1;
+}
+
+.termsTitle {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  color: #111827;
+}
+
+.versionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.versionDate {
+  font-size: 0.7rem;
+}
+
+.editButton {
+  padding: 8px 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-size: 0.875rem;
+  min-height: 40px;
+}
+
+.editButton:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+/* Editor */
+.editor {
+  animation: fadeIn 0.3s ease;
+}
+
+.field {
+  margin-bottom: 24px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Items list */
+.itemsList {
+  margin-bottom: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.itemRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.itemNumber {
+  min-width: 28px;
+  font-weight: 600;
+  color: #6b7280;
+  padding-top: 10px;
+  font-size: 0.875rem;
+}
+
+.itemInput {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.itemInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.removeButton {
+  width: 36px;
+  height: 36px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+}
+
+.removeButton:hover:not(:disabled) {
+  background: #fecaca;
+  transform: scale(1.05);
+}
+
+.removeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.addButton {
+  padding: 8px 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.addButton:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* Actions */
+.actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saveButton {
+  padding: 10px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.saveButton:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Preview */
+.preview {
+  background: #f9fafb;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  animation: fadeIn 0.3s ease;
+}
+
+.descriptionBox {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #3b82f6;
+}
+
+.descriptionBox p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.itemsPreview {
+  margin-bottom: 20px;
+}
+
+.declarationText {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 12px;
+  font-size: 0.9375rem;
+}
+
+.itemsPreview ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style: none;
+}
+
+.itemsPreview li {
+  margin-bottom: 10px;
+  color: #374151;
+  line-height: 1.5;
+  position: relative;
+  padding-left: 20px;
+}
+
+.itemsPreview li::before {
+  content: "•";
+  color: #3b82f6;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.infoBox {
+  background: #eff6ff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.infoText {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Loading */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+.loadingContainer p {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+/* Messages */
+.message {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideDown 0.3s ease;
+}
+
+.success {
+  background: #d1fae5;
+  color: #065f46;
+  border-left: 4px solid #10b981;
+}
+
+.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar personalizada */
+.itemsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.itemsList::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.itemsList::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.itemsList::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .typeButtons {
+    flex-direction: column;
+  }
+
+  .typeButton {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editButton {
+    width: 100%;
+  }
+
+  .itemRow {
+    flex-wrap: wrap;
+  }
+
+  .itemNumber {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .removeButton {
+    align-self: flex-start;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .saveButton {
+    width: 100%;
+  }
+
+  .preview {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  .termsTitle {
+    font-size: 1.125rem;
+  }
+
+  .versionBadge {
+    font-size: 0.7rem;
+    flex-wrap: wrap;
+  }
+
+  .input,
+  .textarea,
+  .itemInput {
+    font-size: 0.8125rem;
+  }
+
+  .typeButtonLabel {
+    font-size: 0.8125rem;
+  }
+
+  .typeButtonForm {
+    font-size: 0.6875rem;
+  }
+}

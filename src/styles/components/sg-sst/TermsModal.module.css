@@ -1,0 +1,181 @@
+/* src/styles/components/sg-sst/TermsModal.module.css */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modalContent {
+  background: white;
+  border-radius: 12px;
+  max-width: 550px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: white;
+  letter-spacing: -0.2px;
+  line-height: 1.4;
+}
+
+.closeButton {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.modalBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.termsBox {
+  background: #f8fafc;
+  padding: 1.25rem;
+  border-radius: 12px;
+  border-left: 4px solid #2a5298;
+}
+
+.descriptionText {
+  font-size: 0.95rem;
+  color: #1e293b;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.declarationText {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+}
+
+.termsList {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.termsList li {
+  margin-bottom: 0.75rem;
+  color: #334155;
+  line-height: 1.5;
+  position: relative;
+  padding-left: 1.25rem;
+}
+
+.termsList li::before {
+  content: "•";
+  color: #2a5298;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.termsList li:last-child {
+  margin-bottom: 0;
+}
+
+.modalFooter {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: #f8fafc;
+}
+
+.acceptButton,
+.rejectButton {
+  padding: 0.625rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.acceptButton {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.acceptButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.rejectButton {
+  background: white;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.rejectButton:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+}

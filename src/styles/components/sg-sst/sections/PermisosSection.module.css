@@ -427,3 +427,189 @@
     transform: translateY(0);
   }
 }
+.termsManagerContainer {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.termsManagerHeader {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.termsManagerHeader h2 {
+  font-size: 1.5rem;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.termsManagerSubtitle {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+/* Estilos para modales */
+.modalOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+  padding: 1rem;
+}
+
+.modalContent,
+.modalContentLarge {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease;
+  overflow: hidden;
+}
+
+.modalContent {
+  width: 800px;
+}
+
+.modalContentLarge {
+  width: 1200px;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: white;
+}
+
+.modalCloseButton {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: white;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.modalCloseButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.modalBody {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modalFooter {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: #f8fafc;
+}
+
+.modalCancelButton {
+  padding: 0.625rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: #6b7280;
+  color: white;
+}
+
+.modalCancelButton:hover {
+  background: #4b5563;
+}
+
+/* Responsive para modales */
+@media (max-width: 768px) {
+  .modalContent,
+  .modalContentLarge {
+    width: 95vw;
+    max-height: 85vh;
+  }
+
+  .modalHeader h2 {
+    font-size: 1rem;
+  }
+
+  .modalBody {
+    padding: 1rem;
+  }
+
+  .modalFooter {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .modalContent,
+  .modalContentLarge {
+    width: 98vw;
+    max-height: 90vh;
+  }
+
+  .modalHeader {
+    padding: 1rem;
+  }
+
+  .modalHeader h2 {
+    font-size: 0.875rem;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
