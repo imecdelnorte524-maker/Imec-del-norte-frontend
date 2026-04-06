@@ -67,10 +67,10 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
   }, []);
 
   const handleFormSelect = (
-    formType: "ATS" | "HEIGHT_WORK" | "PREOPERATIONAL",
+    formType: "ats" | "HEIGHT_WORK" | "PREOPERATIONAL",
   ) => {
     switch (formType) {
-      case "ATS":
+      case "ats":
         setCurrentForm("ats");
         break;
       case "HEIGHT_WORK":
@@ -202,7 +202,7 @@ export default function PermisosSection({ onBack }: PermisosSectionProps) {
           className={`${styles.tab} ${
             currentForm === "ats" ? styles.activeTab : ""
           }`}
-          onClick={() => handleFormSelect("ATS")}
+          onClick={() => handleFormSelect("ats")}
         >
           ⚠️ ATS
         </button>

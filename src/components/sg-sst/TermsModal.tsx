@@ -1,4 +1,3 @@
-// src/components/common/TermsModal.tsx
 import { useState, useEffect } from "react";
 import { termsApi } from "../../api/terms";
 import styles from "../../styles/components/sg-sst/TermsModal.module.css";
@@ -7,9 +6,9 @@ import type { TermsData } from "../../interfaces/TermsIntefaces";
 interface TermsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAccept: () => void;
+  onAccept: (version: number) => void;
   onReject: () => void;
-  type: string; // 'dataprivacy', 'ats', 'height_work', 'preoperational_form'
+  type: string;
 }
 
 export default function TermsModal({
@@ -22,6 +21,7 @@ export default function TermsModal({
   const [termsData, setTermsData] = useState<TermsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notConfigured, setNotConfigured] = useState(false);
 
   useEffect(() => {
     if (isOpen && type) {
@@ -33,11 +33,18 @@ export default function TermsModal({
     try {
       setLoading(true);
       setError(null);
+      setNotConfigured(false);
       const data = await termsApi.getTermsByType(type);
       setTermsData(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading terms:", error);
-      setError("No se pudieron cargar los términos y condiciones");
+
+      if (error?.response?.status === 404) {
+        setNotConfigured(true);
+        setTermsData(null);
+      } else {
+        setError("No se pudieron cargar los términos y condiciones");
+      }
     } finally {
       setLoading(false);
     }
@@ -51,6 +58,40 @@ export default function TermsModal({
         <div className={styles.modalContent}>
           <div className={styles.modalBody}>
             <div className={styles.loadingText}>Cargando términos...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (notConfigured) {
+    return (
+      <div className={styles.modalOverlay}>
+        <div className={styles.modalContent}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>Términos no configurados</h2>
+            <button className={styles.closeButton} onClick={onClose}>
+              ×
+            </button>
+          </div>
+
+          <div className={styles.modalBody}>
+            <div className={styles.errorText}>
+              Aún no existen términos y condiciones configurados para este formulario.
+            </div>
+            <p style={{ marginTop: "12px", fontSize: "0.95rem", color: "#666" }}>
+              Solicita al administrador o al personal SG-SST que los cree desde el panel de gestión.
+            </p>
+          </div>
+
+          <div className={styles.modalFooter}>
+            <button
+              type="button"
+              className={styles.rejectButton}
+              onClick={onClose}
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       </div>
@@ -76,7 +117,10 @@ export default function TermsModal({
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.modalContent}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>{termsData.title}</h2>
           <button className={styles.closeButton} onClick={onClose}>
@@ -96,12 +140,13 @@ export default function TermsModal({
               ))}
             </ul>
 
-            {termsData.version > 1 && (
-              <p className={styles.versionText}>
-                Versión: {termsData.version} - Actualizado:{" "}
-                {new Date(termsData.updatedAt).toLocaleDateString()}
-              </p>
-            )}
+            <p className={styles.versionText}>
+              Versión: {termsData.version}
+              {termsData.updatedAt &&
+                ` - Actualizado: ${new Date(
+                  termsData.updatedAt,
+                ).toLocaleDateString()}`}
+            </p>
           </div>
         </div>
 
@@ -116,7 +161,7 @@ export default function TermsModal({
           <button
             type="button"
             className={styles.acceptButton}
-            onClick={onAccept}
+            onClick={() => onAccept(termsData.version)}
           >
             ✓ Sí, acepto
           </button>

@@ -20,6 +20,7 @@ import type {
   EnqueueWorkOrderReportPayload,
   EnqueueWorkOrderReportResponse,
 } from "../interfaces/OrderInterfaces";
+import { getSocketId } from "../lib/socket";
 
 export interface CreateAcInspectionPayload {
   equipmentId: number;
@@ -135,15 +136,15 @@ const mapAssociatedEquipment = (equipment: any): AssociatedEquipment => ({
   status: equipment.status,
   area: equipment.area
     ? {
-        areaId: equipment.area.areaId,
-        nombre: equipment.area.nombre,
-      }
+      areaId: equipment.area.areaId,
+      nombre: equipment.area.nombre,
+    }
     : null,
   subArea: equipment.subArea
     ? {
-        subAreaId: equipment.subArea.subAreaId,
-        nombre: equipment.subArea.nombre,
-      }
+      subAreaId: equipment.subArea.subAreaId,
+      nombre: equipment.subArea.nombre,
+    }
     : null,
 });
 
@@ -177,20 +178,20 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
 
   const supplyDetails: SupplyDetail[] = Array.isArray(apiOrder.supplyDetails)
     ? apiOrder.supplyDetails.map((d: any) => ({
-        detalleInsumoId: d.detalleInsumoId,
-        cantidadUsada: Number(d.cantidadUsada ?? 0),
-        costoUnitarioAlMomento: Number(d.costoUnitarioAlMomento ?? 0),
-        nombreInsumo: d.nombreInsumo ?? d.supply?.nombre ?? "",
-      }))
+      detalleInsumoId: d.detalleInsumoId,
+      cantidadUsada: Number(d.cantidadUsada ?? 0),
+      costoUnitarioAlMomento: Number(d.costoUnitarioAlMomento ?? 0),
+      nombreInsumo: d.nombreInsumo ?? d.supply?.nombre ?? "",
+    }))
     : [];
 
   const toolDetails: ToolDetail[] = Array.isArray(apiOrder.toolDetails)
     ? apiOrder.toolDetails.map((d: any) => ({
-        detalleHerramientaId: d.detalleHerramientaId,
-        tiempoUso: d.tiempoUso ?? "",
-        nombreHerramienta: d.nombreHerramienta ?? d.tool?.nombre ?? "",
-        marca: d.marca ?? d.tool?.marca ?? "",
-      }))
+      detalleHerramientaId: d.detalleHerramientaId,
+      tiempoUso: d.tiempoUso ?? "",
+      nombreHerramienta: d.nombreHerramienta ?? d.tool?.nombre ?? "",
+      marca: d.marca ?? d.tool?.marca ?? "",
+    }))
     : [];
 
   const timers =
@@ -212,42 +213,42 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
 
   const acInspections: AcInspection[] = Array.isArray(apiOrder.acInspections)
     ? apiOrder.acInspections.map((insp: any) => ({
-        id: insp.id,
-        equipmentId: insp.equipmentId ?? insp.equipment_id ?? null, // ✅ corregido
-        phase: insp.phase,
-        evapTempSupply: insp.evapTempSupply,
-        evapTempReturn: insp.evapTempReturn,
-        evapTempAmbient: insp.evapTempAmbient,
-        evapTempOutdoor: insp.evapTempOutdoor,
-        evapMotorRpm: insp.evapMotorRpm,
-        evapMicrofarads: insp.evapMicrofarads ?? null,
-        condHighPressure: insp.condHighPressure,
-        condLowPressure: insp.condLowPressure,
-        condAmperage: insp.condAmperage,
-        condVoltage: insp.condVoltage,
-        condTempIn: insp.condTempIn,
-        condTempDischarge: insp.condTempDischarge,
-        condMotorRpm: insp.condMotorRpm,
-        condMicrofarads: insp.condMicrofarads ?? null,
-        compressorOhmio: insp.compressorOhmio ?? null,
-        observation: insp.observation ?? null,
-        createdAt: insp.createdAt || insp.created_at,
-      }))
+      id: insp.id,
+      equipmentId: insp.equipmentId ?? insp.equipment_id ?? null, // ✅ corregido
+      phase: insp.phase,
+      evapTempSupply: insp.evapTempSupply,
+      evapTempReturn: insp.evapTempReturn,
+      evapTempAmbient: insp.evapTempAmbient,
+      evapTempOutdoor: insp.evapTempOutdoor,
+      evapMotorRpm: insp.evapMotorRpm,
+      evapMicrofarads: insp.evapMicrofarads ?? null,
+      condHighPressure: insp.condHighPressure,
+      condLowPressure: insp.condLowPressure,
+      condAmperage: insp.condAmperage,
+      condVoltage: insp.condVoltage,
+      condTempIn: insp.condTempIn,
+      condTempDischarge: insp.condTempDischarge,
+      condMotorRpm: insp.condMotorRpm,
+      condMicrofarads: insp.condMicrofarads ?? null,
+      compressorOhmio: insp.compressorOhmio ?? null,
+      observation: insp.observation ?? null,
+      createdAt: insp.createdAt || insp.created_at,
+    }))
     : [];
 
   const images: WorkOrderImage[] = Array.isArray(apiOrder.images)
     ? apiOrder.images.map((img: any) => ({
-        id: img.id,
-        url: img.url,
-        public_id: img.public_id || img.publicId,
-        folder: img.folder,
-        created_at: img.created_at || img.createdAt,
-        evidencePhase: img.evidencePhase ?? img.evidence_phase ?? null,
-        observation: img.observation ?? null,
+      id: img.id,
+      url: img.url,
+      public_id: img.public_id || img.publicId,
+      folder: img.folder,
+      created_at: img.created_at || img.createdAt,
+      evidencePhase: img.evidencePhase ?? img.evidence_phase ?? null,
+      observation: img.observation ?? null,
 
-        // ✅ CLAVE para evidencias por equipo
-        equipmentId: img.equipmentId ?? img.equipment_id ?? null,
-      }))
+      // ✅ CLAVE para evidencias por equipo
+      equipmentId: img.equipmentId ?? img.equipment_id ?? null,
+    }))
     : [];
 
   return {
@@ -272,9 +273,9 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
     tipo_servicio: apiOrder.tipoServicio || apiOrder.tipo_servicio || null,
     maintenance_type: apiOrder.maintenanceType
       ? {
-          id: apiOrder.maintenanceType.id,
-          nombre: apiOrder.maintenanceType.nombre,
-        }
+        id: apiOrder.maintenanceType.id,
+        nombre: apiOrder.maintenanceType.nombre,
+      }
       : null,
     estado_facturacion: mapBillingFromApi(
       apiOrder.estadoFacturacion ?? apiOrder.estado_facturacion,
@@ -316,40 +317,40 @@ export const mapApiOrderToOrder = (apiOrder: any): Order => {
 
     cliente_empresa: apiOrder.clienteEmpresa
       ? {
-          id_cliente:
-            apiOrder.clienteEmpresa.idCliente ||
-            apiOrder.cliente_empresa?.id_cliente,
-          nombre:
-            apiOrder.clienteEmpresa.nombre ||
-            apiOrder.cliente_empresa?.nombre ||
-            "",
-          nit:
-            apiOrder.clienteEmpresa.nit || apiOrder.cliente_empresa?.nit || "",
-          email:
-            apiOrder.clienteEmpresa.email ||
-            apiOrder.cliente_empresa?.email ||
-            "",
-          telefono:
-            apiOrder.clienteEmpresa.telefono ||
-            apiOrder.cliente_empresa?.telefono ||
-            "",
-          localizacion:
-            apiOrder.clienteEmpresa.localizacion ||
-            apiOrder.cliente_empresa?.localizacion ||
-            "",
-          direccion:
-            apiOrder.clienteEmpresa.direccion ||
-            apiOrder.cliente_empresa?.direccion ||
-            null,
-          contacto:
-            apiOrder.clienteEmpresa.contacto ||
-            apiOrder.cliente_empresa?.contacto ||
-            null,
-          id_usuario_contacto:
-            apiOrder.clienteEmpresa.idUsuarioContacto ||
-            apiOrder.cliente_empresa?.id_usuario_contacto ||
-            null,
-        }
+        id_cliente:
+          apiOrder.clienteEmpresa.idCliente ||
+          apiOrder.cliente_empresa?.id_cliente,
+        nombre:
+          apiOrder.clienteEmpresa.nombre ||
+          apiOrder.cliente_empresa?.nombre ||
+          "",
+        nit:
+          apiOrder.clienteEmpresa.nit || apiOrder.cliente_empresa?.nit || "",
+        email:
+          apiOrder.clienteEmpresa.email ||
+          apiOrder.cliente_empresa?.email ||
+          "",
+        telefono:
+          apiOrder.clienteEmpresa.telefono ||
+          apiOrder.cliente_empresa?.telefono ||
+          "",
+        localizacion:
+          apiOrder.clienteEmpresa.localizacion ||
+          apiOrder.cliente_empresa?.localizacion ||
+          "",
+        direccion:
+          apiOrder.clienteEmpresa.direccion ||
+          apiOrder.cliente_empresa?.direccion ||
+          null,
+        contacto:
+          apiOrder.clienteEmpresa.contacto ||
+          apiOrder.cliente_empresa?.contacto ||
+          null,
+        id_usuario_contacto:
+          apiOrder.clienteEmpresa.idUsuarioContacto ||
+          apiOrder.cliente_empresa?.id_usuario_contacto ||
+          null,
+      }
       : null,
 
     technicians,
@@ -994,21 +995,42 @@ export const enqueueClientReportsRequest = async (payload?: {
 
 export const downloadWorkOrderReportByTokenRequest = async (
   token: string,
+  options?: { fallbackFileName?: string },
 ): Promise<DownloadedFile> => {
-  const response = await api.get(`/work-orders/informe-download/${token}`, {
-    responseType: "blob",
-    headers: { "x-skip-global-loading": "1" },
-    skipGlobalLoading: true,
-  } as any);
+  const rawBaseURL = import.meta.env.VITE_API_URL;
+  if (!rawBaseURL) {
+    throw new Error("Falta VITE_API_URL. Revisa tu .env y reinicia Vite.");
+  }
 
-  const disposition = response.headers["content-disposition"];
-  const fileName = getFileNameFromContentDisposition(
-    disposition,
-    "reporte.pdf",
-  );
+  const baseURL = rawBaseURL.replace(/\/$/, ""); // sin slash final
+  const authToken = localStorage.getItem("authToken");
+  const socketId = getSocketId();
 
-  return {
-    blob: response.data as Blob,
-    fileName,
-  };
+  const res = await fetch(`${baseURL}/work-orders/informe-download/${token}`, {
+    method: "GET",
+    headers: {
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...(socketId ? { "x-socket-id": socketId } : {}),
+      "x-skip-global-loading": "1",
+    },
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Download failed (${res.status}): ${text}`);
+  }
+
+  const blob = await res.blob();
+
+  const disposition = res.headers.get("content-disposition") || undefined;
+  const contentType = res.headers.get("content-type") || "";
+
+  const defaultName =
+    options?.fallbackFileName ??
+    (contentType.includes("zip") ? "informes.zip" : "reporte.pdf");
+
+  const fileName = getFileNameFromContentDisposition(disposition, defaultName);
+
+  return { blob, fileName };
 };

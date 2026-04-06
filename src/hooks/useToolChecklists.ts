@@ -1,4 +1,3 @@
-// src/hooks/useToolChecklists.ts
 import { useState, useCallback } from "react";
 import { sgSstService } from "../api/sg-sst";
 import type { CheckValue } from "../interfaces/SgSstInterface";
@@ -13,45 +12,43 @@ export function useChecklistForm() {
   const [loadingChecklist, setLoadingChecklist] = useState(false);
   const [checklistError, setChecklistError] = useState<string | null>(null);
 
-  const initializeChecklist = useCallback(
-    async (toolType: string) => {
-      try {
-        setLoadingChecklist(true);
-        setChecklistError(null);
+  const initializeChecklist = useCallback(async (toolType: string) => {
+    try {
+      setLoadingChecklist(true);
+      setChecklistError(null);
 
-        const template = await sgSstService.getPreoperationalTemplate(toolType);
+      const template = await sgSstService.getPreoperationalTemplate(toolType);
 
-        const items: ChecklistItem[] = template.parameters.map((p) => ({
-          parameterId: p.parameterCode || String(p.id),
-          parameter: p.parameter,
-          description: p.description,
-          category: p.category,
-          required: p.required,
-          critical: p.critical,
-          value: undefined,
-          observations: "",
-        }));
+      const items: ChecklistItem[] = template.parameters.map((p) => ({
+        parameterId: p.id, // <-- ahora numérico
+        parameterCode: p.parameterCode,
+        parameter: p.parameter,
+        description: p.description,
+        category: p.category,
+        required: p.required,
+        critical: p.critical,
+        value: undefined,
+        observations: "",
+      }));
 
-        setChecklistItems(items);
+      setChecklistItems(items);
 
-        return { items, meta: template };
-      } catch (error: any) {
-        console.error("Error cargando checklist preoperacional:", error);
-        setChecklistError(
-          error.response?.data?.message ||
-            "Error al cargar checklist preoperacional",
-        );
-        setChecklistItems([]);
-        return { items: [], meta: null };
-      } finally {
-        setLoadingChecklist(false);
-      }
-    },
-    [],
-  );
+      return { items, meta: template };
+    } catch (error: any) {
+      console.error("Error cargando checklist preoperacional:", error);
+      setChecklistError(
+        error.response?.data?.message ||
+        "Error al cargar checklist preoperacional",
+      );
+      setChecklistItems([]);
+      return { items: [], meta: null };
+    } finally {
+      setLoadingChecklist(false);
+    }
+  }, []);
 
   const updateItemValue = useCallback(
-    (parameterId: string, value: CheckValue) => {
+    (parameterId: number, value: CheckValue) => {
       setChecklistItems((prev) =>
         prev.map((item) =>
           item.parameterId === parameterId ? { ...item, value } : item,
@@ -62,7 +59,7 @@ export function useChecklistForm() {
   );
 
   const updateItemObservations = useCallback(
-    (parameterId: string, observations: string) => {
+    (parameterId: number, observations: string) => {
       setChecklistItems((prev) =>
         prev.map((item) =>
           item.parameterId === parameterId ? { ...item, observations } : item,
@@ -92,11 +89,8 @@ export function useChecklistForm() {
       }
     });
 
-    // 🔹 isValid = no faltan requeridos
-    const isValid = missingRequired.length === 0;
-
     return {
-      isValid,
+      isValid: missingRequired.length === 0,
       missingRequired,
       criticalIssues,
       warnings,

@@ -1,13 +1,12 @@
-// src/components/admin/TermsManager.tsx
 import { useState, useEffect } from "react";
 import { termsApi } from "../../api/terms";
 import styles from "../../styles/components/sg-sst/TermsManager.module.css";
 import type {
   TermsData,
   UpdateTermsDto,
+  CreateTermsDto,
 } from "../../interfaces/TermsIntefaces";
 
-// Lista de tipos de términos disponibles
 const TERM_TYPES = [
   {
     value: "dataprivacy",
@@ -29,7 +28,6 @@ const TERM_TYPES = [
     label: "✅ Checklist Preoperacional",
     formType: "Formulario Preoperacional",
   },
-  { value: "security", label: "🛡️ Seguridad General", formType: "General" },
 ];
 
 export default function TermsManager() {
@@ -37,11 +35,14 @@ export default function TermsManager() {
   const [terms, setTerms] = useState<TermsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [creating, setCreating] = useState(false);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     items: [""],
   });
+
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -55,17 +56,35 @@ export default function TermsManager() {
   const loadTerms = async () => {
     try {
       setLoading(true);
+      setMessage(null);
+
       const data = await termsApi.getTermsByType(selectedType);
       setTerms(data);
       setFormData({
         title: data.title,
         description: data.description || "",
-        items: data.items,
+        items: data.items?.length ? data.items : [""],
       });
       setEditing(false);
-    } catch (error) {
-      console.error("Error loading terms:", error);
-      setMessage({ type: "error", text: "Error al cargar los términos" });
+      setCreating(false);
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        setTerms(null);
+        setFormData({
+          title: "",
+          description: "",
+          items: [""],
+        });
+        setCreating(true);
+        setEditing(true);
+        setMessage({
+          type: "error",
+          text: "No existen términos para este tipo. Puedes crearlos ahora.",
+        });
+      } else {
+        console.error("Error loading terms:", error);
+        setMessage({ type: "error", text: "Error al cargar los términos" });
+      }
     } finally {
       setLoading(false);
     }
@@ -83,7 +102,7 @@ export default function TermsManager() {
 
   const removeItem = (index: number) => {
     const newItems = formData.items.filter((_, i) => i !== index);
-    setFormData({ ...formData, items: newItems });
+    setFormData({ ...formData, items: newItems.length ? newItems : [""] });
   };
 
   const handleSave = async () => {
@@ -91,25 +110,59 @@ export default function TermsManager() {
       setSaving(true);
       setMessage(null);
 
-      const updateData: UpdateTermsDto = {
-        title: formData.title,
-        description: formData.description || undefined,
-        items: formData.items.filter((item) => item.trim() !== ""),
-      };
+      const cleanItems = formData.items.filter((item) => item.trim() !== "");
 
-      const updated = await termsApi.updateTerms(selectedType, updateData);
-      setTerms(updated);
-      setEditing(false);
-      setMessage({
-        type: "success",
-        text: "Términos actualizados correctamente",
-      });
+      if (!formData.title.trim()) {
+        setMessage({ type: "error", text: "El título es obligatorio" });
+        return;
+      }
+
+      if (!cleanItems.length) {
+        setMessage({
+          type: "error",
+          text: "Debes agregar al menos un punto en la lista",
+        });
+        return;
+      }
+
+      if (creating || !terms) {
+        const createData: CreateTermsDto = {
+          type: selectedType,
+          title: formData.title,
+          description: formData.description || undefined,
+          items: cleanItems,
+          isActive: true,
+        };
+
+        const created = await termsApi.createTerms(createData);
+        setTerms(created);
+        setCreating(false);
+        setEditing(false);
+        setMessage({
+          type: "success",
+          text: "Términos creados correctamente",
+        });
+      } else {
+        const updateData: UpdateTermsDto = {
+          title: formData.title,
+          description: formData.description || undefined,
+          items: cleanItems,
+        };
+
+        const updated = await termsApi.updateTerms(selectedType, updateData);
+        setTerms(updated);
+        setEditing(false);
+        setMessage({
+          type: "success",
+          text: "Términos actualizados correctamente",
+        });
+      }
 
       setTimeout(() => setMessage(null), 3000);
     } catch (error: any) {
       setMessage({
         type: "error",
-        text: error.response?.data?.message || "Error al actualizar términos",
+        text: error.response?.data?.message || "Error al guardar términos",
       });
     } finally {
       setSaving(false);
@@ -127,7 +180,6 @@ export default function TermsManager() {
 
   return (
     <div className={styles.container}>
-      {/* Selector de tipo de términos */}
       <div className={styles.typeSelector}>
         <label className={styles.selectorLabel}>
           Seleccionar tipo de términos:
@@ -136,7 +188,8 @@ export default function TermsManager() {
           {TERM_TYPES.map((type) => (
             <button
               key={type.value}
-              className={`${styles.typeButton} ${selectedType === type.value ? styles.activeType : ""}`}
+              className={`${styles.typeButton} ${selectedType === type.value ? styles.activeType : ""
+                }`}
               onClick={() => setSelectedType(type.value)}
             >
               <div className={styles.typeButtonLabel}>{type.label}</div>
@@ -146,34 +199,36 @@ export default function TermsManager() {
         </div>
       </div>
 
-      {/* Mensajes de estado */}
       {message && (
         <div className={`${styles.message} ${styles[message.type]}`}>
           {message.text}
         </div>
       )}
 
-      {/* Header con información de versión */}
       <div className={styles.header}>
         <div className={styles.headerInfo}>
-          <h3 className={styles.termsTitle}>{terms?.title}</h3>
-          {terms && (
+          <h3 className={styles.termsTitle}>
+            {terms?.title || "Términos no configurados"}
+          </h3>
+          {terms ? (
             <div className={styles.versionBadge}>
               Versión {terms.version}
               {terms.updatedAt && (
                 <span className={styles.versionDate}>
-                  (Actualizado: {new Date(terms.updatedAt).toLocaleDateString()}
-                  )
+                  (Actualizado: {new Date(terms.updatedAt).toLocaleDateString()})
                 </span>
               )}
             </div>
+          ) : (
+            <div className={styles.versionBadge}>Sin registro</div>
           )}
         </div>
+
         <button
           className={styles.editButton}
           onClick={() => setEditing(!editing)}
         >
-          {editing ? "Cancelar" : "✏️ Editar"}
+          {editing ? "Cancelar" : creating ? "➕ Crear" : "✏️ Editar"}
         </button>
       </div>
 
@@ -201,7 +256,7 @@ export default function TermsManager() {
               }
               className={styles.textarea}
               rows={3}
-              placeholder="Descripción adicional que aparece antes de la lista"
+              placeholder="Descripción adicional"
             />
           </div>
 
@@ -230,6 +285,7 @@ export default function TermsManager() {
                 </div>
               ))}
             </div>
+
             <button
               type="button"
               onClick={addItem}
@@ -245,30 +301,42 @@ export default function TermsManager() {
               className={styles.saveButton}
               disabled={saving}
             >
-              {saving ? "Guardando..." : "💾 Guardar cambios"}
+              {saving
+                ? "Guardando..."
+                : creating
+                  ? "💾 Crear términos"
+                  : "💾 Guardar cambios"}
             </button>
           </div>
         </div>
-      ) : (
+      ) : terms ? (
         <div className={styles.preview}>
-          {terms?.description && (
+          {terms.description && (
             <div className={styles.descriptionBox}>
               <p>{terms.description}</p>
             </div>
           )}
+
           <div className={styles.itemsPreview}>
             <p className={styles.declarationText}>Declaro que:</p>
             <ul>
-              {terms?.items.map((item, index) => (
+              {terms.items.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
           </div>
+
           <div className={styles.infoBox}>
             <p className={styles.infoText}>
-              ℹ️ Estos términos se mostrarán en el modal correspondiente cuando
-              el usuario haga clic en "términos y condiciones" dentro del
-              formulario.
+              ℹ️ Estos términos se mostrarán en el modal correspondiente dentro del formulario.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.preview}>
+          <div className={styles.infoBox}>
+            <p className={styles.infoText}>
+              No existen términos configurados para este tipo.
             </p>
           </div>
         </div>

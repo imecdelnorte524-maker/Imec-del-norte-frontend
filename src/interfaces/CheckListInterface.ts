@@ -1,47 +1,53 @@
 // src/interfaces/CheckListInterface.ts
-import type { CheckValue } from './SgSstInterface';
+import type { CheckValue, PreopParamCategory } from './SgSstInterface';
 
-// Parámetro del checklist
+// Parámetro de checklist proveniente del backend
 export interface ChecklistParameter {
-  id: string;
+  id: number;
+  parameterCode?: string;
   parameter: string;
   description?: string;
-  category: 'safety' | 'functional' | 'visual' | 'operational' | 'electrical';
+  category: PreopParamCategory;
   required: boolean;
   critical: boolean;
+  displayOrder?: number;
 }
 
 // Checklist completo para un tipo de herramienta
 export interface ToolChecklist {
+  id: number;
   toolType: string;
   toolCategory: string;
+  version?: number;
   parameters: ChecklistParameter[];
   additionalInstructions?: string;
   requiresTools?: string[];
   estimatedTime: number;
 }
 
-// Item de checklist en el formulario
+// Item de checklist en el formulario del front
 export interface ChecklistItem {
   parameter: string;
-  parameterId: string;
+  parameterId: number;
   description?: string;
-  category: string;
+  category: PreopParamCategory;
   value?: CheckValue;
   observations?: string;
   required: boolean;
   critical: boolean;
+  parameterCode?: string;
 }
 
 // Datos extendidos para el formulario preoperacional
 export interface DynamicPreoperationalFormData {
+  templateId: number;
   toolName: string;
   toolType: string;
   toolCategory: string;
-  checklistType: string;
   checks: ChecklistItem[];
   userId: number;
   createdBy: number;
+  workOrderId: number;
   estimatedTime: number;
   requiresTools?: string[];
   additionalInstructions?: string;

@@ -1,9 +1,5 @@
-// src/components/sg-sst/forms/FormDetailsModal.tsx
 import { useState, useEffect, useRef } from "react";
-import type {
-  SgSstForm,
-  SignFormData,
-} from "../../../interfaces/SgSstInterface";
+import type { SgSstForm, SignFormData } from "../../../interfaces/SgSstInterface";
 import type { Usuario } from "../../../interfaces/UserInterfaces";
 import { sgSstService } from "../../../api/sg-sst";
 import SignaturePad from "../SignaturePad";
@@ -33,19 +29,15 @@ export default function FormDetailsModal({
   const [activeTab, setActiveTab] = useState<"details" | "sign">("details");
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Estados para OTP
   const [otpRequested, setOtpRequested] = useState(false);
   const [otpCode, setOtpCode] = useState("");
 
-  // Estados para rechazo
   const [rejectReason, setRejectReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
   const [showRejectArea, setShowRejectArea] = useState(false);
 
-  // Estado para descarga de PDF
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Resetear estados cuando cambia el formulario
   useEffect(() => {
     if (form) {
       setSignatureData("");
@@ -58,24 +50,16 @@ export default function FormDetailsModal({
     }
   }, [form]);
 
-  // Cerrar con Escape
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
+      if (e.key === "Escape" && isOpen) onClose();
     };
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose]);
 
-  // Prevenir scroll del body cuando el modal está abierto
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
+    document.body.style.overflow = isOpen ? "hidden" : "unset";
     return () => {
       document.body.style.overflow = "unset";
     };
@@ -83,22 +67,12 @@ export default function FormDetailsModal({
 
   if (!isOpen) return null;
 
-  const handleSignatureSave = (signature: string) => {
-    setSignatureData(signature);
-  };
+  const handleSignatureSave = (signature: string) => setSignatureData(signature);
+  const handleSignatureClear = () => setSignatureData("");
 
-  const handleSignatureClear = () => {
-    setSignatureData("");
-  };
-
-  // 1. Solicitar OTP
   const handleRequestOtp = async () => {
     if (!currentUser?.usuarioId) {
-      showModal({
-        type: "error",
-        title: "Error",
-        message: "Usuario no válido",
-      });
+      showModal({ type: "error", title: "Error", message: "Usuario no válido" });
       return;
     }
 
@@ -112,7 +86,6 @@ export default function FormDetailsModal({
         message: "Se ha enviado un código OTP a tu correo electrónico.",
       });
     } catch (error: any) {
-      console.error("Error solicitando OTP:", error);
       showModal({
         type: "error",
         title: "Error",
@@ -123,7 +96,6 @@ export default function FormDetailsModal({
     }
   };
 
-  // 2. Firmar con OTP
   const handleSignForm = async () => {
     if (!signatureData) {
       showModal({
@@ -146,7 +118,7 @@ export default function FormDetailsModal({
 
     try {
       const signData: SignFormData = {
-        signatureData: signatureData,
+        signatureData,
         signerType: "SST",
         otpCode: otpCode.trim(),
       };
@@ -162,7 +134,6 @@ export default function FormDetailsModal({
         onFormSigned();
       }
     } catch (error: any) {
-      console.error("Error firmando formulario:", error);
       showModal({
         type: "error",
         title: "Error al firmar",
@@ -173,7 +144,6 @@ export default function FormDetailsModal({
     }
   };
 
-  // Función para rechazar formulario como SST
   const handleRejectForm = async () => {
     if (!currentUser) {
       showModal({
@@ -192,7 +162,7 @@ export default function FormDetailsModal({
         {
           text: "Cancelar",
           variant: "secondary",
-          onClick: () => {},
+          onClick: () => { },
         },
         {
           text: "Sí, rechazar",
@@ -202,15 +172,11 @@ export default function FormDetailsModal({
             try {
               const payload = {
                 userId: currentUser.usuarioId,
-                userName:
-                  `${currentUser.nombre} ${currentUser.apellido || ""}`.trim(),
+                userName: `${currentUser.nombre} ${currentUser.apellido || ""}`.trim(),
                 reason: rejectReason || undefined,
               };
 
-              const response = await sgSstService.rejectForm(
-                form.id,
-                payload as any,
-              );
+              const response = await sgSstService.rejectForm(form.id, payload as any);
 
               if (response.success) {
                 showModal({
@@ -227,7 +193,6 @@ export default function FormDetailsModal({
                 });
               }
             } catch (error: any) {
-              console.error("Error rechazando formulario:", error);
               showModal({
                 type: "error",
                 title: "Error al rechazar",
@@ -242,30 +207,20 @@ export default function FormDetailsModal({
     });
   };
 
-  // Función de Descarga de PDF
   const handleDownloadPdf = async () => {
     try {
       setIsDownloading(true);
       const response = await sgSstService.downloadPdf(form.id);
-
-      // Crear URL del Blob
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-
-      // Nombre del archivo (usar el del form o generar uno)
-      const filename =
-        form.pdfFileName || `${form.formType}_${form.id}_Report.pdf`;
+      const filename = form.pdfFileName || `${form.formType}_${form.id}_Report.pdf`;
       link.setAttribute("download", filename);
-
       document.body.appendChild(link);
       link.click();
-
-      // Limpieza
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error descargando PDF:", error);
       showModal({
         type: "error",
         title: "Error",
@@ -340,18 +295,46 @@ export default function FormDetailsModal({
     }
   };
 
-  const renderSelectedRisks = (risks: Record<string, string[]>) => {
-    if (!risks || Object.keys(risks).length === 0) {
+  const buildAtsRisksGrouped = () => {
+    const risks = form.atsReport?.risks || [];
+    const grouped: Record<string, string[]> = {};
+
+    risks.forEach((item) => {
+      const category = item.risk?.category?.name || item.risk?.category?.code || "Otros";
+      const riskName = item.risk?.name;
+      if (!riskName) return;
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push(riskName);
+    });
+
+    return grouped;
+  };
+
+  const buildAtsPpeList = () => {
+    const ppeItems = form.atsReport?.ppeItems || [];
+    return ppeItems
+      .map((item) => item.ppeItem?.name)
+      .filter(Boolean) as string[];
+  };
+
+  const buildHeightProtectionList = () => {
+    const items = form.heightWork?.protectionElements || [];
+    return items
+      .map((item) => item.protectionElement?.name)
+      .filter(Boolean) as string[];
+  };
+
+  const renderSelectedRisks = () => {
+    const grouped = buildAtsRisksGrouped();
+    if (!grouped || Object.keys(grouped).length === 0) {
       return <p className={styles.emptyMessage}>No se seleccionaron riesgos</p>;
     }
 
     return (
       <div className={styles.risksContainer}>
-        {Object.entries(risks).map(([category, riskList]) => (
+        {Object.entries(grouped).map(([category, riskList]) => (
           <div key={category} className={styles.riskCategory}>
-            <h4 className={styles.riskCategoryTitle}>
-              {category.charAt(0).toUpperCase() + category.slice(1)}
-            </h4>
+            <h4 className={styles.riskCategoryTitle}>{category}</h4>
             <ul className={styles.riskList}>
               {riskList.map((risk, index) => (
                 <li key={index} className={styles.riskItem}>
@@ -366,20 +349,10 @@ export default function FormDetailsModal({
     );
   };
 
-  const renderSelectedPPEAndTools = (ppe: Record<string, boolean>) => {
-    if (!ppe || Object.keys(ppe).length === 0) {
-      return (
-        <p className={styles.emptyMessage}>
-          No se seleccionaron equipos o herramientas
-        </p>
-      );
-    }
+  const renderSelectedPPEAndTools = () => {
+    const selectedItems = buildAtsPpeList();
 
-    const selectedItems = Object.entries(ppe)
-      .filter(([_, isSelected]) => isSelected)
-      .map(([item]) => item);
-
-    if (selectedItems.length === 0) {
+    if (!selectedItems.length) {
       return (
         <p className={styles.emptyMessage}>
           No se seleccionaron equipos o herramientas
@@ -446,6 +419,12 @@ export default function FormDetailsModal({
                 {atsReport.area || "No especificado"}
               </span>
             </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Sub-área:</span>
+              <span className={styles.infoValue}>
+                {atsReport.subArea || "No especificado"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -475,24 +454,9 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Ubicación:</span>
-              {atsReport.location ? (
-                <button
-                  className={styles.locationButton}
-                  onClick={() => {
-                    window.open(
-                      atsReport.location,
-                      "_blank",
-                      "noopener,noreferrer",
-                    );
-                  }}
-                  title="Abrir ubicación en Google Maps"
-                >
-                  <span className={styles.locationIcon}>📍</span>
-                  <span className={styles.infoValue}>Ubicación Maps</span>
-                </button>
-              ) : (
-                <span className={styles.infoValue}>No especificado</span>
-              )}
+              <span className={styles.infoValue}>
+                {atsReport.location || "No especificada"}
+              </span>
             </div>
           </div>
 
@@ -509,7 +473,7 @@ export default function FormDetailsModal({
             <span className={styles.cardIcon}>⚠️</span>
             Identificación de Riesgos
           </h3>
-          {renderSelectedRisks(atsReport.selectedRisks || {})}
+          {renderSelectedRisks()}
         </div>
 
         <div className={styles.detailCard}>
@@ -517,7 +481,7 @@ export default function FormDetailsModal({
             <span className={styles.cardIcon}>🛡️</span>
             Equipos y Herramientas
           </h3>
-          {renderSelectedPPEAndTools(atsReport.requiredPpe || {})}
+          {renderSelectedPPEAndTools()}
         </div>
 
         {atsReport.observations && (
@@ -537,6 +501,8 @@ export default function FormDetailsModal({
     const heightWork = form.heightWork;
     if (!heightWork) return null;
 
+    const protectionList = buildHeightProtectionList();
+
     return (
       <>
         <div className={styles.detailCard}>
@@ -553,9 +519,7 @@ export default function FormDetailsModal({
             <div className={styles.infoGrid}>
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>Nombre Completo:</span>
-                <span className={styles.infoValue}>
-                  {heightWork.workerName}
-                </span>
+                <span className={styles.infoValue}>{heightWork.workerName}</span>
               </div>
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>Identificación:</span>
@@ -586,24 +550,9 @@ export default function FormDetailsModal({
             <div className={styles.infoGrid}>
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>Ubicación:</span>
-                {heightWork.location ? (
-                  <button
-                    className={styles.locationButton}
-                    onClick={() => {
-                      window.open(
-                        heightWork.location,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }}
-                    title="Abrir ubicación en Google Maps"
-                  >
-                    <span className={styles.locationIcon}>📍</span>
-                    <span className={styles.infoValue}>Ubicación Maps</span>
-                  </button>
-                ) : (
-                  <span className={styles.infoValue}>No especificado</span>
-                )}
+                <span className={styles.infoValue}>
+                  {heightWork.location || "No especificada"}
+                </span>
               </div>
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>Tiempo Estimado:</span>
@@ -614,24 +563,21 @@ export default function FormDetailsModal({
             </div>
           </div>
 
-          {heightWork.protectionElements &&
-            Object.keys(heightWork.protectionElements).length > 0 && (
-              <div className={styles.subsection}>
-                <h4 className={styles.subsectionTitle}>
-                  <span className={styles.subsectionIcon}>🛡️</span>
-                  Elementos de Protección
-                </h4>
-                <div className={styles.badgeList}>
-                  {Object.entries(heightWork.protectionElements)
-                    .filter(([_, value]) => value === true)
-                    .map(([element]) => (
-                      <span key={element} className={styles.badge}>
-                        ✓ {element}
-                      </span>
-                    ))}
-                </div>
+          {protectionList.length > 0 && (
+            <div className={styles.subsection}>
+              <h4 className={styles.subsectionTitle}>
+                <span className={styles.subsectionIcon}>🛡️</span>
+                Elementos de Protección
+              </h4>
+              <div className={styles.badgeList}>
+                {protectionList.map((element) => (
+                  <span key={element} className={styles.badge}>
+                    ✓ {element}
+                  </span>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
           {form.status === "COMPLETED" && (
             <div className={styles.subsection}>
@@ -655,7 +601,8 @@ export default function FormDetailsModal({
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Condiciones físicas:</span>
                   <span
-                    className={`${styles.statusBadge} ${heightWork.physicalCondition ? styles.success : styles.error}`}
+                    className={`${styles.statusBadge} ${heightWork.physicalCondition ? styles.success : styles.error
+                      }`}
                   >
                     {heightWork.physicalCondition
                       ? "✅ Verificadas"
@@ -665,7 +612,8 @@ export default function FormDetailsModal({
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Instrucciones:</span>
                   <span
-                    className={`${styles.statusBadge} ${heightWork.instructionsReceived ? styles.success : styles.error}`}
+                    className={`${styles.statusBadge} ${heightWork.instructionsReceived ? styles.success : styles.error
+                      }`}
                   >
                     {heightWork.instructionsReceived
                       ? "✅ Recibidas"
@@ -675,16 +623,15 @@ export default function FormDetailsModal({
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Apto para alturas:</span>
                   <span
-                    className={`${styles.statusBadge} ${heightWork.fitForHeightWork ? styles.success : styles.error}`}
+                    className={`${styles.statusBadge} ${heightWork.fitForHeightWork ? styles.success : styles.error
+                      }`}
                   >
                     {heightWork.fitForHeightWork ? "✅ Sí" : "❌ No"}
                   </span>
                 </div>
                 {form.sstSignatureDate && (
                   <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>
-                      Fecha autorización:
-                    </span>
+                    <span className={styles.infoLabel}>Fecha autorización:</span>
                     <span className={styles.infoValue}>
                       {formatDate(form.sstSignatureDate)}
                     </span>
@@ -699,15 +646,11 @@ export default function FormDetailsModal({
   };
 
   const renderPreoperationalDetails = () => {
-    const preoperational = form.preoperationalChecks;
-    const checks = preoperational || [];
-
+    const checks = form.preoperationalChecks || [];
     if (checks.length === 0) return null;
 
     const goodChecks = checks.filter((check) => check.value === "GOOD").length;
-    const regularChecks = checks.filter(
-      (checks) => checks.value === "REGULAR",
-    ).length;
+    const regularChecks = checks.filter((check) => check.value === "REGULAR").length;
     const badChecks = checks.filter((check) => check.value === "BAD").length;
     const totalChecks = checks.length;
     const totalScore = goodChecks * 1 + regularChecks * 0.5 + badChecks * 0;
@@ -716,100 +659,97 @@ export default function FormDetailsModal({
       maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
     return (
-      <>
-        <div className={styles.detailCard}>
-          <h3 className={styles.cardTitle}>
-            <span className={styles.cardIcon}>🔍</span>
-            Checklist Preoperacional
-          </h3>
+      <div className={styles.detailCard}>
+        <h3 className={styles.cardTitle}>
+          <span className={styles.cardIcon}>🔍</span>
+          Checklist Preoperacional
+        </h3>
 
-          <div className={styles.summaryStats}>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{goodChecks}</span>
-              <span className={styles.statLabel}>Correctos</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{regularChecks}</span>
-              <span className={styles.statLabel}>Regular</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{badChecks}</span>
-              <span className={styles.statLabel}>Incorrectos</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{totalChecks}</span>
-              <span className={styles.statLabel}>Total</span>
-            </div>
-            <div className={`${styles.statItem} ${styles.percentageStat}`}>
-              <span className={styles.statValue}>{percentageScore}%</span>
-              <span className={styles.statLabel}>Aprobación</span>
-            </div>
+        <div className={styles.summaryStats}>
+          <div className={styles.statItem}>
+            <span className={styles.statValue}>{goodChecks}</span>
+            <span className={styles.statLabel}>Correctos</span>
           </div>
-
-          <div className={styles.checksList}>
-            {checks.map((check, index) => (
-              <div
-                key={index}
-                className={`${styles.checkItem} ${
-                  check.value === "GOOD"
-                    ? styles.goodCheck
-                    : check.value === "REGULAR"
-                      ? styles.regularCheck
-                      : styles.badCheck
-                }`}
-              >
-                <div className={styles.checkHeader}>
-                  <span className={styles.checkNumber}>{index + 1}.</span>
-                  <span className={styles.checkParameter}>
-                    {check.parameter}
-                  </span>
-                  <span className={styles.checkValue}>
-                    {check.value === "GOOD"
-                      ? "✅"
-                      : check.value === "REGULAR"
-                        ? "⚠️"
-                        : "❌"}
-                  </span>
-                </div>
-                {check.observations && (
-                  <div className={styles.checkObservations}>
-                    <span className={styles.observationsLabel}>
-                      Observaciones:
-                    </span>
-                    <span>{check.observations}</span>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className={styles.statItem}>
+            <span className={styles.statValue}>{regularChecks}</span>
+            <span className={styles.statLabel}>Regular</span>
           </div>
-
-          <div className={styles.conclusionBox}>
-            <h4 className={styles.conclusionTitle}>📋 Conclusión</h4>
-            {badChecks === 0 ? (
-              <div className={styles.successConclusion}>
-                <span className={styles.conclusionIcon}>✅</span>
-                <div>
-                  <strong>Equipo en óptimas condiciones</strong>
-                  <p>
-                    Todos los puntos fueron aprobados. El herramienta está apto
-                    para uso.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.warningConclusion}>
-                <span className={styles.conclusionIcon}>⚠️</span>
-                <div>
-                  <strong>Equipo con observaciones</strong>
-                  <p>
-                    Se encontraron {badChecks} punto(s) que requieren atención.
-                  </p>
-                </div>
-              </div>
-            )}
+          <div className={styles.statItem}>
+            <span className={styles.statValue}>{badChecks}</span>
+            <span className={styles.statLabel}>Incorrectos</span>
+          </div>
+          <div className={styles.statItem}>
+            <span className={styles.statValue}>{totalChecks}</span>
+            <span className={styles.statLabel}>Total</span>
+          </div>
+          <div className={`${styles.statItem} ${styles.percentageStat}`}>
+            <span className={styles.statValue}>{percentageScore}%</span>
+            <span className={styles.statLabel}>Aprobación</span>
           </div>
         </div>
-      </>
+
+        <div className={styles.checksList}>
+          {checks.map((check, index) => (
+            <div
+              key={index}
+              className={`${styles.checkItem} ${check.value === "GOOD"
+                  ? styles.goodCheck
+                  : check.value === "REGULAR"
+                    ? styles.regularCheck
+                    : styles.badCheck
+                }`}
+            >
+              <div className={styles.checkHeader}>
+                <span className={styles.checkNumber}>{index + 1}.</span>
+                <span className={styles.checkParameter}>
+                  {check.parameterSnapshot}
+                </span>
+                <span className={styles.checkValue}>
+                  {check.value === "GOOD"
+                    ? "✅"
+                    : check.value === "REGULAR"
+                      ? "⚠️"
+                      : "❌"}
+                </span>
+              </div>
+              {check.observations && (
+                <div className={styles.checkObservations}>
+                  <span className={styles.observationsLabel}>
+                    Observaciones:
+                  </span>
+                  <span>{check.observations}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.conclusionBox}>
+          <h4 className={styles.conclusionTitle}>📋 Conclusión</h4>
+          {badChecks === 0 ? (
+            <div className={styles.successConclusion}>
+              <span className={styles.conclusionIcon}>✅</span>
+              <div>
+                <strong>Equipo en óptimas condiciones</strong>
+                <p>
+                  Todos los puntos fueron aprobados. La herramienta está apta
+                  para uso.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.warningConclusion}>
+              <span className={styles.conclusionIcon}>⚠️</span>
+              <div>
+                <strong>Equipo con observaciones</strong>
+                <p>
+                  Se encontraron {badChecks} punto(s) que requieren atención.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     );
   };
 
@@ -854,25 +794,31 @@ export default function FormDetailsModal({
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Creación:</span>
-              <span className={styles.infoValue}>
-                {formatDate(form.createdAt)}
-              </span>
+              <span className={styles.infoValue}>{formatDate(form.createdAt)}</span>
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>Actualización:</span>
-              <span className={styles.infoValue}>
-                {formatDate(form.updatedAt)}
-              </span>
+              <span className={styles.infoValue}>{formatDate(form.updatedAt)}</span>
             </div>
+            {form.equipmentTool && (
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>Herramienta:</span>
+                <span className={styles.infoValue}>{form.equipmentTool}</span>
+              </div>
+            )}
+            {form.version != null && (
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>Versión:</span>
+                <span className={styles.infoValue}>{form.version}</span>
+              </div>
+            )}
           </div>
 
           {form.status === "REJECTED" && (
             <div className={styles.rejectionBox}>
               <h4 className={styles.rejectionTitle}>Motivo de rechazo</h4>
               <p className={styles.rejectionReason}>
-                <strong>
-                  {form.rejectedByUserName || "Rechazado por SG-SST"}:
-                </strong>{" "}
+                <strong>{form.rejectedByUserName || "Rechazado por SG-SST"}:</strong>{" "}
                 {form.rejectionReason || "Sin motivo especificado"}
               </p>
               {form.rejectedAt && (
@@ -893,9 +839,8 @@ export default function FormDetailsModal({
             <div className={styles.signatureCard}>
               <span className={styles.signatureRole}>Técnico</span>
               <span
-                className={`${styles.signatureStatus} ${
-                  form.technicianSignatureDate ? styles.signed : styles.pending
-                }`}
+                className={`${styles.signatureStatus} ${form.technicianSignatureDate ? styles.signed : styles.pending
+                  }`}
               >
                 {form.technicianSignatureDate ? "✅ Firmado" : "⏳ Pendiente"}
               </span>
@@ -908,9 +853,8 @@ export default function FormDetailsModal({
             <div className={styles.signatureCard}>
               <span className={styles.signatureRole}>SG-SST</span>
               <span
-                className={`${styles.signatureStatus} ${
-                  form.sstSignatureDate ? styles.signed : styles.pending
-                }`}
+                className={`${styles.signatureStatus} ${form.sstSignatureDate ? styles.signed : styles.pending
+                  }`}
               >
                 {form.sstSignatureDate ? "✅ Firmado" : "⏳ Pendiente"}
               </span>
@@ -923,7 +867,6 @@ export default function FormDetailsModal({
           </div>
         </div>
 
-        {/* 🟢 BOTÓN DE DESCARGA: Solo si está completado */}
         {form.status === "COMPLETED" && (
           <div className={styles.detailCard}>
             <h3 className={styles.cardTitle}>
@@ -1052,14 +995,13 @@ export default function FormDetailsModal({
               {form.user
                 ? `${form.user.nombre} ${form.user.apellido}`
                 : `Usuario #${form.createdBy}`}
-            </strong>
-            .
+            </strong>.
           </p>
           <div className={styles.warningBox}>
             <span className={styles.warningIcon}>⚠️</span>
             <p>
-              Al firmar, el formulario será marcado como{" "}
-              <strong>Aprobado</strong> y no podrá ser editado.
+              Al firmar, el formulario será marcado como <strong>Aprobado</strong>{" "}
+              y no podrá ser editado.
             </p>
           </div>
         </div>
@@ -1081,7 +1023,6 @@ export default function FormDetailsModal({
             </div>
           )}
 
-          {/* INPUT PARA OTP */}
           {!otpRequested ? (
             <div className={styles.otpRequestBox}>
               <button
@@ -1204,9 +1145,7 @@ export default function FormDetailsModal({
     );
   };
 
-  const renderSignTab = () => {
-    return renderStandardSignTab();
-  };
+  const renderSignTab = () => renderStandardSignTab();
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -1235,22 +1174,19 @@ export default function FormDetailsModal({
           <button
             role="tab"
             aria-selected={activeTab === "details"}
-            className={`${styles.tab} ${
-              activeTab === "details" ? styles.activeTab : ""
-            }`}
+            className={`${styles.tab} ${activeTab === "details" ? styles.activeTab : ""
+              }`}
             onClick={() => setActiveTab("details")}
           >
             📋 Detalles
           </button>
 
-          {/* ✅ Solo aparece cuando está pendiente y el usuario puede firmar */}
           {form.status === "PENDING_SST" && canSignAsSST && (
             <button
               role="tab"
               aria-selected={activeTab === "sign"}
-              className={`${styles.tab} ${
-                activeTab === "sign" ? styles.activeTab : ""
-              }`}
+              className={`${styles.tab} ${activeTab === "sign" ? styles.activeTab : ""
+                }`}
               onClick={() => setActiveTab("sign")}
             >
               ✍️ Firmar

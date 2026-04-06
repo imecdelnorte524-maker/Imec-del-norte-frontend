@@ -1,4 +1,3 @@
-// src/interfaces/TermsIntefaces.ts
 export interface TermsData {
   id: number;
   type: string;
